@@ -47,9 +47,7 @@ export default function Home() {
               className="rounded-md border border-slate-200 bg-white p-5 shadow-sm"
               key={title}
             >
-              <h2 className="text-lg font-semibold text-[#1e3275]">
-                {title}
-              </h2>
+              <h2 className="text-lg font-semibold text-[#1e3275]">{title}</h2>
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 {description}
               </p>

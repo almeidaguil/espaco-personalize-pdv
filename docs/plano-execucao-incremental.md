@@ -16,6 +16,7 @@ Este plano quebra o desenvolvimento em entregas menores, coesas e testaveis. Cad
 Objetivo: deixar o projeto pronto para desenvolvimento.
 
 Tarefas:
+
 - Criar projeto Next.js com TypeScript.
 - Configurar Tailwind CSS.
 - Criar estrutura inicial de pastas.
@@ -26,6 +27,7 @@ Tarefas:
 - Configurar deploy inicial na Vercel.
 
 Criterio de pronto:
+
 - App abre localmente.
 - App abre na Vercel.
 - Tailwind funciona.
@@ -36,6 +38,7 @@ Criterio de pronto:
 Objetivo: criar a estrutura visual minima do sistema.
 
 Tarefas:
+
 - Criar layout autenticado.
 - Criar navegacao principal.
 - Criar tela inicial temporaria.
@@ -44,6 +47,7 @@ Tarefas:
 - Garantir responsividade mobile first.
 
 Criterio de pronto:
+
 - Usuario consegue navegar entre rotas principais simuladas.
 - Interface funciona bem em tela pequena.
 - Componentes base estao reutilizaveis.
@@ -53,6 +57,7 @@ Criterio de pronto:
 Objetivo: criar a base de dados para usuarios e permissoes.
 
 Tarefas:
+
 - Criar tabela `profiles`.
 - Definir enum ou constraint de perfil: `admin`, `operator`.
 - Criar trigger para gerar profile ao criar usuario.
@@ -61,6 +66,7 @@ Tarefas:
 - Criar tipos TypeScript basicos do dominio.
 
 Criterio de pronto:
+
 - Usuario autenticado possui profile.
 - Admin e operador podem ser diferenciados.
 - RLS esta ativa.
@@ -70,6 +76,7 @@ Criterio de pronto:
 Objetivo: permitir acesso privado ao sistema.
 
 Tarefas:
+
 - Criar tela `/login`.
 - Implementar login com e-mail e senha.
 - Implementar logout.
@@ -78,6 +85,7 @@ Tarefas:
 - Exibir erros de login em portugues.
 
 Criterio de pronto:
+
 - Usuario consegue entrar e sair.
 - Rotas privadas bloqueiam acesso anonimo.
 - Sessao persiste ao recarregar.
@@ -87,6 +95,7 @@ Criterio de pronto:
 Objetivo: permitir organizacao simples dos produtos.
 
 Tarefas:
+
 - Criar tabela `categories`.
 - Criar migration com campos principais.
 - Ativar RLS.
@@ -95,6 +104,7 @@ Tarefas:
 - Popular categorias iniciais: chaveiros, vasos, decoracao, utilidades, personalizados, brinquedos, brindes, outros.
 
 Criterio de pronto:
+
 - Admin consegue cadastrar e editar categorias.
 - Produtos poderao usar categorias.
 
@@ -103,6 +113,7 @@ Criterio de pronto:
 Objetivo: cadastrar produtos vendaveis.
 
 Tarefas:
+
 - Criar tabela `products`.
 - Criar campos: nome, categoria, SKU, preco, custo, estoque, estoque minimo, foto, ativo.
 - Ativar RLS.
@@ -113,6 +124,7 @@ Tarefas:
 - Criar indicador de estoque baixo.
 
 Criterio de pronto:
+
 - Admin cadastra, edita e inativa produtos.
 - Operador visualiza produtos ativos.
 - Produto aparece pronto para venda no PDV.
@@ -122,6 +134,7 @@ Criterio de pronto:
 Objetivo: preparar eventos para vincular vendas.
 
 Tarefas:
+
 - Criar tabela `events`.
 - Criar campos: nome, data, local, status, observacoes.
 - Ativar RLS.
@@ -131,6 +144,7 @@ Tarefas:
 - Definir evento ativo.
 
 Criterio de pronto:
+
 - Admin cadastra eventos.
 - Sistema consegue identificar o evento ativo.
 - Venda futura podera ser vinculada a um evento.
@@ -140,6 +154,7 @@ Criterio de pronto:
 Objetivo: controlar inicio de turno/evento antes de vender.
 
 Tarefas:
+
 - Criar tabela `cash_sessions`.
 - Criar status: aberto, fechado.
 - Criar rota `/cash/open`.
@@ -148,6 +163,7 @@ Tarefas:
 - Exibir caixa aberto no dashboard.
 
 Criterio de pronto:
+
 - Operador abre caixa.
 - Sistema sabe qual caixa esta ativo.
 - PDV pode exigir caixa aberto antes da venda.
@@ -157,6 +173,7 @@ Criterio de pronto:
 Objetivo: montar venda antes de salvar.
 
 Tarefas:
+
 - Criar tela `/pdv`.
 - Selecionar evento ativo.
 - Verificar caixa aberto.
@@ -168,6 +185,7 @@ Tarefas:
 - Bloquear quantidade maior que estoque disponivel.
 
 Criterio de pronto:
+
 - Operador monta carrinho completo no celular.
 - Totais sao calculados corretamente.
 - Ainda nao precisa finalizar venda.
@@ -177,6 +195,7 @@ Criterio de pronto:
 Objetivo: registrar venda completa com pagamento.
 
 Tarefas:
+
 - Criar tabelas `sales`, `sale_items` e `payments`.
 - Criar fluxo de finalizacao no servidor.
 - Salvar venda, itens e pagamentos em transacao.
@@ -186,6 +205,7 @@ Tarefas:
 - Exibir confirmacao de venda.
 
 Criterio de pronto:
+
 - Venda finalizada aparece em `/sales`.
 - Venda possui itens e pagamento.
 - Troco e total ficam corretos.
@@ -195,6 +215,7 @@ Criterio de pronto:
 Objetivo: baixar estoque automaticamente com historico.
 
 Tarefas:
+
 - Criar tabela `stock_movements`.
 - Criar tipos: entrada manual, saida por venda, ajuste, devolucao por cancelamento.
 - Ao finalizar venda, criar movimentacao de saida.
@@ -203,6 +224,7 @@ Tarefas:
 - Registrar operador, produto, venda e evento quando aplicavel.
 
 Criterio de pronto:
+
 - Toda venda reduz estoque.
 - Toda reducao tem historico.
 - Produto nao altera estoque diretamente fora do fluxo controlado.
@@ -212,6 +234,7 @@ Criterio de pronto:
 Objetivo: consultar o que foi vendido.
 
 Tarefas:
+
 - Criar tela `/sales`.
 - Criar tela `/sales/[id]`.
 - Listar vendas por data, evento e status.
@@ -219,6 +242,7 @@ Tarefas:
 - Criar resumo simples de total da venda.
 
 Criterio de pronto:
+
 - Admin e operador consultam vendas.
 - Detalhe da venda permite auditoria basica.
 
@@ -227,6 +251,7 @@ Criterio de pronto:
 Objetivo: cancelar sem apagar historico.
 
 Tarefas:
+
 - Criar acao de cancelamento no servidor.
 - Alterar status da venda para cancelada.
 - Criar movimentacao de devolucao por cancelamento.
@@ -235,6 +260,7 @@ Tarefas:
 - Bloquear cancelamento duplicado.
 
 Criterio de pronto:
+
 - Venda cancelada continua visivel.
 - Estoque volta corretamente.
 - Historico de movimentacao fica completo.
@@ -244,6 +270,7 @@ Criterio de pronto:
 Objetivo: conferir valores do turno/evento.
 
 Tarefas:
+
 - Criar rota `/cash/close`.
 - Calcular totais esperados por forma de pagamento.
 - Permitir informar valores conferidos.
@@ -253,6 +280,7 @@ Tarefas:
 - Bloquear novas vendas em caixa fechado.
 
 Criterio de pronto:
+
 - Operador fecha caixa.
 - Sistema mostra esperado, informado e divergencia.
 - Caixa fechado nao recebe novas vendas.
@@ -262,6 +290,7 @@ Criterio de pronto:
 Objetivo: permitir entradas e ajustes controlados.
 
 Tarefas:
+
 - Criar tela `/stock`.
 - Listar produtos e quantidades.
 - Mostrar historico de movimentacoes.
@@ -271,6 +300,7 @@ Tarefas:
 - Alertar estoque baixo.
 
 Criterio de pronto:
+
 - Admin ajusta estoque sem editar produto diretamente.
 - Todo ajuste gera movimentacao.
 
@@ -279,6 +309,7 @@ Criterio de pronto:
 Objetivo: mostrar resumo operacional util.
 
 Tarefas:
+
 - Criar tela `/dashboard`.
 - Mostrar vendas do dia.
 - Mostrar vendas do evento atual.
@@ -288,6 +319,7 @@ Tarefas:
 - Mostrar caixa aberto/fechado.
 
 Criterio de pronto:
+
 - Dashboard ajuda a operar o evento.
 - Dados batem com vendas e caixa.
 
@@ -296,6 +328,7 @@ Criterio de pronto:
 Objetivo: entregar a primeira analise pos-evento.
 
 Tarefas:
+
 - Criar tela `/reports`.
 - Filtrar por evento.
 - Mostrar total vendido.
@@ -305,6 +338,7 @@ Tarefas:
 - Exportar CSV do evento.
 
 Criterio de pronto:
+
 - Admin gera relatorio de evento.
 - CSV pode ser baixado.
 
@@ -313,6 +347,7 @@ Criterio de pronto:
 Objetivo: permitir uso com aparencia de app.
 
 Tarefas:
+
 - Criar manifest.
 - Criar icones.
 - Configurar nome e tema.
@@ -321,6 +356,7 @@ Tarefas:
 - Ajustar metadados.
 
 Criterio de pronto:
+
 - Sistema pode ser instalado no celular.
 - Visual mobile fica consistente.
 
@@ -329,6 +365,7 @@ Criterio de pronto:
 Objetivo: validar o fluxo completo antes de uso real.
 
 Tarefas:
+
 - Testar login e logout.
 - Testar cadastro de produto.
 - Testar cadastro de evento.
@@ -343,6 +380,7 @@ Tarefas:
 - Testar exportacao CSV.
 
 Criterio de pronto:
+
 - Fluxo principal funciona de ponta a ponta.
 - Erros criticos corrigidos.
 - MVP esta pronto para primeiro evento real.
