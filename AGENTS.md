@@ -9,6 +9,7 @@ Projeto: Espaco Personalize PDV.
 Objetivo: sistema privado de vendas para eventos presenciais.
 
 Stack fixa:
+
 - Next.js
 - TypeScript
 - Tailwind
@@ -25,12 +26,14 @@ Stack fixa:
 - GitHub Actions
 
 Principios:
+
 - Mobile First
 - PWA
 - Sistema privado
 - Usuarios: Admin e Operador
 
 Modulos principais:
+
 - Produtos
 - Eventos
 - PDV
@@ -111,12 +114,14 @@ src/
 ```
 
 Camadas:
+
 - Domain: regras puras do negocio.
 - Application: casos de uso.
 - Infra: Supabase, banco, storage e servicos externos.
 - Presentation: telas, componentes, formularios e actions do Next.js.
 
 Regra de ouro:
+
 - O frontend nao decide regra critica.
 - O frontend envia a intencao.
 - Use cases e servidor validam finalizar venda, cancelar venda, abrir caixa e ajustar estoque.

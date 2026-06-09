@@ -79,6 +79,7 @@ src/
 Regras puras do negocio. Nao deve depender de Next.js, Supabase, React ou APIs externas.
 
 Exemplos:
+
 - Produto nao pode ter preco negativo.
 - Venda cancelada devolve estoque.
 - Estoque nao pode ficar negativo.
@@ -88,6 +89,7 @@ Exemplos:
 Casos de uso e orquestracao das regras de negocio.
 
 Exemplos:
+
 - `CreateSaleUseCase`.
 - `CancelSaleUseCase`.
 - `OpenCashSessionUseCase`.
@@ -98,6 +100,7 @@ Exemplos:
 Acesso a Supabase, banco, storage e servicos externos.
 
 Exemplos:
+
 - Repositories Supabase.
 - Clients.
 - Gateways.
@@ -108,6 +111,7 @@ Exemplos:
 Telas, componentes, formularios e actions do Next.js.
 
 Exemplos:
+
 - Pages/routes.
 - Server actions.
 - Components.
@@ -118,6 +122,7 @@ Exemplos:
 O frontend nao decide regra critica.
 
 Ele apenas envia a intencao:
+
 - Finalizar venda.
 - Cancelar venda.
 - Abrir caixa.
@@ -135,16 +140,19 @@ A regra deve ser validada no servidor e nos use cases.
 ## Testes
 
 Ferramentas:
+
 - Vitest.
 - Testing Library.
 - Playwright.
 
 Tipos:
+
 - Unitarios.
 - Integracao.
 - E2E.
 
 Prioridade de cobertura:
+
 - Regras de venda.
 - Estoque.
 - Cancelamento.
@@ -153,6 +161,7 @@ Prioridade de cobertura:
 - Exportacao CSV.
 
 Diretriz:
+
 - Domain deve ter testes unitarios rapidos.
 - Application deve testar casos de uso com mocks/fakes de repositories.
 - Infra deve ter testes de integracao quando houver contrato importante.
@@ -161,6 +170,7 @@ Diretriz:
 ## CI/CD
 
 Pipeline no GitHub Actions:
+
 - install.
 - lint.
 - type-check.
@@ -169,6 +179,7 @@ Pipeline no GitHub Actions:
 - deploy.
 
 Regra:
+
 - Nenhum codigo entra quebrado.
 - Pull requests devem passar lint, type-check, testes e build.
 
@@ -182,6 +193,7 @@ Regra:
 - Branches: `feature/nome-da-funcionalidade`.
 
 Exemplos de commits:
+
 - `feat: add product registration`
 - `fix: correct stock movement on sale cancel`
 - `test: add sale use case tests`
@@ -198,6 +210,7 @@ Exemplos de commits:
 ## Criterio Tecnico Para Entregas
 
 Cada entrega deve, quando aplicavel:
+
 - Respeitar as camadas do modulo.
 - Ter validacao no servidor.
 - Ter tipos TypeScript explicitos nos contratos importantes.

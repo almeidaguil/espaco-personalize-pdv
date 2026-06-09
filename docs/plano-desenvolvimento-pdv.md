@@ -39,18 +39,21 @@ Banco de dados + Login + Seguranca
 ### Login E Usuarios
 
 Funcoes:
+
 - Login.
 - Logout.
 - Recuperacao de senha.
 - Perfis de acesso.
 
 Perfis:
+
 - Admin: controla tudo.
 - Operador: faz vendas, abre e fecha caixa, visualiza produtos.
 
 ### Dashboard
 
 Resumo inicial:
+
 - Vendas do dia.
 - Vendas do evento atual.
 - Total em dinheiro.
@@ -62,6 +65,7 @@ Resumo inicial:
 ### Produtos
 
 Campos:
+
 - Nome.
 - Categoria.
 - Preco de venda.
@@ -75,6 +79,7 @@ Campos:
 ### Categorias
 
 Categorias iniciais:
+
 - Chaveiros.
 - Vasos.
 - Decoracao.
@@ -89,12 +94,14 @@ Categorias iniciais:
 Cada venda deve ser vinculada a um evento.
 
 Exemplos:
+
 - Feira Junho 2026.
 - Congresso de Psicologia.
 - Loja online.
 - Venda avulsa.
 
 Campos:
+
 - Nome.
 - Data.
 - Local.
@@ -106,6 +113,7 @@ Campos:
 Tela principal de operacao.
 
 Funcoes:
+
 - Selecionar evento ativo.
 - Buscar produto.
 - Adicionar ao carrinho.
@@ -118,6 +126,7 @@ Funcoes:
 - Baixar estoque automaticamente.
 
 Formas de pagamento:
+
 - Pix.
 - Dinheiro.
 - Cartao de credito.
@@ -130,6 +139,7 @@ Formas de pagamento:
 Controle de caixa por evento/turno.
 
 Funcoes:
+
 - Abrir caixa.
 - Informar valor inicial.
 - Registrar vendas.
@@ -138,6 +148,7 @@ Funcoes:
 - Adicionar observacoes.
 
 No fechamento:
+
 - Dinheiro esperado.
 - Pix recebido.
 - Cartao recebido.
@@ -149,6 +160,7 @@ No fechamento:
 ### Vendas
 
 Cada venda salva:
+
 - Numero da venda.
 - Data e hora.
 - Operador.
@@ -164,10 +176,12 @@ Cada venda salva:
 - Status.
 
 Status:
+
 - Concluida.
 - Cancelada.
 
 Ao cancelar uma venda:
+
 - O estoque volta automaticamente.
 - A venda continua registrada como cancelada.
 
@@ -176,6 +190,7 @@ Ao cancelar uma venda:
 O estoque deve ser controlado por movimentacoes.
 
 Tipos:
+
 - Entrada manual.
 - Saida por venda.
 - Ajuste.
@@ -186,6 +201,7 @@ Regra central: produto nunca altera estoque diretamente. Todo ajuste gera movime
 ### Relatorios
 
 Relatorios essenciais:
+
 - Vendas por dia.
 - Vendas por evento.
 - Vendas por produto.
@@ -195,6 +211,7 @@ Relatorios essenciais:
 - Produtos mais vendidos.
 
 Exportacoes:
+
 - CSV de vendas.
 - CSV de produtos.
 - CSV de estoque.
@@ -203,6 +220,7 @@ Exportacoes:
 ## 5. Banco De Dados
 
 Tabelas principais:
+
 - `profiles`
 - `products`
 - `categories`
@@ -280,6 +298,7 @@ created_at
 ## 6. Seguranca
 
 Medidas obrigatorias:
+
 - Login obrigatorio.
 - Permissoes por perfil.
 - Row Level Security no banco.
@@ -293,6 +312,7 @@ Medidas obrigatorias:
 ### Fase 1 - Base Do Projeto
 
 Criar:
+
 - Projeto Next.js.
 - Tailwind.
 - Conexao com Supabase.
@@ -306,6 +326,7 @@ Resultado: sistema online com login funcionando.
 ### Fase 2 - Cadastros
 
 Criar:
+
 - Produtos.
 - Categorias.
 - Eventos.
@@ -316,6 +337,7 @@ Resultado: cadastro de produtos e preparacao de evento.
 ### Fase 3 - PDV
 
 Criar:
+
 - Tela de venda.
 - Carrinho.
 - Desconto.
@@ -329,6 +351,7 @@ Resultado: sistema pronto para vender em evento.
 ### Fase 4 - Caixa
 
 Criar:
+
 - Abertura de caixa.
 - Fechamento de caixa.
 - Resumo por forma de pagamento.
@@ -339,6 +362,7 @@ Resultado: controle financeiro basico do evento.
 ### Fase 5 - Estoque
 
 Criar:
+
 - Historico de movimentacoes.
 - Entrada manual.
 - Ajuste.
@@ -350,6 +374,7 @@ Resultado: controle real dos produtos.
 ### Fase 6 - Relatorios
 
 Criar:
+
 - Relatorio diario.
 - Relatorio por evento.
 - Relatorio por produto.
@@ -361,6 +386,7 @@ Resultado: analise do evento depois da venda.
 ### Fase 7 - PWA
 
 Criar:
+
 - Instalacao no celular.
 - Icone.
 - Tela inicial.
@@ -390,6 +416,7 @@ Resultado: sistema com experiencia de app.
 ## 9. MVP Ideal
 
 A primeira versao util deve ter:
+
 - Login.
 - Cadastro de produtos.
 - Cadastro de eventos.
@@ -404,6 +431,7 @@ A primeira versao util deve ter:
 ## 10. Fora Do Escopo Inicial
 
 Nao fazer na primeira versao:
+
 - Nota fiscal.
 - Integracao com maquininha.
 - Pagamento online.
