@@ -1,0 +1,128 @@
+import { Money } from "./money";
+
+export type Product = {
+  id: string;
+  isActive: boolean;
+  name: string;
+  price: Money;
+  sku?: string;
+};
+
+export type CreateProductInput = {
+  id: string;
+  isActive?: boolean;
+  name: string;
+  priceInReais: number;
+  sku?: string | null;
+};
+
+export type ProductValidationError = {
+  field: "id" | "name" | "priceInReais" | "sku";
+  message: string;
+};
+
+export type CreateProductResult =
+  | {
+      product: Product;
+      success: true;
+    }
+  | {
+      errors: ProductValidationError[];
+      success: false;
+    };
+
+export function createProduct(input: CreateProductInput): CreateProductResult {
+  const errors: ProductValidationError[] = [];
+  const id = input.id.trim();
+  const name = input.name.trim();
+  const sku = normalizeSku(input.sku);
+
+  if (!id) {
+    errors.push({
+      field: "id",
+      message: "Product id is required.",
+    });
+  }
+
+  if (!name) {
+    errors.push({
+      field: "name",
+      message: "Product name is required.",
+    });
+  }
+
+  if (!Number.isFinite(input.priceInReais)) {
+    errors.push({
+      field: "priceInReais",
+      message: "Product price must be a valid BRL amount.",
+    });
+  }
+
+  if (input.priceInReais < 0) {
+    errors.push({
+      field: "priceInReais",
+      message: "Product price cannot be negative.",
+    });
+  }
+
+  if (
+    Number.isFinite(input.priceInReais) &&
+    !hasBrlPrecision(input.priceInReais)
+  ) {
+    errors.push({
+      field: "priceInReais",
+      message: "Product price can have at most 2 decimal places.",
+    });
+  }
+
+  if (sku && sku.length > 64) {
+    errors.push({
+      field: "sku",
+      message: "Product SKU cannot exceed 64 characters.",
+    });
+  }
+
+  if (errors.length > 0) {
+    return {
+      errors,
+      success: false,
+    };
+  }
+
+  return {
+    product: {
+      id,
+      isActive: input.isActive ?? true,
+      name,
+      price: Money.fromReais(input.priceInReais),
+      ...(sku ? { sku } : {}),
+    },
+    success: true,
+  };
+}
+
+export function deactivateProduct(product: Product): Product {
+  return {
+    ...product,
+    isActive: false,
+  };
+}
+
+export function activateProduct(product: Product): Product {
+  return {
+    ...product,
+    isActive: true,
+  };
+}
+
+function normalizeSku(sku: string | null | undefined): string | undefined {
+  const normalizedSku = sku?.trim();
+
+  return normalizedSku ? normalizedSku : undefined;
+}
+
+function hasBrlPrecision(amountInReais: number): boolean {
+  const cents = amountInReais * 100;
+
+  return Math.abs(cents - Math.round(cents)) < 1e-8;
+}
