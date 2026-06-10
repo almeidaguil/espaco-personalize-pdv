@@ -4,7 +4,7 @@ export function parseCreateProductFormData(
   formData: FormData,
 ): CreateProductUseCaseInput {
   return {
-    isActive: parseOptionalBoolean(formData.get("isActive")),
+    isActive: parseOptionalBoolean(formData.getAll("isActive")),
     name: getTrimmedString(formData, "name"),
     priceInReais: parseBrlPrice(formData.get("priceInReais")),
     sku: getOptionalTrimmedString(formData, "sku"),
@@ -26,12 +26,12 @@ function getOptionalTrimmedString(
   return value ? value : null;
 }
 
-function parseOptionalBoolean(value: FormDataEntryValue | null): boolean {
-  if (typeof value !== "string") {
+function parseOptionalBoolean(values: FormDataEntryValue[]): boolean {
+  if (values.length === 0) {
     return true;
   }
 
-  return value !== "false";
+  return values.some((value) => value === "true");
 }
 
 function parseBrlPrice(value: FormDataEntryValue | null): number {
