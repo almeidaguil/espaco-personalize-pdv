@@ -10,6 +10,17 @@ export type SaveProductResult =
       success: false;
     };
 
+export type ListProductsResult =
+  | {
+      products: Product[];
+      success: true;
+    }
+  | {
+      error: "unknown";
+      success: false;
+    };
+
 export type ProductRepository = {
+  list(): Promise<ListProductsResult>;
   save(product: Product): Promise<SaveProductResult>;
 };
