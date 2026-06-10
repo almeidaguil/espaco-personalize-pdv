@@ -3,10 +3,15 @@ import { z } from "zod";
 export const createProductSchema = z.object({
   isActive: z.boolean().optional(),
   name: z.string().trim().min(1, "Informe o nome do produto."),
-  priceInCents: z
+  priceInReais: z
     .number()
-    .int("Informe o preco em centavos.")
-    .min(0, "O preco nao pode ser negativo."),
+    .finite("Informe um preco valido em Reais.")
+    .min(0, "O preco nao pode ser negativo.")
+    .refine(
+      (priceInReais) =>
+        Math.abs(priceInReais * 100 - Math.round(priceInReais * 100)) < 1e-8,
+      "Informe o preco com no maximo 2 casas decimais.",
+    ),
   sku: z
     .string()
     .trim()

@@ -5,6 +5,7 @@ import type {
   ProductRepository,
   SaveProductResult,
 } from "./product-repository";
+import { Money } from "../domain/money";
 import type { Product } from "../domain/product";
 
 class FakeProductRepository implements ProductRepository {
@@ -31,7 +32,7 @@ describe("createProductUseCase", () => {
     const result = await createProductUseCase(
       {
         name: " Caneca personalizada ",
-        priceInCents: 3500,
+        priceInReais: 35,
         sku: " CANECA-001 ",
       },
       {
@@ -45,7 +46,7 @@ describe("createProductUseCase", () => {
         id: "product-1",
         isActive: true,
         name: "Caneca personalizada",
-        priceInCents: 3500,
+        price: Money.fromReais(35),
         sku: "CANECA-001",
       },
       success: true,
@@ -54,7 +55,7 @@ describe("createProductUseCase", () => {
       id: "product-1",
       isActive: true,
       name: "Caneca personalizada",
-      priceInCents: 3500,
+      price: Money.fromReais(35),
       sku: "CANECA-001",
     });
   });
@@ -65,7 +66,7 @@ describe("createProductUseCase", () => {
     const result = await createProductUseCase(
       {
         name: "",
-        priceInCents: -1,
+        priceInReais: -1,
       },
       {
         generateProductId: () => "product-1",
@@ -76,7 +77,7 @@ describe("createProductUseCase", () => {
     expect(result).toEqual({
       fieldErrors: {
         name: "Informe o nome do produto.",
-        priceInCents: "O preco nao pode ser negativo.",
+        priceInReais: "O preco nao pode ser negativo.",
         sku: undefined,
       },
       success: false,
@@ -93,7 +94,7 @@ describe("createProductUseCase", () => {
     const result = await createProductUseCase(
       {
         name: "Caneca personalizada",
-        priceInCents: 3500,
+        priceInReais: 35,
         sku: "CANECA-001",
       },
       {
@@ -117,7 +118,7 @@ describe("createProductUseCase", () => {
     const result = await createProductUseCase(
       {
         name: "Caneca personalizada",
-        priceInCents: 3500,
+        priceInReais: 35,
       },
       {
         generateProductId: () => "product-1",

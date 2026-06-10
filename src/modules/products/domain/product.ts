@@ -1,8 +1,10 @@
+import { Money } from "./money";
+
 export type Product = {
   id: string;
   isActive: boolean;
   name: string;
-  priceInCents: number;
+  price: Money;
   sku?: string;
 };
 
@@ -10,12 +12,12 @@ export type CreateProductInput = {
   id: string;
   isActive?: boolean;
   name: string;
-  priceInCents: number;
+  priceInReais: number;
   sku?: string | null;
 };
 
 export type ProductValidationError = {
-  field: "id" | "name" | "priceInCents" | "sku";
+  field: "id" | "name" | "priceInReais" | "sku";
   message: string;
 };
 
@@ -49,17 +51,27 @@ export function createProduct(input: CreateProductInput): CreateProductResult {
     });
   }
 
-  if (!Number.isInteger(input.priceInCents)) {
+  if (!Number.isFinite(input.priceInReais)) {
     errors.push({
-      field: "priceInCents",
-      message: "Product price must be represented in cents.",
+      field: "priceInReais",
+      message: "Product price must be a valid BRL amount.",
     });
   }
 
-  if (input.priceInCents < 0) {
+  if (input.priceInReais < 0) {
     errors.push({
-      field: "priceInCents",
+      field: "priceInReais",
       message: "Product price cannot be negative.",
+    });
+  }
+
+  if (
+    Number.isFinite(input.priceInReais) &&
+    !hasBrlPrecision(input.priceInReais)
+  ) {
+    errors.push({
+      field: "priceInReais",
+      message: "Product price can have at most 2 decimal places.",
     });
   }
 
@@ -82,7 +94,7 @@ export function createProduct(input: CreateProductInput): CreateProductResult {
       id,
       isActive: input.isActive ?? true,
       name,
-      priceInCents: input.priceInCents,
+      price: Money.fromReais(input.priceInReais),
       ...(sku ? { sku } : {}),
     },
     success: true,
@@ -107,4 +119,10 @@ function normalizeSku(sku: string | null | undefined): string | undefined {
   const normalizedSku = sku?.trim();
 
   return normalizedSku ? normalizedSku : undefined;
+}
+
+function hasBrlPrecision(amountInReais: number): boolean {
+  const cents = amountInReais * 100;
+
+  return Math.abs(cents - Math.round(cents)) < 1e-8;
 }
