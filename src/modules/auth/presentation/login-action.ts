@@ -11,7 +11,7 @@ export async function loginAction(
   _previousState: LoginActionState,
   formData: FormData,
 ): Promise<LoginActionState> {
-  const supabaseClient = createSupabaseServerClient();
+  const supabaseClient = await createSupabaseServerClient();
   const authRepository = new SupabaseAuthRepository(supabaseClient);
 
   const result = await authenticateWithPasswordUseCase(
