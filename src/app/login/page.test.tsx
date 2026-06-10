@@ -18,6 +18,9 @@ describe("LoginPage", () => {
     expect(
       screen.getByRole("heading", { name: "Acessar PDV" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Espaco Personalize" }),
+    ).toBeInTheDocument();
     expect(screen.getByLabelText("Formulario de login")).toBeInTheDocument();
   });
 });
