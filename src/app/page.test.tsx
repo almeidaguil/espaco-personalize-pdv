@@ -10,6 +10,9 @@ describe("Home", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "PDV" }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("img", { name: "Espaco Personalize" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("Vendas hoje")).toBeInTheDocument();
     expect(screen.getByText("Produtos")).toBeInTheDocument();
     expect(screen.getByText("Fechado")).toBeInTheDocument();

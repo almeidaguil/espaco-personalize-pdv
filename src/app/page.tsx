@@ -1,3 +1,5 @@
+import { BrandLogo } from "@/shared/components/brand-logo";
+
 const summaryCards = [
   ["Vendas hoje", "R$ 0,00"],
   ["Evento ativo", "Nao definido"],
@@ -16,11 +18,14 @@ export default function Home() {
     <main className="min-h-screen bg-[#f6f7fb] text-slate-950">
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-5 py-6 sm:px-8 lg:px-10">
         <header className="flex items-center justify-between gap-4 rounded-md border border-slate-200 bg-white px-4 py-3 shadow-sm">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-              Espaco Personalize
-            </p>
-            <h1 className="text-xl font-semibold">PDV</h1>
+          <div className="flex items-center gap-3">
+            <BrandLogo className="h-auto w-16" priority />
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+                Espaco Personalize
+              </p>
+              <h1 className="text-xl font-semibold">PDV</h1>
+            </div>
           </div>
           <span className="rounded-md bg-[#f5c313] px-3 py-2 text-sm font-semibold text-[#1e3275]">
             MVP
