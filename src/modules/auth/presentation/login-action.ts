@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { authenticateWithPasswordUseCase } from "../application/authenticate-with-password-use-case";
 import { SupabaseAuthRepository } from "../infra/supabase-auth-repository";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
+import { parseLoginFormData } from "./login-form-data";
 import type { LoginActionState } from "./login-action-state";
 
 export async function loginAction(
@@ -15,10 +16,7 @@ export async function loginAction(
   const authRepository = new SupabaseAuthRepository(supabaseClient);
 
   const result = await authenticateWithPasswordUseCase(
-    {
-      email: formData.get("email"),
-      password: formData.get("password"),
-    },
+    parseLoginFormData(formData),
     authRepository,
   );
 

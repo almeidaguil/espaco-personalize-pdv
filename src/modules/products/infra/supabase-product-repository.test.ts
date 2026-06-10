@@ -143,6 +143,31 @@ describe("SupabaseProductRepository", () => {
     });
   });
 
+  it("maps SKU unique violations even when Supabase omits details", async () => {
+    const supabaseClient = new FakeSupabaseProductClient({
+      data: null,
+      error: {
+        code: "23505",
+        message:
+          'duplicate key value violates unique constraint "products_sku_unique_idx"',
+      },
+    });
+    const repository = new SupabaseProductRepository(supabaseClient);
+
+    const result = await repository.save({
+      id: "product-1",
+      isActive: true,
+      name: "Caneca personalizada",
+      price: Money.fromReais(35),
+      sku: "CANECA-001",
+    });
+
+    expect(result).toEqual({
+      error: "sku_already_exists",
+      success: false,
+    });
+  });
+
   it("maps unknown Supabase errors", async () => {
     const supabaseClient = new FakeSupabaseProductClient({
       data: null,
