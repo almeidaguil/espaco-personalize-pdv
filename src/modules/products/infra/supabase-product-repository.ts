@@ -27,14 +27,16 @@ type SupabaseError = {
   message?: string;
 };
 
+type SupabaseSingleProductResult = PromiseLike<{
+  data: SupabaseProductRow | null;
+  error: SupabaseError | null;
+}>;
+
 type SupabaseProductClient = {
   from(table: "products"): {
     insert(payload: SupabaseProductInsert): {
       select(columns: string): {
-        single(): Promise<{
-          data: SupabaseProductRow | null;
-          error: SupabaseError | null;
-        }>;
+        single(): SupabaseSingleProductResult;
       };
     };
   };
