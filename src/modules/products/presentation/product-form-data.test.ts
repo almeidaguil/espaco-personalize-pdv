@@ -46,6 +46,21 @@ describe("parseCreateProductFormData", () => {
     });
   });
 
+  it("keeps checked products active when hidden and checkbox values are submitted", () => {
+    const formData = new FormData();
+    formData.set("name", "Caneca personalizada");
+    formData.set("priceInReais", "35");
+    formData.append("isActive", "false");
+    formData.append("isActive", "true");
+
+    expect(parseCreateProductFormData(formData)).toEqual({
+      isActive: true,
+      name: "Caneca personalizada",
+      priceInReais: 35,
+      sku: null,
+    });
+  });
+
   it("uses invalid price when the price is missing or not a string", () => {
     const formData = new FormData();
     formData.set("name", "Caneca personalizada");
