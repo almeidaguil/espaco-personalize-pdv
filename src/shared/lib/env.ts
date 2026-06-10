@@ -5,10 +5,10 @@ const publicEnvSchema = z.object({
     .string()
     .trim()
     .url("NEXT_PUBLIC_SUPABASE_URL must be a valid URL"),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z
+  NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: z
     .string()
     .trim()
-    .min(1, "NEXT_PUBLIC_SUPABASE_ANON_KEY is required"),
+    .min(1, "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY is required"),
 });
 
 export type PublicEnv = z.infer<typeof publicEnvSchema>;
@@ -18,7 +18,8 @@ export function parsePublicEnv(
 ): PublicEnv {
   return publicEnvSchema.parse({
     NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
+      env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
   });
 }
 
