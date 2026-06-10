@@ -10,7 +10,7 @@ export type CreateProductUseCaseResult =
       success: true;
     }
   | {
-      fieldErrors?: Partial<Record<"name" | "priceInCents" | "sku", string>>;
+      fieldErrors?: Partial<Record<"name" | "priceInReais" | "sku", string>>;
       formError?: string;
       success: false;
     };
@@ -32,7 +32,7 @@ export async function createProductUseCase(
     return {
       fieldErrors: {
         name: flattenedErrors.name?.[0],
-        priceInCents: flattenedErrors.priceInCents?.[0],
+        priceInReais: flattenedErrors.priceInReais?.[0],
         sku: flattenedErrors.sku?.[0],
       },
       success: false,
@@ -43,7 +43,7 @@ export async function createProductUseCase(
     id: dependencies.generateProductId(),
     isActive: parsedInput.data.isActive,
     name: parsedInput.data.name,
-    priceInCents: parsedInput.data.priceInCents,
+    priceInReais: parsedInput.data.priceInReais,
     sku: parsedInput.data.sku,
   });
 

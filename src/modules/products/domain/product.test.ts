@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { Money } from "./money";
 import { activateProduct, createProduct, deactivateProduct } from "./product";
 
 describe("createProduct", () => {
@@ -7,27 +8,30 @@ describe("createProduct", () => {
     const result = createProduct({
       id: " product-1 ",
       name: " Caneca personalizada ",
-      priceInCents: 3500,
+      priceInReais: 35,
       sku: " CANECA-001 ",
     });
 
-    expect(result).toEqual({
-      product: {
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.product).toMatchObject({
         id: "product-1",
         isActive: true,
         name: "Caneca personalizada",
-        priceInCents: 3500,
         sku: "CANECA-001",
-      },
-      success: true,
-    });
+      });
+      expect(result.product.price.currency).toBe("BRL");
+      expect(result.product.price.toReais()).toBe(35);
+      expect(result.product.price.toCents()).toBe(3500);
+    }
   });
 
   it("does not expose stock as product state", () => {
     const result = createProduct({
       id: "product-1",
       name: "Caneca personalizada",
-      priceInCents: 3500,
+      priceInReais: 35,
     });
 
     expect(result.success).toBe(true);
@@ -42,7 +46,7 @@ describe("createProduct", () => {
     const result = createProduct({
       id: "product-1",
       name: " ",
-      priceInCents: 3500,
+      priceInReais: 35,
     });
 
     expect(result).toEqual({
@@ -60,13 +64,13 @@ describe("createProduct", () => {
     const result = createProduct({
       id: "product-1",
       name: "Caneca personalizada",
-      priceInCents: -1,
+      priceInReais: -1,
     });
 
     expect(result).toEqual({
       errors: [
         {
-          field: "priceInCents",
+          field: "priceInReais",
           message: "Product price cannot be negative.",
         },
       ],
@@ -74,18 +78,51 @@ describe("createProduct", () => {
     });
   });
 
-  it("rejects prices that are not represented in cents", () => {
+  it("accepts prices with cents in Reais", () => {
     const result = createProduct({
       id: "product-1",
       name: "Caneca personalizada",
-      priceInCents: 10.5,
+      priceInReais: 35.99,
+    });
+
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.product.price.toReais()).toBe(35.99);
+      expect(result.product.price.toCents()).toBe(3599);
+    }
+  });
+
+  it("rejects prices with more than 2 decimal places", () => {
+    const result = createProduct({
+      id: "product-1",
+      name: "Caneca personalizada",
+      priceInReais: 35.999,
     });
 
     expect(result).toEqual({
       errors: [
         {
-          field: "priceInCents",
-          message: "Product price must be represented in cents.",
+          field: "priceInReais",
+          message: "Product price can have at most 2 decimal places.",
+        },
+      ],
+      success: false,
+    });
+  });
+
+  it("rejects invalid prices in Reais", () => {
+    const result = createProduct({
+      id: "product-1",
+      name: "Caneca personalizada",
+      priceInReais: Number.NaN,
+    });
+
+    expect(result).toEqual({
+      errors: [
+        {
+          field: "priceInReais",
+          message: "Product price must be a valid BRL amount.",
         },
       ],
       success: false,
@@ -99,7 +136,7 @@ describe("product activation", () => {
       id: "product-1",
       isActive: true,
       name: "Caneca personalizada",
-      priceInCents: 3500,
+      price: Money.fromReais(35),
       sku: "CANECA-001",
     };
 
@@ -114,7 +151,7 @@ describe("product activation", () => {
       id: "product-1",
       isActive: false,
       name: "Caneca personalizada",
-      priceInCents: 3500,
+      price: Money.fromReais(35),
       sku: "CANECA-001",
     };
 
