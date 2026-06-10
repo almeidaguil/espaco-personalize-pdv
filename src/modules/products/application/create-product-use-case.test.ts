@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { createProductUseCase } from "./create-product-use-case";
 import type {
+  ListProductsResult,
   ProductRepository,
   SaveProductResult,
 } from "./product-repository";
@@ -12,6 +13,13 @@ class FakeProductRepository implements ProductRepository {
   public savedProduct?: Product;
 
   constructor(private readonly saveResult?: SaveProductResult) {}
+
+  async list(): Promise<ListProductsResult> {
+    return {
+      products: [],
+      success: true,
+    };
+  }
 
   async save(product: Product): Promise<SaveProductResult> {
     this.savedProduct = product;

@@ -1,6 +1,7 @@
 import { Money } from "../domain/money";
 import type { Product } from "../domain/product";
 import type {
+  ListProductsResult,
   ProductRepository,
   SaveProductResult,
 } from "../application/product-repository";
@@ -32,6 +33,11 @@ type SupabaseSingleProductResult = PromiseLike<{
   error: SupabaseError | null;
 }>;
 
+type SupabaseProductListResult = PromiseLike<{
+  data: SupabaseProductRow[] | null;
+  error: SupabaseError | null;
+}>;
+
 type SupabaseProductClient = {
   from(table: "products"): {
     insert(payload: SupabaseProductInsert): {
@@ -39,11 +45,36 @@ type SupabaseProductClient = {
         single(): SupabaseSingleProductResult;
       };
     };
+    select(columns: string): {
+      order(
+        column: "name",
+        options: { ascending: true },
+      ): SupabaseProductListResult;
+    };
   };
 };
 
 export class SupabaseProductRepository implements ProductRepository {
   constructor(private readonly supabaseClient: SupabaseProductClient) {}
+
+  async list(): Promise<ListProductsResult> {
+    const { data, error } = await this.supabaseClient
+      .from("products")
+      .select("id,name,sku,price_in_cents,is_active")
+      .order("name", { ascending: true });
+
+    if (error || !data) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
+    return {
+      products: data.map(toProduct),
+      success: true,
+    };
+  }
 
   async save(product: Product): Promise<SaveProductResult> {
     const { data, error } = await this.supabaseClient
