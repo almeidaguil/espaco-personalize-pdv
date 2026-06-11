@@ -22,8 +22,17 @@ vi.mock("@/modules/cash/infra/supabase-cash-session-repository", () => ({
   SupabaseCashSessionRepository: vi.fn(),
 }));
 
+vi.mock("@/modules/products/infra/supabase-product-repository", () => ({
+  SupabaseProductRepository: vi.fn(),
+}));
+
+vi.mock("@/modules/sales/presentation/pdv-cart", () => ({
+  PdvCart: () => <section aria-label="Carrinho do PDV" />,
+}));
+
 const listActiveEventsUseCaseMock = vi.hoisted(() => vi.fn());
 const listOpenCashSessionsUseCaseMock = vi.hoisted(() => vi.fn());
+const listProductsUseCaseMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/events/application/list-active-events-use-case", () => ({
   listActiveEventsUseCase: listActiveEventsUseCaseMock,
@@ -31,6 +40,10 @@ vi.mock("@/modules/events/application/list-active-events-use-case", () => ({
 
 vi.mock("@/modules/cash/application/list-open-cash-sessions-use-case", () => ({
   listOpenCashSessionsUseCase: listOpenCashSessionsUseCaseMock,
+}));
+
+vi.mock("@/modules/products/application/list-products-use-case", () => ({
+  listProductsUseCase: listProductsUseCaseMock,
 }));
 
 describe("PdvPage", () => {
@@ -60,6 +73,19 @@ describe("PdvPage", () => {
       ],
       success: true,
     });
+    listProductsUseCaseMock.mockResolvedValueOnce({
+      products: [
+        {
+          id: "product-1",
+          isActive: true,
+          name: "Chaveiro Polvo",
+          price: {
+            toReais: () => 15,
+          },
+        },
+      ],
+      success: true,
+    });
 
     render(await PdvPage());
 
@@ -76,6 +102,7 @@ describe("PdvPage", () => {
       }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/Evento Julho/)).toBeChecked();
+    expect(screen.getByLabelText("Carrinho do PDV")).toBeInTheDocument();
   });
 
   it("renders the cash opening requirement when there are no open sessions", async () => {
@@ -93,6 +120,10 @@ describe("PdvPage", () => {
     });
     listOpenCashSessionsUseCaseMock.mockResolvedValueOnce({
       sessions: [],
+      success: true,
+    });
+    listProductsUseCaseMock.mockResolvedValueOnce({
+      products: [],
       success: true,
     });
 
@@ -117,6 +148,10 @@ describe("PdvPage", () => {
     });
     listOpenCashSessionsUseCaseMock.mockResolvedValueOnce({
       sessions: [],
+      success: true,
+    });
+    listProductsUseCaseMock.mockResolvedValueOnce({
+      products: [],
       success: true,
     });
 
