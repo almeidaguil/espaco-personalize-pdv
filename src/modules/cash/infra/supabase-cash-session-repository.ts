@@ -25,6 +25,11 @@ type SupabaseCashSessionInsert = {
   status: CashSessionStatus;
 };
 
+type SupabaseCashSessionUpdate = {
+  closed_at: string | null;
+  status: CashSessionStatus;
+};
+
 type SupabaseError = {
   code?: string;
   details?: string;
@@ -41,6 +46,14 @@ type SupabaseMaybeSingleCashSessionResult = PromiseLike<{
   error: SupabaseError | null;
 }>;
 
+type SupabaseCashSessionFilterBuilder = {
+  eq(
+    column: "event_id" | "id" | "operator_id" | "status",
+    value: string,
+  ): SupabaseCashSessionFilterBuilder;
+  maybeSingle(): SupabaseMaybeSingleCashSessionResult;
+};
+
 export type SupabaseCashSessionClient = {
   from(table: "cash_sessions"): {
     insert(payload: SupabaseCashSessionInsert): {
@@ -48,21 +61,14 @@ export type SupabaseCashSessionClient = {
         single(): SupabaseSingleCashSessionResult;
       };
     };
-    select(columns: string): {
+    select(columns: string): SupabaseCashSessionFilterBuilder;
+    update(payload: SupabaseCashSessionUpdate): {
       eq(
-        column: "event_id",
+        column: "id",
         value: string,
       ): {
-        eq(
-          column: "operator_id",
-          value: string,
-        ): {
-          eq(
-            column: "status",
-            value: "open",
-          ): {
-            maybeSingle(): SupabaseMaybeSingleCashSessionResult;
-          };
+        select(columns: string): {
+          single(): SupabaseSingleCashSessionResult;
         };
       };
     };
@@ -74,6 +80,31 @@ const cashSessionColumns =
 
 export class SupabaseCashSessionRepository implements CashSessionRepository {
   constructor(private readonly supabaseClient: SupabaseCashSessionClient) {}
+
+  async findOpenByIdAndOperator(input: {
+    cashSessionId: string;
+    operatorId: string;
+  }): Promise<FindOpenCashSessionResult> {
+    const { data, error } = await this.supabaseClient
+      .from("cash_sessions")
+      .select(cashSessionColumns)
+      .eq("id", input.cashSessionId)
+      .eq("operator_id", input.operatorId)
+      .eq("status", "open")
+      .maybeSingle();
+
+    if (error) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
+    return {
+      session: data ? toCashSession(data) : null,
+      success: true,
+    };
+  }
 
   async findOpenByEventAndOperator(input: {
     eventId: string;
@@ -121,6 +152,27 @@ export class SupabaseCashSessionRepository implements CashSessionRepository {
       success: true,
     };
   }
+
+  async update(session: CashSession): Promise<SaveCashSessionResult> {
+    const { data, error } = await this.supabaseClient
+      .from("cash_sessions")
+      .update(toCashSessionUpdate(session))
+      .eq("id", session.id)
+      .select(cashSessionColumns)
+      .single();
+
+    if (error || !data) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
+    return {
+      session: toCashSession(data),
+      success: true,
+    };
+  }
 }
 
 function toCashSessionInsert(session: CashSession): SupabaseCashSessionInsert {
@@ -131,6 +183,13 @@ function toCashSessionInsert(session: CashSession): SupabaseCashSessionInsert {
     opened_at: session.openedAt.toISOString(),
     opening_amount_in_cents: Math.round(session.openingAmountInReais * 100),
     operator_id: session.operatorId,
+    status: session.status,
+  };
+}
+
+function toCashSessionUpdate(session: CashSession): SupabaseCashSessionUpdate {
+  return {
+    closed_at: session.closedAt?.toISOString() ?? null,
     status: session.status,
   };
 }

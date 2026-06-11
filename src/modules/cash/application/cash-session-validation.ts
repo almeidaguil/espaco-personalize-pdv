@@ -15,4 +15,11 @@ export const openCashSessionSchema = z.object({
     ),
 });
 
+export const closeCashSessionSchema = z.object({
+  cashSessionId: z.string().trim().min(1, "Informe o caixa aberto."),
+});
+
+export type CloseCashSessionUseCaseInput = z.infer<
+  typeof closeCashSessionSchema
+>;
 export type OpenCashSessionUseCaseInput = z.infer<typeof openCashSessionSchema>;

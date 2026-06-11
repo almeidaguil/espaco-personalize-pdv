@@ -21,9 +21,14 @@ export type FindOpenCashSessionResult =
     };
 
 export type CashSessionRepository = {
+  findOpenByIdAndOperator(input: {
+    cashSessionId: string;
+    operatorId: string;
+  }): Promise<FindOpenCashSessionResult>;
   findOpenByEventAndOperator(input: {
     eventId: string;
     operatorId: string;
   }): Promise<FindOpenCashSessionResult>;
   save(session: CashSession): Promise<SaveCashSessionResult>;
+  update(session: CashSession): Promise<SaveCashSessionResult>;
 };

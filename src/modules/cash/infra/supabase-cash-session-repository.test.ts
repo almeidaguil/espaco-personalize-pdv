@@ -26,6 +26,7 @@ class FakeSupabaseCashSessionClient {
   public eqFilters: Array<{ column: string; value: unknown }> = [];
   public insertedPayload?: unknown;
   public selectedColumns?: string;
+  public updatedPayload?: unknown;
 
   constructor(
     private readonly response: FakeSupabaseResponse,
@@ -55,22 +56,21 @@ class FakeSupabaseCashSessionClient {
       select: (columns: string) => {
         this.selectedColumns = columns;
 
+        return this.createFilterBuilder();
+      },
+      update: (payload: unknown) => {
+        this.updatedPayload = payload;
+
         return {
           eq: (column: string, value: unknown) => {
             this.eqFilters.push({ column, value });
 
             return {
-              eq: (column: string, value: unknown) => {
-                this.eqFilters.push({ column, value });
+              select: (columns: string) => {
+                this.selectedColumns = columns;
 
                 return {
-                  eq: (column: string, value: unknown) => {
-                    this.eqFilters.push({ column, value });
-
-                    return {
-                      maybeSingle: async () => this.findResponse,
-                    };
-                  },
+                  single: async () => this.response,
                 };
               },
             };
@@ -78,6 +78,19 @@ class FakeSupabaseCashSessionClient {
         };
       },
     };
+  }
+
+  private createFilterBuilder() {
+    const builder = {
+      eq: (column: string, value: unknown) => {
+        this.eqFilters.push({ column, value });
+
+        return builder;
+      },
+      maybeSingle: async () => this.findResponse,
+    };
+
+    return builder;
   }
 }
 
@@ -181,6 +194,84 @@ describe("SupabaseCashSessionRepository", () => {
     if (result.success) {
       expect(result.session?.id).toBe("cash-session-1");
       expect(result.session?.openingAmountInReais).toBe(150.5);
+    }
+  });
+
+  it("finds an open cash session by id and operator", async () => {
+    const supabaseClient = new FakeSupabaseCashSessionClient(
+      { data: null, error: null },
+      {
+        data: {
+          closed_at: null,
+          event_id: "event-1",
+          id: "cash-session-1",
+          opened_at: "2026-07-10T12:00:00.000Z",
+          opening_amount_in_cents: 15050,
+          operator_id: "operator-1",
+          status: "open",
+        },
+        error: null,
+      },
+    );
+    const repository = new SupabaseCashSessionRepository(supabaseClient);
+
+    const result = await repository.findOpenByIdAndOperator({
+      cashSessionId: "cash-session-1",
+      operatorId: "operator-1",
+    });
+
+    expect(supabaseClient.eqFilters).toEqual([
+      { column: "id", value: "cash-session-1" },
+      { column: "operator_id", value: "operator-1" },
+      { column: "status", value: "open" },
+    ]);
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.session?.id).toBe("cash-session-1");
+      expect(result.session?.openingAmountInReais).toBe(150.5);
+    }
+  });
+
+  it("updates a cash session when closing it", async () => {
+    const supabaseClient = new FakeSupabaseCashSessionClient({
+      data: {
+        closed_at: "2026-07-10T18:00:00.000Z",
+        event_id: "event-1",
+        id: "cash-session-1",
+        opened_at: "2026-07-10T12:00:00.000Z",
+        opening_amount_in_cents: 15050,
+        operator_id: "operator-1",
+        status: "closed",
+      },
+      error: null,
+    });
+    const repository = new SupabaseCashSessionRepository(supabaseClient);
+
+    const result = await repository.update({
+      closedAt: new Date("2026-07-10T18:00:00.000Z"),
+      eventId: "event-1",
+      id: "cash-session-1",
+      openedAt: new Date("2026-07-10T12:00:00.000Z"),
+      openingAmountInReais: 150.5,
+      operatorId: "operator-1",
+      status: "closed",
+    });
+
+    expect(supabaseClient.updatedPayload).toEqual({
+      closed_at: "2026-07-10T18:00:00.000Z",
+      status: "closed",
+    });
+    expect(supabaseClient.eqFilters).toEqual([
+      { column: "id", value: "cash-session-1" },
+    ]);
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.session.status).toBe("closed");
+      expect(result.session.closedAt).toEqual(
+        new Date("2026-07-10T18:00:00.000Z"),
+      );
     }
   });
 

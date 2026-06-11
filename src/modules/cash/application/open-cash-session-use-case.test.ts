@@ -31,6 +31,13 @@ class FakeCashSessionRepository implements CashSessionRepository {
     return this.findResult;
   }
 
+  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
+    return {
+      session: null,
+      success: true,
+    };
+  }
+
   async save(session: CashSession): Promise<SaveCashSessionResult> {
     this.savedSession = session;
 
@@ -40,6 +47,13 @@ class FakeCashSessionRepository implements CashSessionRepository {
         success: true,
       }
     );
+  }
+
+  async update(session: CashSession): Promise<SaveCashSessionResult> {
+    return {
+      session,
+      success: true,
+    };
   }
 }
 
