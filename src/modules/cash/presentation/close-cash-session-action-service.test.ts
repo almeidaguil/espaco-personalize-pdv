@@ -8,24 +8,23 @@ import type {
   SaveCashSessionResult,
 } from "../application/cash-session-repository";
 import type { CashSession } from "../domain/cash-session";
-import { openCashSessionActionService } from "./open-cash-session-action-service";
+import { closeCashSessionActionService } from "./close-cash-session-action-service";
 
 class FakeCashSessionRepository implements CashSessionRepository {
-  public savedSession?: CashSession;
+  public updatedSession?: CashSession;
 
   constructor(
     private readonly findResult: FindOpenCashSessionResult = {
-      session: null,
+      session: createCashSession(),
       success: true,
     },
-    private readonly saveResult?: SaveCashSessionResult,
   ) {}
 
-  async findOpenByEventAndOperator(): Promise<FindOpenCashSessionResult> {
+  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
     return this.findResult;
   }
 
-  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
+  async findOpenByEventAndOperator(): Promise<FindOpenCashSessionResult> {
     return {
       session: null,
       success: true,
@@ -33,17 +32,15 @@ class FakeCashSessionRepository implements CashSessionRepository {
   }
 
   async save(session: CashSession): Promise<SaveCashSessionResult> {
-    this.savedSession = session;
-
-    return (
-      this.saveResult ?? {
-        session,
-        success: true,
-      }
-    );
+    return {
+      session,
+      success: true,
+    };
   }
 
   async update(session: CashSession): Promise<SaveCashSessionResult> {
+    this.updatedSession = session;
+
     return {
       session,
       success: true,
@@ -51,81 +48,73 @@ class FakeCashSessionRepository implements CashSessionRepository {
   }
 }
 
-describe("openCashSessionActionService", () => {
-  it("opens a cash session for the current user", async () => {
+describe("closeCashSessionActionService", () => {
+  it("closes a cash session for the current user", async () => {
     const cashSessionRepository = new FakeCashSessionRepository();
 
-    const result = await openCashSessionActionService(
+    const result = await closeCashSessionActionService(
       {},
       createFormData({
-        eventId: "event-1",
-        openingAmountInReais: "150,50",
+        cashSessionId: "cash-session-1",
       }),
       {
         cashSessionRepository,
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateCashSessionId: () => "cash-session-1",
-        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
       },
     );
 
     expect(result).toEqual({
-      successMessage: "Caixa aberto com sucesso.",
+      successMessage: "Caixa fechado com sucesso.",
     });
-    expect(cashSessionRepository.savedSession).toMatchObject({
-      eventId: "event-1",
+    expect(cashSessionRepository.updatedSession).toMatchObject({
+      closedAt: new Date("2026-07-10T18:00:00.000Z"),
       id: "cash-session-1",
-      openingAmountInReais: 150.5,
       operatorId: "operator-1",
-      status: "open",
+      status: "closed",
     });
   });
 
   it("returns validation errors from the use case", async () => {
-    const result = await openCashSessionActionService(
+    const result = await closeCashSessionActionService(
       {},
       createFormData({
-        eventId: "",
-        openingAmountInReais: "-1",
+        cashSessionId: "",
       }),
       {
         cashSessionRepository: new FakeCashSessionRepository(),
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateCashSessionId: () => "cash-session-1",
-        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
       },
     );
 
     expect(result).toEqual({
       fieldErrors: {
-        eventId: "Informe o evento.",
-        openingAmountInReais: "O valor inicial nao pode ser negativo.",
+        cashSessionId: "Informe o caixa aberto.",
       },
       formError: undefined,
     });
   });
 
-  it("returns duplicated open session errors", async () => {
-    const result = await openCashSessionActionService(
+  it("returns missing open session errors", async () => {
+    const result = await closeCashSessionActionService(
       {},
       createFormData({
-        eventId: "event-1",
-        openingAmountInReais: "150,50",
+        cashSessionId: "cash-session-1",
       }),
       {
         cashSessionRepository: new FakeCashSessionRepository({
-          session: createCashSession(),
+          session: null,
           success: true,
         }),
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateCashSessionId: () => "cash-session-2",
-        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
       },
     );
 
     expect(result).toEqual({
       fieldErrors: undefined,
-      formError: "Ja existe um caixa aberto para este evento.",
+      formError: "Nao ha caixa aberto para fechar.",
     });
   });
 });
@@ -142,13 +131,9 @@ function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
   };
 }
 
-function createFormData(input: {
-  eventId: string;
-  openingAmountInReais: string;
-}): FormData {
+function createFormData(input: { cashSessionId: string }): FormData {
   const formData = new FormData();
-  formData.set("eventId", input.eventId);
-  formData.set("openingAmountInReais", input.openingAmountInReais);
+  formData.set("cashSessionId", input.cashSessionId);
 
   return formData;
 }
