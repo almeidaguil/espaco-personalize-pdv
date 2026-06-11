@@ -26,9 +26,21 @@ describe("Home", () => {
     ).toBe(true);
     expect(
       screen
+        .getAllByRole("link", { name: /Eventos/ })
+        .some((link) => link.getAttribute("href") === "/events"),
+    ).toBe(true);
+    expect(
+      screen
+        .getAllByRole("link", { name: /Caixa/ })
+        .some((link) => link.getAttribute("href") === "/cash/open"),
+    ).toBe(true);
+    expect(
+      screen
         .getAllByRole("link", { name: /PDV/ })
         .some((link) => link.getAttribute("href") === "/pdv"),
     ).toBe(true);
     expect(screen.getByText("Fechado")).toBeInTheDocument();
+    expect(screen.getAllByText("Disponivel")).toHaveLength(4);
+    expect(screen.getByText("Parcial")).toBeInTheDocument();
   });
 });

@@ -18,25 +18,25 @@ const modules = [
   {
     description: "Ajustes iniciais e manuais por movimentacao.",
     href: "/stock",
-    status: "Proxima tela",
+    status: "Disponivel",
     title: "Estoque",
   },
   {
     description: "Preparacao das vendas presenciais.",
     href: "/events",
-    status: "Em breve",
+    status: "Disponivel",
     title: "Eventos",
   },
   {
-    description: "Carrinho, pagamento e finalizacao.",
+    description: "Selecao de evento e verificacao de caixa aberto.",
     href: "/pdv",
-    status: "Em breve",
+    status: "Parcial",
     title: "PDV",
   },
   {
     description: "Abertura, fechamento e turnos de evento.",
     href: "/cash/open",
-    status: "Em breve",
+    status: "Disponivel",
     title: "Caixa",
   },
   {
