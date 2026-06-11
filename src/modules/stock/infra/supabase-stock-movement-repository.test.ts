@@ -58,6 +58,15 @@ class FakeSupabaseStockMovementClient {
         this.selectedColumns = columns;
 
         return {
+          order: (
+            columnToOrder: "created_at",
+            options: { ascending: boolean },
+          ) => {
+            this.orderedColumn = columnToOrder;
+            this.orderOptions = options;
+
+            return Promise.resolve(this.listResponse);
+          },
           eq: (column: "product_id", value: string) => {
             this.eqColumn = column;
             this.eqValue = value;
@@ -156,6 +165,32 @@ describe("SupabaseStockMovementRepository", () => {
     expect(supabaseClient.eqValue).toBe("product-1");
     expect(supabaseClient.orderedColumn).toBe("created_at");
     expect(supabaseClient.orderOptions).toEqual({ ascending: true });
+  });
+
+  it("lists all stock movements ordered by most recent first", async () => {
+    const supabaseClient = new FakeSupabaseStockMovementClient(
+      { data: null, error: null },
+      {
+        data: [
+          {
+            created_at: "2026-06-10T12:00:00.000Z",
+            id: "movement-1",
+            product_id: "product-1",
+            quantity_change: 10,
+            type: "initial_adjustment",
+          },
+        ],
+        error: null,
+      },
+    );
+    const repository = new SupabaseStockMovementRepository(supabaseClient);
+
+    await expect(repository.listAll()).resolves.toEqual([createMovement()]);
+    expect(supabaseClient.selectedColumns).toBe(
+      "id,product_id,type,quantity_change,created_at",
+    );
+    expect(supabaseClient.orderedColumn).toBe("created_at");
+    expect(supabaseClient.orderOptions).toEqual({ ascending: false });
   });
 
   it("returns an empty list when listing fails", async () => {

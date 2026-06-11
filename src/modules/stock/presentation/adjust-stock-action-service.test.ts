@@ -11,6 +11,10 @@ class FakeStockMovementRepository implements StockMovementRepository {
 
   constructor(private readonly movements: StockMovement[] = []) {}
 
+  async listAll(): Promise<StockMovement[]> {
+    return this.movements;
+  }
+
   async listByProductId(): Promise<StockMovement[]> {
     return this.movements;
   }
