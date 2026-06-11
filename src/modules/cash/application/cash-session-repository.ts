@@ -20,6 +20,16 @@ export type FindOpenCashSessionResult =
       success: false;
     };
 
+export type ListOpenCashSessionsResult =
+  | {
+      sessions: CashSession[];
+      success: true;
+    }
+  | {
+      error: "unknown";
+      success: false;
+    };
+
 export type CashSessionRepository = {
   findOpenByIdAndOperator(input: {
     cashSessionId: string;
@@ -29,6 +39,7 @@ export type CashSessionRepository = {
     eventId: string;
     operatorId: string;
   }): Promise<FindOpenCashSessionResult>;
+  listOpenByOperator(operatorId: string): Promise<ListOpenCashSessionsResult>;
   save(session: CashSession): Promise<SaveCashSessionResult>;
   update(session: CashSession): Promise<SaveCashSessionResult>;
 };

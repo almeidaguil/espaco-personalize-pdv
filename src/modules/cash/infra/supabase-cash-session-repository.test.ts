@@ -22,9 +22,19 @@ type FakeSupabaseResponse = {
   } | null;
 };
 
+type FakeSupabaseListResponse = {
+  data: FakeSupabaseCashSessionRow[] | null;
+  error: {
+    code?: string;
+    details?: string;
+    message?: string;
+  } | null;
+};
+
 class FakeSupabaseCashSessionClient {
   public eqFilters: Array<{ column: string; value: unknown }> = [];
   public insertedPayload?: unknown;
+  public orderedBy?: { ascending: boolean; column: string };
   public selectedColumns?: string;
   public updatedPayload?: unknown;
 
@@ -32,6 +42,10 @@ class FakeSupabaseCashSessionClient {
     private readonly response: FakeSupabaseResponse,
     private readonly findResponse: FakeSupabaseResponse = {
       data: null,
+      error: null,
+    },
+    private readonly listResponse: FakeSupabaseListResponse = {
+      data: [],
       error: null,
     },
   ) {}
@@ -88,6 +102,14 @@ class FakeSupabaseCashSessionClient {
         return builder;
       },
       maybeSingle: async () => this.findResponse,
+      order: async (column: string, options: { ascending: boolean }) => {
+        this.orderedBy = {
+          ascending: options.ascending,
+          column,
+        };
+
+        return this.listResponse;
+      },
     };
 
     return builder;
@@ -272,6 +294,45 @@ describe("SupabaseCashSessionRepository", () => {
       expect(result.session.closedAt).toEqual(
         new Date("2026-07-10T18:00:00.000Z"),
       );
+    }
+  });
+
+  it("lists open cash sessions by operator", async () => {
+    const supabaseClient = new FakeSupabaseCashSessionClient(
+      { data: null, error: null },
+      { data: null, error: null },
+      {
+        data: [
+          {
+            closed_at: null,
+            event_id: "event-1",
+            id: "cash-session-1",
+            opened_at: "2026-07-10T12:00:00.000Z",
+            opening_amount_in_cents: 15050,
+            operator_id: "operator-1",
+            status: "open",
+          },
+        ],
+        error: null,
+      },
+    );
+    const repository = new SupabaseCashSessionRepository(supabaseClient);
+
+    const result = await repository.listOpenByOperator("operator-1");
+
+    expect(supabaseClient.eqFilters).toEqual([
+      { column: "operator_id", value: "operator-1" },
+      { column: "status", value: "open" },
+    ]);
+    expect(supabaseClient.orderedBy).toEqual({
+      ascending: false,
+      column: "opened_at",
+    });
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.sessions).toHaveLength(1);
+      expect(result.sessions[0]?.id).toBe("cash-session-1");
     }
   });
 

@@ -38,6 +38,13 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
+  async listOpenByOperator() {
+    return {
+      sessions: [],
+      success: true as const,
+    };
+  }
+
   async save(session: CashSession): Promise<SaveCashSessionResult> {
     this.savedSession = session;
 
