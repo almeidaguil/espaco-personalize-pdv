@@ -18,7 +18,14 @@ describe("NewProductPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Novo produto" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Produtos")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Painel" })).toHaveAttribute(
+      "href",
+      "/",
+    );
+    expect(screen.getByRole("link", { name: "Produtos" })).toHaveAttribute(
+      "href",
+      "/products",
+    );
     expect(screen.getByLabelText("Formulario de produto")).toBeInTheDocument();
   });
 });

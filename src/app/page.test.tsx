@@ -14,7 +14,21 @@ describe("Home", () => {
       screen.getByRole("img", { name: "Espaco Personalize" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Vendas hoje")).toBeInTheDocument();
-    expect(screen.getByText("Produtos")).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole("link", { name: /Produtos/ })
+        .some((link) => link.getAttribute("href") === "/products"),
+    ).toBe(true);
+    expect(
+      screen
+        .getAllByRole("link", { name: /Estoque/ })
+        .some((link) => link.getAttribute("href") === "/stock"),
+    ).toBe(true);
+    expect(
+      screen
+        .getAllByRole("link", { name: /PDV/ })
+        .some((link) => link.getAttribute("href") === "/pdv"),
+    ).toBe(true);
     expect(screen.getByText("Fechado")).toBeInTheDocument();
   });
 });

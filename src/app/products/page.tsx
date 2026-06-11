@@ -30,6 +30,12 @@ export default async function ProductsPage() {
     <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
       <section className="mx-auto grid w-full max-w-3xl gap-4">
         <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+          <Link
+            className="mb-3 inline-flex text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
+            href="/"
+          >
+            Voltar ao painel
+          </Link>
           <div className="flex items-start justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
@@ -44,7 +50,7 @@ export default async function ProductsPage() {
               className="rounded-md bg-[#f5c313] px-3 py-2 text-sm font-semibold text-[#1e3275] transition hover:bg-[#e7b80f]"
               href="/products/new"
             >
-              Novo
+              Novo produto
             </Link>
           </div>
         </header>
