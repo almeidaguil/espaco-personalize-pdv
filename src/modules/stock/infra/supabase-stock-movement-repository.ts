@@ -38,7 +38,7 @@ type SupabaseStockMovementListResult = PromiseLike<{
   error: SupabaseError | null;
 }>;
 
-type SupabaseStockMovementClient = {
+export type SupabaseStockMovementClient = {
   from(table: "stock_movements"): {
     insert(payload: SupabaseStockMovementInsert): {
       select(columns: string): {
