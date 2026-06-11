@@ -1,6 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import {
+  SupabaseCurrentUserProfileRepository,
+  type SupabaseCurrentUserProfileClient,
+} from "@/modules/auth/infra/supabase-current-user-profile-repository";
+import { listOpenCashSessionsUseCase } from "@/modules/cash/application/list-open-cash-sessions-use-case";
+import type { CashSession } from "@/modules/cash/domain/cash-session";
+import {
+  SupabaseCashSessionRepository,
+  type SupabaseCashSessionClient,
+} from "@/modules/cash/infra/supabase-cash-session-repository";
+import {
+  PdvCashStatus,
+  type PdvCashStatusItem,
+} from "@/modules/cash/presentation/pdv-cash-status";
 import { listActiveEventsUseCase } from "@/modules/events/application/list-active-events-use-case";
 import type { Event } from "@/modules/events/domain/event";
 import {
@@ -27,8 +41,27 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 export default async function PdvPage() {
   const supabaseClient = await createSupabaseServerClient();
   const eventClient = supabaseClient as unknown as SupabaseEventClient;
+  const cashSessionClient =
+    supabaseClient as unknown as SupabaseCashSessionClient;
+  const currentUserProfileClient =
+    supabaseClient as unknown as SupabaseCurrentUserProfileClient;
   const eventRepository = new SupabaseEventRepository(eventClient);
-  const result = await listActiveEventsUseCase({ eventRepository });
+  const [eventsResult, cashSessionsResult] = await Promise.all([
+    listActiveEventsUseCase({ eventRepository }),
+    listOpenCashSessionsUseCase({
+      cashSessionRepository: new SupabaseCashSessionRepository(
+        cashSessionClient,
+      ),
+      currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
+        currentUserProfileClient,
+      ),
+    }),
+  ]);
+  const eventNames = new Map(
+    eventsResult.success
+      ? eventsResult.events.map((event) => [event.id, event.name])
+      : [],
+  );
 
   return (
     <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
@@ -50,16 +83,31 @@ export default async function PdvPage() {
           </p>
         </header>
 
-        {!result.success ? (
+        {!eventsResult.success ? (
           <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {result.formError}
+            {eventsResult.formError}
           </section>
-        ) : result.events.length === 0 ? (
+        ) : eventsResult.events.length === 0 ? (
           <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
             Nenhum evento ativo disponivel para venda.
           </section>
         ) : (
-          <PdvEventSelector events={result.events.map(toPdvEventItem)} />
+          <>
+            {!cashSessionsResult.success ? (
+              <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                {cashSessionsResult.formError}
+              </section>
+            ) : (
+              <PdvCashStatus
+                sessions={cashSessionsResult.sessions.map((session) =>
+                  toPdvCashStatusItem(session, eventNames),
+                )}
+              />
+            )}
+            <PdvEventSelector
+              events={eventsResult.events.map(toPdvEventItem)}
+            />
+          </>
         )}
       </section>
     </main>
@@ -72,5 +120,16 @@ function toPdvEventItem(event: Event): PdvEventSelectorItem {
     location: event.location ?? null,
     name: event.name,
     startsAtLabel: dateFormatter.format(event.startsAt),
+  };
+}
+
+function toPdvCashStatusItem(
+  session: CashSession,
+  eventNames: Map<string, string>,
+): PdvCashStatusItem {
+  return {
+    eventName: eventNames.get(session.eventId) ?? "Evento sem nome",
+    id: session.id,
+    openedAtLabel: dateFormatter.format(session.openedAt),
   };
 }
