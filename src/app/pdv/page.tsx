@@ -25,6 +25,16 @@ import {
   PdvEventSelector,
   type PdvEventSelectorItem,
 } from "@/modules/events/presentation/pdv-event-selector";
+import { listProductsUseCase } from "@/modules/products/application/list-products-use-case";
+import type { Product } from "@/modules/products/domain/product";
+import {
+  SupabaseProductRepository,
+  type SupabaseProductClient,
+} from "@/modules/products/infra/supabase-product-repository";
+import {
+  PdvCart,
+  type PdvCartProduct,
+} from "@/modules/sales/presentation/pdv-cart";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -45,8 +55,9 @@ export default async function PdvPage() {
     supabaseClient as unknown as SupabaseCashSessionClient;
   const currentUserProfileClient =
     supabaseClient as unknown as SupabaseCurrentUserProfileClient;
+  const productClient = supabaseClient as unknown as SupabaseProductClient;
   const eventRepository = new SupabaseEventRepository(eventClient);
-  const [eventsResult, cashSessionsResult] = await Promise.all([
+  const [eventsResult, cashSessionsResult, productsResult] = await Promise.all([
     listActiveEventsUseCase({ eventRepository }),
     listOpenCashSessionsUseCase({
       cashSessionRepository: new SupabaseCashSessionRepository(
@@ -55,6 +66,9 @@ export default async function PdvPage() {
       currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
         currentUserProfileClient,
       ),
+    }),
+    listProductsUseCase({
+      productRepository: new SupabaseProductRepository(productClient),
     }),
   ]);
   const eventNames = new Map(
@@ -107,6 +121,17 @@ export default async function PdvPage() {
             <PdvEventSelector
               events={eventsResult.events.map(toPdvEventItem)}
             />
+            {!productsResult.success ? (
+              <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+                {productsResult.formError}
+              </section>
+            ) : (
+              <PdvCart
+                products={productsResult.products
+                  .filter((product) => product.isActive)
+                  .map(toPdvCartProduct)}
+              />
+            )}
           </>
         )}
       </section>
@@ -131,5 +156,14 @@ function toPdvCashStatusItem(
     eventName: eventNames.get(session.eventId) ?? "Evento sem nome",
     id: session.id,
     openedAtLabel: dateFormatter.format(session.openedAt),
+  };
+}
+
+function toPdvCartProduct(product: Product): PdvCartProduct {
+  return {
+    id: product.id,
+    name: product.name,
+    priceInReais: product.price.toReais(),
+    ...(product.sku ? { sku: product.sku } : {}),
   };
 }

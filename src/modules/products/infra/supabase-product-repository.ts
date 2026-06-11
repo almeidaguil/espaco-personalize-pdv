@@ -38,7 +38,7 @@ type SupabaseProductListResult = PromiseLike<{
   error: SupabaseError | null;
 }>;
 
-type SupabaseProductClient = {
+export type SupabaseProductClient = {
   from(table: "products"): {
     insert(payload: SupabaseProductInsert): {
       select(columns: string): {
