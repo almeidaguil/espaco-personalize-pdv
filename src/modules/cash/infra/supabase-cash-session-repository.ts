@@ -1,6 +1,7 @@
 import type {
   CashSessionRepository,
   FindOpenCashSessionResult,
+  ListOpenCashSessionsResult,
   SaveCashSessionResult,
 } from "../application/cash-session-repository";
 import type { CashSession, CashSessionStatus } from "../domain/cash-session";
@@ -46,12 +47,21 @@ type SupabaseMaybeSingleCashSessionResult = PromiseLike<{
   error: SupabaseError | null;
 }>;
 
+type SupabaseCashSessionListResult = PromiseLike<{
+  data: SupabaseCashSessionRow[] | null;
+  error: SupabaseError | null;
+}>;
+
 type SupabaseCashSessionFilterBuilder = {
   eq(
     column: "event_id" | "id" | "operator_id" | "status",
     value: string,
   ): SupabaseCashSessionFilterBuilder;
   maybeSingle(): SupabaseMaybeSingleCashSessionResult;
+  order(
+    column: "opened_at",
+    options: { ascending: boolean },
+  ): SupabaseCashSessionListResult;
 };
 
 export type SupabaseCashSessionClient = {
@@ -127,6 +137,29 @@ export class SupabaseCashSessionRepository implements CashSessionRepository {
 
     return {
       session: data ? toCashSession(data) : null,
+      success: true,
+    };
+  }
+
+  async listOpenByOperator(
+    operatorId: string,
+  ): Promise<ListOpenCashSessionsResult> {
+    const { data, error } = await this.supabaseClient
+      .from("cash_sessions")
+      .select(cashSessionColumns)
+      .eq("operator_id", operatorId)
+      .eq("status", "open")
+      .order("opened_at", { ascending: false });
+
+    if (error) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
+    return {
+      sessions: (data ?? []).map(toCashSession),
       success: true,
     };
   }
