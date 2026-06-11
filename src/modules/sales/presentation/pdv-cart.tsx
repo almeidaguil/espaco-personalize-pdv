@@ -24,6 +24,8 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
 
 export function PdvCart({ products }: PdvCartProps) {
   const [items, setItems] = useState<CartItem[]>([]);
+  const [receivedAmountInput, setReceivedAmountInput] = useState("");
+  const receivedAmountInReais = parseBrlAmount(receivedAmountInput);
   const totalInReais = useMemo(
     () =>
       items.reduce(
@@ -32,6 +34,9 @@ export function PdvCart({ products }: PdvCartProps) {
       ),
     [items],
   );
+  const paymentDifferenceInReais = receivedAmountInReais - totalInReais;
+  const hasCartItems = items.length > 0;
+  const hasValidReceivedAmount = Number.isFinite(receivedAmountInReais);
 
   return (
     <section className="grid gap-3 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -135,6 +140,55 @@ export function PdvCart({ products }: PdvCartProps) {
           </strong>
         </div>
       </div>
+
+      <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+        <div className="grid gap-2">
+          <label
+            className="text-sm font-medium text-slate-700"
+            htmlFor="receivedAmount"
+          >
+            Valor recebido
+          </label>
+          <input
+            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+            id="receivedAmount"
+            inputMode="decimal"
+            name="receivedAmount"
+            onChange={(event) => setReceivedAmountInput(event.target.value)}
+            placeholder="50,00"
+            type="text"
+            value={receivedAmountInput}
+          />
+        </div>
+
+        <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
+          {!hasCartItems ? (
+            <p className="text-sm text-slate-600">
+              Adicione itens para calcular o pagamento.
+            </p>
+          ) : !hasValidReceivedAmount ? (
+            <p className="text-sm text-slate-600">
+              Informe o valor recebido para calcular o troco.
+            </p>
+          ) : paymentDifferenceInReais < 0 ? (
+            <p className="text-sm font-semibold text-red-700">
+              Falta {moneyFormatter.format(Math.abs(paymentDifferenceInReais))}
+            </p>
+          ) : (
+            <p className="text-sm font-semibold text-emerald-700">
+              Troco {moneyFormatter.format(paymentDifferenceInReais)}
+            </p>
+          )}
+        </div>
+
+        <button
+          className="h-11 rounded-md bg-slate-300 px-4 text-sm font-semibold text-slate-600"
+          disabled
+          type="button"
+        >
+          Finalizar venda
+        </button>
+      </div>
     </section>
   );
 
@@ -169,4 +223,18 @@ export function PdvCart({ products }: PdvCartProps) {
       }),
     );
   }
+}
+
+function parseBrlAmount(value: string): number {
+  const normalizedValue = value
+    .trim()
+    .replace(/^R\$\s?/, "")
+    .replace(/\./g, "")
+    .replace(",", ".");
+
+  if (!normalizedValue) {
+    return Number.NaN;
+  }
+
+  return Number(normalizedValue);
 }
