@@ -22,6 +22,8 @@ type FakeSupabaseEventRow = {
 
 class FakeSupabaseEventClient {
   public insertedPayload?: unknown;
+  public eqColumn?: string;
+  public eqValue?: unknown;
   public orderedColumn?: string;
   public orderOptions?: unknown;
   public selectedColumns?: string;
@@ -55,6 +57,19 @@ class FakeSupabaseEventClient {
         this.selectedColumns = columns;
 
         return {
+          eq: (column: "is_active", value: true) => {
+            this.eqColumn = column;
+            this.eqValue = value;
+
+            return {
+              order: (column: "starts_at", options: { ascending: boolean }) => {
+                this.orderedColumn = column;
+                this.orderOptions = options;
+
+                return Promise.resolve(this.listResponse);
+              },
+            };
+          },
           order: (column: "starts_at", options: { ascending: boolean }) => {
             this.orderedColumn = column;
             this.orderOptions = options;
@@ -233,5 +248,41 @@ describe("SupabaseEventRepository", () => {
       error: "unknown",
       success: false,
     });
+  });
+
+  it("lists only active events ordered by start date", async () => {
+    const supabaseClient = new FakeSupabaseEventClient(
+      { data: null, error: null },
+      {
+        data: [
+          {
+            ends_at: null,
+            id: "event-1",
+            is_active: true,
+            location: "Centro de Eventos",
+            name: "Evento Julho",
+            starts_at: "2026-07-10T12:00:00.000Z",
+          },
+        ],
+        error: null,
+      },
+    );
+    const repository = new SupabaseEventRepository(supabaseClient);
+
+    const result = await repository.listActive();
+
+    expect(supabaseClient.selectedColumns).toBe(
+      "id,name,location,starts_at,ends_at,is_active",
+    );
+    expect(supabaseClient.eqColumn).toBe("is_active");
+    expect(supabaseClient.eqValue).toBe(true);
+    expect(supabaseClient.orderedColumn).toBe("starts_at");
+    expect(supabaseClient.orderOptions).toEqual({ ascending: false });
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.events).toHaveLength(1);
+      expect(result.events[0]?.isActive).toBe(true);
+    }
   });
 });
