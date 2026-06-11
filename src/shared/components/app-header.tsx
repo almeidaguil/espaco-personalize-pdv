@@ -5,7 +5,9 @@ import { BrandLogo } from "./brand-logo";
 const navigationItems = [
   { href: "/", label: "Painel" },
   { href: "/products", label: "Produtos" },
+  { href: "/events", label: "Eventos" },
   { href: "/stock", label: "Estoque" },
+  { href: "/cash/open", label: "Caixa" },
   { href: "/pdv", label: "PDV" },
 ] as const;
 
