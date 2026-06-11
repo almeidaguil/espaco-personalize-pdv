@@ -11,6 +11,7 @@ export type SaveStockMovementResult =
     };
 
 export type StockMovementRepository = {
+  listAll(): Promise<StockMovement[]>;
   listByProductId(productId: string): Promise<StockMovement[]>;
   save(movement: StockMovement): Promise<SaveStockMovementResult>;
 };

@@ -46,6 +46,10 @@ export type SupabaseStockMovementClient = {
       };
     };
     select(columns: string): {
+      order(
+        column: "created_at",
+        options: { ascending: boolean },
+      ): SupabaseStockMovementListResult;
       eq(
         column: "product_id",
         value: string,
@@ -64,6 +68,19 @@ const stockMovementColumns =
 
 export class SupabaseStockMovementRepository implements StockMovementRepository {
   constructor(private readonly supabaseClient: SupabaseStockMovementClient) {}
+
+  async listAll(): Promise<StockMovement[]> {
+    const { data, error } = await this.supabaseClient
+      .from("stock_movements")
+      .select(stockMovementColumns)
+      .order("created_at", { ascending: false });
+
+    if (error || !data) {
+      return [];
+    }
+
+    return data.map(toStockMovement);
+  }
 
   async listByProductId(productId: string): Promise<StockMovement[]> {
     const { data, error } = await this.supabaseClient

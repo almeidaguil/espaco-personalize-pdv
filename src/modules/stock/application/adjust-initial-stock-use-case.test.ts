@@ -16,6 +16,10 @@ class FakeStockMovementRepository implements StockMovementRepository {
     private readonly saveResult?: SaveStockMovementResult,
   ) {}
 
+  async listAll(): Promise<StockMovement[]> {
+    return this.movements;
+  }
+
   async listByProductId(productId: string): Promise<StockMovement[]> {
     this.listedProductId = productId;
 

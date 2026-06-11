@@ -4,11 +4,17 @@ import Link from "next/link";
 import { listProductsUseCase } from "@/modules/products/application/list-products-use-case";
 import type { Product } from "@/modules/products/domain/product";
 import { SupabaseProductRepository } from "@/modules/products/infra/supabase-product-repository";
+import { listStockMovementsSummaryUseCase } from "@/modules/stock/application/list-stock-movements-summary-use-case";
+import {
+  SupabaseStockMovementRepository,
+  type SupabaseStockMovementClient,
+} from "@/modules/stock/infra/supabase-stock-movement-repository";
 import { adjustStockAction } from "@/modules/stock/presentation/adjust-stock-action";
 import {
   StockAdjustmentForm,
   type StockAdjustmentProductOption,
 } from "@/modules/stock/presentation/stock-adjustment-form";
+import { StockMovementsOverview } from "@/modules/stock/presentation/stock-movements-overview";
 import { AppHeader } from "@/shared/components/app-header";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -21,7 +27,16 @@ export const dynamic = "force-dynamic";
 export default async function StockPage() {
   const supabaseClient = await createSupabaseServerClient();
   const productRepository = new SupabaseProductRepository(supabaseClient);
+  const stockMovementClient =
+    supabaseClient as unknown as SupabaseStockMovementClient;
+  const stockMovementRepository = new SupabaseStockMovementRepository(
+    stockMovementClient,
+  );
   const result = await listProductsUseCase({ productRepository });
+  const summaryResult = await listStockMovementsSummaryUseCase({
+    productRepository,
+    stockMovementRepository,
+  });
 
   return (
     <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
@@ -64,6 +79,17 @@ export default async function StockPage() {
               products={toActiveProductOptions(result.products)}
             />
           </section>
+        )}
+
+        {!summaryResult.success ? (
+          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            {summaryResult.formError}
+          </section>
+        ) : (
+          <StockMovementsOverview
+            balances={summaryResult.balances}
+            movements={summaryResult.movements}
+          />
         )}
       </section>
     </main>
