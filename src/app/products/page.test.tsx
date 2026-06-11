@@ -39,7 +39,10 @@ describe("ProductsPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Produtos" }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Novo" })).toHaveAttribute(
+    expect(
+      screen.getByRole("link", { name: "Voltar ao painel" }),
+    ).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: "Novo produto" })).toHaveAttribute(
       "href",
       "/products/new",
     );
