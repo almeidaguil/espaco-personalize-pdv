@@ -22,5 +22,6 @@ export type ListEventsResult =
 
 export type EventRepository = {
   list(): Promise<ListEventsResult>;
+  listActive(): Promise<ListEventsResult>;
   save(event: Event): Promise<SaveEventResult>;
 };

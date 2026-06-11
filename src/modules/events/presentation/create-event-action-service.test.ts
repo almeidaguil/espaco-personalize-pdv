@@ -22,6 +22,13 @@ class FakeEventRepository implements EventRepository {
     };
   }
 
+  async listActive(): Promise<ListEventsResult> {
+    return {
+      events: [],
+      success: true,
+    };
+  }
+
   async save(event: Event): Promise<SaveEventResult> {
     this.savedEvent = event;
 

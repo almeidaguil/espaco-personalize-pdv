@@ -46,6 +46,15 @@ export type SupabaseEventClient = {
       };
     };
     select(columns: string): {
+      eq(
+        column: "is_active",
+        value: true,
+      ): {
+        order(
+          column: "starts_at",
+          options: { ascending: boolean },
+        ): SupabaseEventListResult;
+      };
       order(
         column: "starts_at",
         options: { ascending: boolean },
@@ -58,6 +67,26 @@ const eventColumns = "id,name,location,starts_at,ends_at,is_active" as const;
 
 export class SupabaseEventRepository implements EventRepository {
   constructor(private readonly supabaseClient: SupabaseEventClient) {}
+
+  async listActive(): Promise<ListEventsResult> {
+    const { data, error } = await this.supabaseClient
+      .from("events")
+      .select(eventColumns)
+      .eq("is_active", true)
+      .order("starts_at", { ascending: false });
+
+    if (error || !data) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
+    return {
+      events: data.map(toEvent),
+      success: true,
+    };
+  }
 
   async list(): Promise<ListEventsResult> {
     const { data, error } = await this.supabaseClient
