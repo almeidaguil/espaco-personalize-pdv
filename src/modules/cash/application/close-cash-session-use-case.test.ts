@@ -71,6 +71,7 @@ describe("closeCashSessionUseCase", () => {
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: " cash-session-1 ",
+        countedAmountInReais: 260.75,
       },
       {
         cashSessionRepository,
@@ -86,6 +87,7 @@ describe("closeCashSessionUseCase", () => {
     });
     expect(cashSessionRepository.updatedSession).toEqual({
       closedAt: new Date("2026-07-10T18:00:00.000Z"),
+      countedAmountInReais: 260.75,
       eventId: "event-1",
       id: "cash-session-1",
       openedAt: new Date("2026-07-10T12:00:00.000Z"),
@@ -101,6 +103,7 @@ describe("closeCashSessionUseCase", () => {
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: "",
+        countedAmountInReais: Number.NaN,
       },
       {
         cashSessionRepository,
@@ -112,6 +115,7 @@ describe("closeCashSessionUseCase", () => {
     expect(result).toEqual({
       fieldErrors: {
         cashSessionId: "Informe o caixa aberto.",
+        countedAmountInReais: "Informe o valor contado em Reais.",
       },
       success: false,
     });
@@ -122,6 +126,7 @@ describe("closeCashSessionUseCase", () => {
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: "cash-session-1",
+        countedAmountInReais: 260.75,
       },
       {
         cashSessionRepository: new FakeCashSessionRepository(),
@@ -150,6 +155,7 @@ describe("closeCashSessionUseCase", () => {
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: "cash-session-1",
+        countedAmountInReais: 260.75,
       },
       {
         cashSessionRepository,
@@ -180,6 +186,7 @@ describe("closeCashSessionUseCase", () => {
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: "cash-session-1",
+        countedAmountInReais: 260.75,
       },
       {
         cashSessionRepository,

@@ -2,7 +2,11 @@ export type CashSessionStatus = "closed" | "open";
 
 export type CashSession = {
   closedAt?: Date;
+  closedBy?: string;
+  countedAmountInReais?: number;
+  differenceAmountInReais?: number;
   eventId: string;
+  expectedAmountInReais?: number;
   id: string;
   openedAt: Date;
   openingAmountInReais: number;
@@ -20,12 +24,14 @@ export type OpenCashSessionInput = {
 
 export type CloseCashSessionInput = {
   closedAt: Date;
+  countedAmountInReais: number;
   session: CashSession;
 };
 
 export type CashSessionValidationError = {
   field:
     | "closedAt"
+    | "countedAmountInReais"
     | "eventId"
     | "id"
     | "openedAt"
@@ -154,6 +160,30 @@ export function closeCashSession(
     });
   }
 
+  if (!Number.isFinite(input.countedAmountInReais)) {
+    errors.push({
+      field: "countedAmountInReais",
+      message: "Counted amount must be a valid BRL amount.",
+    });
+  }
+
+  if (input.countedAmountInReais < 0) {
+    errors.push({
+      field: "countedAmountInReais",
+      message: "Counted amount cannot be negative.",
+    });
+  }
+
+  if (
+    Number.isFinite(input.countedAmountInReais) &&
+    !hasBrlPrecision(input.countedAmountInReais)
+  ) {
+    errors.push({
+      field: "countedAmountInReais",
+      message: "Counted amount can have at most 2 decimal places.",
+    });
+  }
+
   if (
     isValidDate(input.closedAt) &&
     isValidDate(input.session.openedAt) &&
@@ -176,6 +206,7 @@ export function closeCashSession(
     session: {
       ...input.session,
       closedAt: input.closedAt,
+      countedAmountInReais: input.countedAmountInReais,
       status: "closed",
     },
     success: true,

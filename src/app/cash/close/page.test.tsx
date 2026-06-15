@@ -18,6 +18,13 @@ vi.mock("@/modules/cash/infra/supabase-cash-session-repository", () => ({
   SupabaseCashSessionRepository: vi.fn(),
 }));
 
+vi.mock(
+  "@/modules/cash/infra/supabase-cash-session-closing-summary-repository",
+  () => ({
+    SupabaseCashSessionClosingSummaryRepository: vi.fn(),
+  }),
+);
+
 vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
   SupabaseEventRepository: vi.fn(),
 }));
@@ -31,11 +38,20 @@ vi.mock("@/modules/cash/presentation/close-cash-session-form", () => ({
 }));
 
 const listOpenCashSessionsUseCaseMock = vi.hoisted(() => vi.fn());
+const listCashSessionClosingSummariesUseCaseMock = vi.hoisted(() => vi.fn());
 const listEventsUseCaseMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/cash/application/list-open-cash-sessions-use-case", () => ({
   listOpenCashSessionsUseCase: listOpenCashSessionsUseCaseMock,
 }));
+
+vi.mock(
+  "@/modules/cash/application/list-cash-session-closing-summaries-use-case",
+  () => ({
+    listCashSessionClosingSummariesUseCase:
+      listCashSessionClosingSummariesUseCaseMock,
+  }),
+);
 
 vi.mock("@/modules/events/application/list-events-use-case", () => ({
   listEventsUseCase: listEventsUseCaseMock,
@@ -67,6 +83,20 @@ describe("CloseCashPage", () => {
       ],
       success: true,
     });
+    listCashSessionClosingSummariesUseCaseMock.mockResolvedValueOnce({
+      summaries: [
+        {
+          canceledSalesCount: 1,
+          canceledSalesTotalInReais: 15,
+          cashSessionId: "cash-session-1",
+          completedSalesCount: 2,
+          completedSalesTotalInReais: 100,
+          expectedAmountInReais: 250.5,
+          openingAmountInReais: 150.5,
+        },
+      ],
+      success: true,
+    });
 
     render(await CloseCashPage());
 
@@ -93,6 +123,10 @@ describe("CloseCashPage", () => {
     });
     listEventsUseCaseMock.mockResolvedValueOnce({
       events: [],
+      success: true,
+    });
+    listCashSessionClosingSummariesUseCaseMock.mockResolvedValueOnce({
+      summaries: [],
       success: true,
     });
 

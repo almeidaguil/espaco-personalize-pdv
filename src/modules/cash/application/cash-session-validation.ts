@@ -17,6 +17,17 @@ export const openCashSessionSchema = z.object({
 
 export const closeCashSessionSchema = z.object({
   cashSessionId: z.string().trim().min(1, "Informe o caixa aberto."),
+  countedAmountInReais: z
+    .number({ error: "Informe o valor contado em Reais." })
+    .finite("Informe o valor contado em Reais.")
+    .min(0, "O valor contado nao pode ser negativo.")
+    .refine(
+      (countedAmountInReais) =>
+        Math.abs(
+          countedAmountInReais * 100 - Math.round(countedAmountInReais * 100),
+        ) < 1e-8,
+      "Informe o valor contado com no maximo 2 casas decimais.",
+    ),
 });
 
 export type CloseCashSessionUseCaseInput = z.infer<

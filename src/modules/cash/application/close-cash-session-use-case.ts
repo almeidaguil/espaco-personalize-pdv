@@ -11,7 +11,9 @@ export type CloseCashSessionUseCaseResult =
       success: true;
     }
   | {
-      fieldErrors?: Partial<Record<"cashSessionId", string>>;
+      fieldErrors?: Partial<
+        Record<"cashSessionId" | "countedAmountInReais", string>
+      >;
       formError?: string;
       success: false;
     };
@@ -47,6 +49,7 @@ export async function closeCashSessionUseCase(
     return {
       fieldErrors: {
         cashSessionId: flattenedErrors.cashSessionId?.[0],
+        countedAmountInReais: flattenedErrors.countedAmountInReais?.[0],
       },
       success: false,
     };
@@ -74,6 +77,7 @@ export async function closeCashSessionUseCase(
 
   const closeResult = closeCashSession({
     closedAt: dependencies.getCurrentDate(),
+    countedAmountInReais: parsedInput.data.countedAmountInReais,
     session: openSessionResult.session,
   });
 
