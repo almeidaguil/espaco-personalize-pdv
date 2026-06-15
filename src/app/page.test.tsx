@@ -31,8 +31,13 @@ describe("Home", () => {
     ).toBe(true);
     expect(
       screen
-        .getAllByRole("link", { name: /Caixa/ })
+        .getAllByRole("link", { name: /Abrir caixa/ })
         .some((link) => link.getAttribute("href") === "/cash/open"),
+    ).toBe(true);
+    expect(
+      screen
+        .getAllByRole("link", { name: /Fechar caixa/ })
+        .some((link) => link.getAttribute("href") === "/cash/close"),
     ).toBe(true);
     expect(
       screen
