@@ -9,6 +9,7 @@ describe("SalesList", () => {
       <SalesList
         sales={[
           {
+            cashSessionId: "cash-session-1",
             completedAt: new Date("2026-07-10T12:00:00.000Z"),
             eventId: "event-1",
             eventName: "Evento Julho",

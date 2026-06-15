@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { SupabaseSaleSummaryRepository } from "./supabase-sale-summary-repository";
 
 type FakeSaleSummaryRow = {
+  cash_session_id: string;
   completed_at: string;
   event_id: string;
   events: {
@@ -53,6 +54,7 @@ describe("SupabaseSaleSummaryRepository", () => {
     const supabaseClient = new FakeSupabaseSaleSummaryClient({
       data: [
         {
+          cash_session_id: "cash-session-1",
           completed_at: "2026-07-10T12:00:00.000Z",
           event_id: "event-1",
           events: {
@@ -70,6 +72,7 @@ describe("SupabaseSaleSummaryRepository", () => {
     await expect(repository.list()).resolves.toEqual({
       sales: [
         {
+          cashSessionId: "cash-session-1",
           completedAt: new Date("2026-07-10T12:00:00.000Z"),
           eventId: "event-1",
           eventName: "Evento Julho",
@@ -81,7 +84,7 @@ describe("SupabaseSaleSummaryRepository", () => {
       success: true,
     });
     expect(supabaseClient.selectedColumns).toBe(
-      "id,event_id,status,total_in_cents,completed_at,events(name)",
+      "id,event_id,cash_session_id,status,total_in_cents,completed_at,events(name)",
     );
     expect(supabaseClient.orderedColumn).toBe("completed_at");
     expect(supabaseClient.orderOptions).toEqual({ ascending: false });
