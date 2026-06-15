@@ -2,9 +2,8 @@ import type { CurrentUserProfileRepository } from "@/modules/auth/application/cu
 import type { CashSessionRepository } from "@/modules/cash/application/cash-session-repository";
 import type { ProductRepository } from "@/modules/products/application/product-repository";
 import type { Product } from "@/modules/products/domain/product";
-import { calculateStockBalance } from "@/modules/stock/domain/stock-balance";
-import { createStockMovement } from "@/modules/stock/domain/stock-movement";
 import type { StockMovementRepository } from "@/modules/stock/application/stock-movement-repository";
+import { calculateStockBalance } from "@/modules/stock/domain/stock-balance";
 
 import {
   createSale,
@@ -15,7 +14,6 @@ import type { SaleRepository } from "./sale-repository";
 import { createSaleSchema } from "./sale-validation";
 
 export type SaleIdGenerator = () => string;
-export type StockMovementIdGenerator = () => string;
 export type SaleDateProvider = () => Date;
 
 export type CreateSaleUseCaseResult =
@@ -35,7 +33,6 @@ type CreateSaleUseCaseDependencies = {
   cashSessionRepository: CashSessionRepository;
   currentUserProfileRepository: CurrentUserProfileRepository;
   generateSaleId: SaleIdGenerator;
-  generateStockMovementId: StockMovementIdGenerator;
   getCurrentDate: SaleDateProvider;
   productRepository: ProductRepository;
   saleRepository: SaleRepository;
@@ -171,35 +168,6 @@ export async function createSaleUseCase(
       formError: "Nao foi possivel registrar a venda.",
       success: false,
     };
-  }
-
-  for (const item of saveResult.sale.items) {
-    const movementResult = createStockMovement({
-      createdAt: saveResult.sale.completedAt,
-      id: dependencies.generateStockMovementId(),
-      productId: item.productId,
-      quantityChange: -item.quantity,
-      saleId: saveResult.sale.id,
-      type: "sale",
-    });
-
-    if (!movementResult.success) {
-      return {
-        formError: "Nao foi possivel gerar a movimentacao de estoque.",
-        success: false,
-      };
-    }
-
-    const saveMovementResult = await dependencies.stockMovementRepository.save(
-      movementResult.movement,
-    );
-
-    if (!saveMovementResult.success) {
-      return {
-        formError: "Nao foi possivel baixar o estoque da venda.",
-        success: false,
-      };
-    }
   }
 
   return {

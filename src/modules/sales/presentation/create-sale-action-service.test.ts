@@ -82,8 +82,6 @@ class FakeProductRepository implements ProductRepository {
 }
 
 class FakeStockMovementRepository implements StockMovementRepository {
-  public savedMovements: StockMovement[] = [];
-
   async listAll(): Promise<StockMovement[]> {
     return [];
   }
@@ -93,8 +91,6 @@ class FakeStockMovementRepository implements StockMovementRepository {
   }
 
   async save(movement: StockMovement): Promise<SaveStockMovementResult> {
-    this.savedMovements.push(movement);
-
     return {
       movement,
       success: true,
@@ -118,17 +114,14 @@ class FakeSaleRepository implements SaleRepository {
 describe("createSaleActionService", () => {
   it("creates a sale from form data", async () => {
     const saleRepository = new FakeSaleRepository();
-    const stockMovementRepository = new FakeStockMovementRepository();
-
     const result = await createSaleActionService({}, createFormData(), {
       cashSessionRepository: new FakeCashSessionRepository(),
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
-      generateStockMovementId: () => "stock-movement-sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository(),
       saleRepository,
-      stockMovementRepository,
+      stockMovementRepository: new FakeStockMovementRepository(),
     });
 
     expect(result).toEqual({
@@ -149,16 +142,6 @@ describe("createSaleActionService", () => {
         changeInReais: 20,
       },
     });
-    expect(stockMovementRepository.savedMovements).toEqual([
-      {
-        createdAt: new Date("2026-07-10T12:00:00.000Z"),
-        id: "stock-movement-sale-1",
-        productId: "product-1",
-        quantityChange: -2,
-        saleId: "sale-1",
-        type: "sale",
-      },
-    ]);
   });
 
   it("returns validation errors from invalid form data", async () => {
@@ -166,7 +149,6 @@ describe("createSaleActionService", () => {
       cashSessionRepository: new FakeCashSessionRepository(),
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
-      generateStockMovementId: () => "stock-movement-sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository(),
       saleRepository: new FakeSaleRepository(),

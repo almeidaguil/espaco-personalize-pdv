@@ -41,7 +41,6 @@ export async function createSaleAction(
       supabaseClient as unknown as SupabaseCurrentUserProfileClient,
     ),
     generateSaleId: randomUUID,
-    generateStockMovementId: randomUUID,
     getCurrentDate: () => new Date(),
     productRepository: new SupabaseProductRepository(
       supabaseClient as unknown as SupabaseProductClient,

@@ -7,7 +7,6 @@ import {
   createSaleUseCase,
   type SaleDateProvider,
   type SaleIdGenerator,
-  type StockMovementIdGenerator,
 } from "../application/create-sale-use-case";
 import type { SaleRepository } from "../application/sale-repository";
 import { parseCreateSaleFormData } from "./sale-form-data";
@@ -17,7 +16,6 @@ type CreateSaleActionServiceDependencies = {
   cashSessionRepository: CashSessionRepository;
   currentUserProfileRepository: CurrentUserProfileRepository;
   generateSaleId: SaleIdGenerator;
-  generateStockMovementId: StockMovementIdGenerator;
   getCurrentDate: SaleDateProvider;
   productRepository: ProductRepository;
   saleRepository: SaleRepository;
