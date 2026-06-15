@@ -1,6 +1,4 @@
 import type { CurrentUserProfileRepository } from "@/modules/auth/application/current-user-profile-repository";
-import type { StockMovementRepository } from "@/modules/stock/application/stock-movement-repository";
-import { createStockMovement } from "@/modules/stock/domain/stock-movement";
 
 import type { SaleCancellationRepository } from "./sale-cancellation-repository";
 import type { SaleDetailRepository } from "./sale-detail-repository";
@@ -15,15 +13,12 @@ export type CancelSaleUseCaseResult =
     };
 
 export type CancelSaleDateProvider = () => Date;
-export type CancelSaleStockMovementIdGenerator = () => string;
 
 type CancelSaleUseCaseDependencies = {
   currentUserProfileRepository: CurrentUserProfileRepository;
-  generateStockMovementId: CancelSaleStockMovementIdGenerator;
   getCurrentDate: CancelSaleDateProvider;
   saleCancellationRepository: SaleCancellationRepository;
   saleDetailRepository: SaleDetailRepository;
-  stockMovementRepository: StockMovementRepository;
 };
 
 export async function cancelSaleUseCase(
@@ -93,35 +88,6 @@ export async function cancelSaleUseCase(
       formError: "Nao foi possivel cancelar a venda.",
       success: false,
     };
-  }
-
-  for (const item of saleDetailResult.sale.items) {
-    const movementResult = createStockMovement({
-      createdAt: canceledAt,
-      id: dependencies.generateStockMovementId(),
-      productId: item.productId,
-      quantityChange: item.quantity,
-      saleId: saleDetailResult.sale.id,
-      type: "sale_cancellation",
-    });
-
-    if (!movementResult.success) {
-      return {
-        formError: "Nao foi possivel gerar a devolucao de estoque.",
-        success: false,
-      };
-    }
-
-    const saveMovementResult = await dependencies.stockMovementRepository.save(
-      movementResult.movement,
-    );
-
-    if (!saveMovementResult.success) {
-      return {
-        formError: "Nao foi possivel devolver o estoque da venda.",
-        success: false,
-      };
-    }
   }
 
   return {

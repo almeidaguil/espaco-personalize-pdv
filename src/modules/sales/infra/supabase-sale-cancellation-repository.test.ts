@@ -6,7 +6,7 @@ import {
 } from "./supabase-sale-cancellation-repository";
 
 type FakeSupabaseResponse = {
-  data: unknown;
+  data: string | null;
   error: {
     code?: string;
     message?: string;
@@ -14,45 +14,21 @@ type FakeSupabaseResponse = {
 };
 
 class FakeSupabaseSaleCancellationClient implements SupabaseSaleCancellationClient {
-  public filteredColumn?: string;
-  public filteredValue?: string;
-  public selectedColumns?: string;
-  public updatePayload?: unknown;
+  public functionName?: string;
+  public rpcArgs?: unknown;
 
   constructor(
     private readonly response: FakeSupabaseResponse = {
-      data: {
-        id: "sale-1",
-      },
+      data: "sale-1",
       error: null,
     },
   ) {}
 
-  from(table: "sales") {
-    expect(table).toBe("sales");
+  async rpc(functionName: "cancel_sale", args: unknown) {
+    this.functionName = functionName;
+    this.rpcArgs = args;
 
-    return {
-      update: (payload: unknown) => {
-        this.updatePayload = payload;
-
-        return {
-          eq: (column: "id", value: string) => {
-            this.filteredColumn = column;
-            this.filteredValue = value;
-
-            return {
-              select: (columns: string) => {
-                this.selectedColumns = columns;
-
-                return {
-                  single: async () => this.response,
-                };
-              },
-            };
-          },
-        };
-      },
-    };
+    return this.response;
   }
 }
 
@@ -70,13 +46,11 @@ describe("SupabaseSaleCancellationRepository", () => {
       success: true,
     });
 
-    expect(supabaseClient.updatePayload).toEqual({
-      canceled_at: "2026-07-10T15:00:00.000Z",
-      status: "canceled",
+    expect(supabaseClient.functionName).toBe("cancel_sale");
+    expect(supabaseClient.rpcArgs).toEqual({
+      p_canceled_at: "2026-07-10T15:00:00.000Z",
+      p_sale_id: "sale-1",
     });
-    expect(supabaseClient.filteredColumn).toBe("id");
-    expect(supabaseClient.filteredValue).toBe("sale-1");
-    expect(supabaseClient.selectedColumns).toBe("id");
   });
 
   it("returns an error when the sale update fails", async () => {
@@ -87,6 +61,25 @@ describe("SupabaseSaleCancellationRepository", () => {
           code: "PGRST000",
           message: "Unexpected error",
         },
+      }),
+    );
+
+    await expect(
+      repository.cancel({
+        canceledAt: new Date("2026-07-10T15:00:00.000Z"),
+        saleId: "sale-1",
+      }),
+    ).resolves.toEqual({
+      error: "unknown",
+      success: false,
+    });
+  });
+
+  it("returns an error when the RPC returns another sale id", async () => {
+    const repository = new SupabaseSaleCancellationRepository(
+      new FakeSupabaseSaleCancellationClient({
+        data: "another-sale",
+        error: null,
       }),
     );
 
