@@ -12,6 +12,7 @@ type SupabaseStockMovementRow = {
   id: string;
   product_id: string;
   quantity_change: number;
+  sale_id: string | null;
   type: StockMovementType;
 };
 
@@ -20,6 +21,7 @@ type SupabaseStockMovementInsert = {
   id: string;
   product_id: string;
   quantity_change: number;
+  sale_id: string | null;
   type: StockMovementType;
 };
 
@@ -64,7 +66,7 @@ export type SupabaseStockMovementClient = {
 };
 
 const stockMovementColumns =
-  "id,product_id,type,quantity_change,created_at" as const;
+  "id,product_id,type,quantity_change,sale_id,created_at" as const;
 
 export class SupabaseStockMovementRepository implements StockMovementRepository {
   constructor(private readonly supabaseClient: SupabaseStockMovementClient) {}
@@ -125,6 +127,7 @@ function toStockMovementInsert(
     id: movement.id,
     product_id: movement.productId,
     quantity_change: movement.quantityChange,
+    sale_id: movement.saleId ?? null,
     type: movement.type,
   };
 }
@@ -135,6 +138,7 @@ function toStockMovement(row: SupabaseStockMovementRow): StockMovement {
     id: row.id,
     productId: row.product_id,
     quantityChange: row.quantity_change,
+    ...(row.sale_id ? { saleId: row.sale_id } : {}),
     type: row.type,
   };
 }

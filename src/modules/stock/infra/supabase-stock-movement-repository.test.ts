@@ -8,7 +8,8 @@ type FakeStockMovementRow = {
   id: string;
   product_id: string;
   quantity_change: number;
-  type: "initial_adjustment" | "manual_adjustment";
+  sale_id: string | null;
+  type: "initial_adjustment" | "manual_adjustment" | "sale";
 };
 
 type FakeSupabaseResponse<TData> = {
@@ -97,6 +98,7 @@ describe("SupabaseStockMovementRepository", () => {
         id: "movement-1",
         product_id: "product-1",
         quantity_change: 10,
+        sale_id: null,
         type: "initial_adjustment",
       },
       error: null,
@@ -110,13 +112,49 @@ describe("SupabaseStockMovementRepository", () => {
       id: "movement-1",
       product_id: "product-1",
       quantity_change: 10,
+      sale_id: null,
       type: "initial_adjustment",
     });
     expect(supabaseClient.selectedColumns).toBe(
-      "id,product_id,type,quantity_change,created_at",
+      "id,product_id,type,quantity_change,sale_id,created_at",
     );
     expect(result).toEqual({
       movement: createMovement(),
+      success: true,
+    });
+  });
+
+  it("saves sale stock movements with sale references", async () => {
+    const movement = createMovement({
+      quantityChange: -2,
+      saleId: "sale-1",
+      type: "sale",
+    });
+    const supabaseClient = new FakeSupabaseStockMovementClient({
+      data: {
+        created_at: "2026-06-10T12:00:00.000Z",
+        id: "movement-1",
+        product_id: "product-1",
+        quantity_change: -2,
+        sale_id: "sale-1",
+        type: "sale",
+      },
+      error: null,
+    });
+    const repository = new SupabaseStockMovementRepository(supabaseClient);
+
+    const result = await repository.save(movement);
+
+    expect(supabaseClient.insertedPayload).toEqual({
+      created_at: "2026-06-10T12:00:00.000Z",
+      id: "movement-1",
+      product_id: "product-1",
+      quantity_change: -2,
+      sale_id: "sale-1",
+      type: "sale",
+    });
+    expect(result).toEqual({
+      movement,
       success: true,
     });
   });
@@ -147,6 +185,7 @@ describe("SupabaseStockMovementRepository", () => {
             id: "movement-1",
             product_id: "product-1",
             quantity_change: 10,
+            sale_id: null,
             type: "initial_adjustment",
           },
         ],
@@ -159,7 +198,7 @@ describe("SupabaseStockMovementRepository", () => {
       createMovement(),
     ]);
     expect(supabaseClient.selectedColumns).toBe(
-      "id,product_id,type,quantity_change,created_at",
+      "id,product_id,type,quantity_change,sale_id,created_at",
     );
     expect(supabaseClient.eqColumn).toBe("product_id");
     expect(supabaseClient.eqValue).toBe("product-1");
@@ -177,6 +216,7 @@ describe("SupabaseStockMovementRepository", () => {
             id: "movement-1",
             product_id: "product-1",
             quantity_change: 10,
+            sale_id: null,
             type: "initial_adjustment",
           },
         ],
@@ -187,7 +227,7 @@ describe("SupabaseStockMovementRepository", () => {
 
     await expect(repository.listAll()).resolves.toEqual([createMovement()]);
     expect(supabaseClient.selectedColumns).toBe(
-      "id,product_id,type,quantity_change,created_at",
+      "id,product_id,type,quantity_change,sale_id,created_at",
     );
     expect(supabaseClient.orderedColumn).toBe("created_at");
     expect(supabaseClient.orderOptions).toEqual({ ascending: false });

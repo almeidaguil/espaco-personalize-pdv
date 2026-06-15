@@ -1,10 +1,14 @@
-export type StockMovementType = "initial_adjustment" | "manual_adjustment";
+export type StockMovementType =
+  | "initial_adjustment"
+  | "manual_adjustment"
+  | "sale";
 
 export type StockMovement = {
   createdAt: Date;
   id: string;
   productId: string;
   quantityChange: number;
+  saleId?: string;
   type: StockMovementType;
 };
 
@@ -13,11 +17,12 @@ export type CreateStockMovementInput = {
   id: string;
   productId: string;
   quantityChange: number;
+  saleId?: string;
   type: StockMovementType;
 };
 
 export type StockMovementValidationError = {
-  field: "createdAt" | "id" | "productId" | "quantityChange" | "type";
+  field: "createdAt" | "id" | "productId" | "quantityChange" | "saleId";
   message: string;
 };
 
@@ -37,6 +42,7 @@ export function createStockMovement(
   const errors: StockMovementValidationError[] = [];
   const id = input.id.trim();
   const productId = input.productId.trim();
+  const saleId = input.saleId?.trim();
 
   if (!id) {
     errors.push({
@@ -66,6 +72,29 @@ export function createStockMovement(
     });
   }
 
+  if (input.type === "sale") {
+    if (!saleId) {
+      errors.push({
+        field: "saleId",
+        message: "Sale stock movements must reference a sale.",
+      });
+    }
+
+    if (input.quantityChange >= 0) {
+      errors.push({
+        field: "quantityChange",
+        message: "Sale stock movements must decrease stock.",
+      });
+    }
+  }
+
+  if (input.type !== "sale" && saleId) {
+    errors.push({
+      field: "saleId",
+      message: "Only sale stock movements can reference a sale.",
+    });
+  }
+
   if (!isValidMovementDate(input.createdAt)) {
     errors.push({
       field: "createdAt",
@@ -86,6 +115,7 @@ export function createStockMovement(
       id,
       productId,
       quantityChange: input.quantityChange,
+      ...(saleId ? { saleId } : {}),
       type: input.type,
     },
     success: true,
