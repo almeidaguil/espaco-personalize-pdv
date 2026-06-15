@@ -1,6 +1,7 @@
 import type { SaleStatus } from "../domain/sale";
 
 export type SaleSummary = {
+  cashSessionId: string;
   completedAt: Date;
   eventId: string;
   eventName: string;
