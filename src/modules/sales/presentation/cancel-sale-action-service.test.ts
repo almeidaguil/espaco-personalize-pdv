@@ -74,14 +74,18 @@ describe("cancelSaleActionService", () => {
     const saleCancellationRepository = new FakeSaleCancellationRepository();
     const stockMovementRepository = new FakeStockMovementRepository();
 
-    const result = await cancelSaleActionService({}, createFormData("sale-1"), {
-      currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: () => "stock-movement-cancel-1",
-      getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
-      saleCancellationRepository,
-      saleDetailRepository: new FakeSaleDetailRepository(),
-      stockMovementRepository,
-    });
+    const result = await cancelSaleActionService(
+      {},
+      createFormData("sale-1", true),
+      {
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        generateStockMovementId: () => "stock-movement-cancel-1",
+        getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
+        saleCancellationRepository,
+        saleDetailRepository: new FakeSaleDetailRepository(),
+        stockMovementRepository,
+      },
+    );
 
     expect(result).toEqual({
       successMessage: "Venda cancelada com sucesso.",
@@ -102,8 +106,27 @@ describe("cancelSaleActionService", () => {
     ]);
   });
 
+  it("requires cancellation confirmation", async () => {
+    const result = await cancelSaleActionService(
+      {},
+      createFormData("sale-1", false),
+      {
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        generateStockMovementId: () => "stock-movement-cancel-1",
+        getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
+        saleCancellationRepository: new FakeSaleCancellationRepository(),
+        saleDetailRepository: new FakeSaleDetailRepository(),
+        stockMovementRepository: new FakeStockMovementRepository(),
+      },
+    );
+
+    expect(result).toEqual({
+      formError: "Confirme o cancelamento antes de continuar.",
+    });
+  });
+
   it("returns use case errors", async () => {
-    const result = await cancelSaleActionService({}, new FormData(), {
+    const result = await cancelSaleActionService({}, createFormData("", true), {
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateStockMovementId: () => "stock-movement-cancel-1",
       getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
@@ -118,17 +141,21 @@ describe("cancelSaleActionService", () => {
   });
 
   it("keeps cancellation failure messages", async () => {
-    const result = await cancelSaleActionService({}, createFormData("sale-1"), {
-      currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: () => "stock-movement-cancel-1",
-      getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
-      saleCancellationRepository: new FakeSaleCancellationRepository({
-        error: "unknown",
-        success: false,
-      }),
-      saleDetailRepository: new FakeSaleDetailRepository(),
-      stockMovementRepository: new FakeStockMovementRepository(),
-    });
+    const result = await cancelSaleActionService(
+      {},
+      createFormData("sale-1", true),
+      {
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        generateStockMovementId: () => "stock-movement-cancel-1",
+        getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
+        saleCancellationRepository: new FakeSaleCancellationRepository({
+          error: "unknown",
+          success: false,
+        }),
+        saleDetailRepository: new FakeSaleDetailRepository(),
+        stockMovementRepository: new FakeStockMovementRepository(),
+      },
+    );
 
     expect(result).toEqual({
       formError: "Nao foi possivel cancelar a venda.",
@@ -174,9 +201,15 @@ function createSaleDetail(): SaleDetail {
   };
 }
 
-function createFormData(saleId: string): FormData {
+function createFormData(
+  saleId: string,
+  confirmCancellation: boolean,
+): FormData {
   const formData = new FormData();
   formData.set("saleId", saleId);
+  if (confirmCancellation) {
+    formData.set("confirmCancellation", "on");
+  }
 
   return formData;
 }

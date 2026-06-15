@@ -30,7 +30,7 @@ export async function cancelSaleAction(
   previousState: CancelSaleActionState,
   formData: FormData,
 ): Promise<CancelSaleActionState> {
-  const saleId = parseCancelSaleFormData(formData).trim();
+  const saleId = parseCancelSaleFormData(formData).saleId.trim();
   const supabaseClient = await createSupabaseServerClient();
 
   const result = await cancelSaleActionService(previousState, formData, {

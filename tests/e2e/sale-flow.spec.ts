@@ -130,6 +130,11 @@ async function cancelSale(page: Page, eventName: string) {
   await expect(
     page.getByRole("heading", { level: 1, name: "Detalhe da venda" }),
   ).toBeVisible();
+  await page
+    .getByRole("checkbox", {
+      name: /Confirmo que esta venda deve ser cancelada/,
+    })
+    .check();
   await page.getByRole("button", { name: "Cancelar venda" }).click();
 
   await expect(page.getByText("Venda cancelada com sucesso.")).toBeVisible();
