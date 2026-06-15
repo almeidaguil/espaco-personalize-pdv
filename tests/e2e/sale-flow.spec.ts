@@ -37,7 +37,12 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
     .first();
 
   await expect(balanceItem).toBeVisible();
-  await expect(page.getByText("Cancelamento de venda")).toBeVisible();
+  await expect(
+    page
+      .locator("article", { hasText: productName })
+      .filter({ hasText: "Cancelamento de venda" })
+      .first(),
+  ).toBeVisible();
 });
 
 async function createProduct(page: Page, productName: string, sku: string) {
@@ -133,7 +138,7 @@ async function cancelSale(page: Page, eventName: string) {
   await expect(
     page.getByRole("button", { name: "Venda cancelada" }),
   ).toBeDisabled();
-  await expect(page.getByText("Cancelada")).toBeVisible();
+  await expect(page.getByText("Cancelada", { exact: true })).toBeVisible();
 }
 
 async function authenticatePage(page: Page) {
