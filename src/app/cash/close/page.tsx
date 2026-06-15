@@ -5,8 +5,14 @@ import {
   SupabaseCurrentUserProfileRepository,
   type SupabaseCurrentUserProfileClient,
 } from "@/modules/auth/infra/supabase-current-user-profile-repository";
+import { listCashSessionClosingSummariesUseCase } from "@/modules/cash/application/list-cash-session-closing-summaries-use-case";
 import { listOpenCashSessionsUseCase } from "@/modules/cash/application/list-open-cash-sessions-use-case";
+import type { CashSessionClosingSummary } from "@/modules/cash/application/cash-session-closing-summary-repository";
 import type { CashSession } from "@/modules/cash/domain/cash-session";
+import {
+  SupabaseCashSessionClosingSummaryRepository,
+  type SupabaseCashSessionClosingSummaryClient,
+} from "@/modules/cash/infra/supabase-cash-session-closing-summary-repository";
 import {
   SupabaseCashSessionRepository,
   type SupabaseCashSessionClient,
@@ -34,11 +40,6 @@ const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   timeStyle: "short",
 });
 
-const moneyFormatter = new Intl.NumberFormat("pt-BR", {
-  currency: "BRL",
-  style: "currency",
-});
-
 export default async function CloseCashPage() {
   const supabaseClient = await createSupabaseServerClient();
   const cashSessionClient =
@@ -46,6 +47,8 @@ export default async function CloseCashPage() {
   const currentUserProfileClient =
     supabaseClient as unknown as SupabaseCurrentUserProfileClient;
   const eventClient = supabaseClient as unknown as SupabaseEventClient;
+  const cashSessionClosingSummaryClient =
+    supabaseClient as unknown as SupabaseCashSessionClosingSummaryClient;
 
   const [cashSessionsResult, eventsResult] = await Promise.all([
     listOpenCashSessionsUseCase({
@@ -66,10 +69,32 @@ export default async function CloseCashPage() {
       ? eventsResult.events.map((event) => [event.id, event.name])
       : [],
   );
+  const closingSummariesResult = cashSessionsResult.success
+    ? await listCashSessionClosingSummariesUseCase({
+        cashSessionClosingSummaryRepository:
+          new SupabaseCashSessionClosingSummaryRepository(
+            cashSessionClosingSummaryClient,
+          ),
+        cashSessionIds: cashSessionsResult.sessions.map(
+          (session) => session.id,
+        ),
+      })
+    : ({
+        summaries: [],
+        success: true,
+      } as const);
+  const closingSummaries = new Map(
+    closingSummariesResult.success
+      ? closingSummariesResult.summaries.map((summary) => [
+          summary.cashSessionId,
+          summary,
+        ])
+      : [],
+  );
 
   return (
     <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-md gap-4">
+      <section className="mx-auto grid w-full max-w-3xl gap-4">
         <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
           <div className="mb-3 flex flex-wrap gap-3 text-sm font-semibold">
             <Link
@@ -99,6 +124,10 @@ export default async function CloseCashPage() {
           <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
             {cashSessionsResult.formError}
           </section>
+        ) : !closingSummariesResult.success ? (
+          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            Nao foi possivel calcular a conferencia do caixa.
+          </section>
         ) : cashSessionsResult.sessions.length === 0 ? (
           <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
             Nenhum caixa aberto disponivel para fechamento.
@@ -108,7 +137,7 @@ export default async function CloseCashPage() {
             <CloseCashSessionForm
               action={closeCashSessionAction}
               sessions={cashSessionsResult.sessions.map((session) =>
-                toCashSessionOption(session, eventNames),
+                toCashSessionOption(session, eventNames, closingSummaries),
               )}
             />
           </section>
@@ -121,13 +150,29 @@ export default async function CloseCashPage() {
 function toCashSessionOption(
   session: CashSession,
   eventNames: Map<string, string>,
+  closingSummaries: Map<string, CashSessionClosingSummary>,
 ): CloseCashSessionOption {
   const eventName = eventNames.get(session.eventId) ?? "Evento sem nome";
+  const summary = closingSummaries.get(session.id) ?? {
+    canceledSalesCount: 0,
+    canceledSalesTotalInReais: 0,
+    cashSessionId: session.id,
+    completedSalesCount: 0,
+    completedSalesTotalInReais: 0,
+    expectedAmountInReais: session.openingAmountInReais,
+    openingAmountInReais: session.openingAmountInReais,
+  };
 
   return {
+    canceledSalesCount: summary.canceledSalesCount,
+    canceledSalesTotalInReais: summary.canceledSalesTotalInReais,
+    completedSalesCount: summary.completedSalesCount,
+    completedSalesTotalInReais: summary.completedSalesTotalInReais,
+    expectedAmountInReais: summary.expectedAmountInReais,
     id: session.id,
     label: `${eventName} - aberto em ${dateTimeFormatter.format(
       session.openedAt,
-    )} - inicial ${moneyFormatter.format(session.openingAmountInReais)}`,
+    )}`,
+    openingAmountInReais: summary.openingAmountInReais,
   };
 }

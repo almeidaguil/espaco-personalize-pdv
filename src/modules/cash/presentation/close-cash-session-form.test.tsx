@@ -17,7 +17,7 @@ vi.mock("react", async () => {
 const useActionStateMock = vi.mocked(useActionState);
 
 describe("CloseCashSessionForm", () => {
-  it("renders open cash session options", () => {
+  it("renders open cash session cards with reconciliation summary", () => {
     mockActionState({});
 
     render(
@@ -25,19 +25,24 @@ describe("CloseCashSessionForm", () => {
         action={vi.fn()}
         sessions={[
           {
+            canceledSalesCount: 1,
+            canceledSalesTotalInReais: 10,
+            completedSalesCount: 2,
+            completedSalesTotalInReais: 100,
+            expectedAmountInReais: 250.5,
             id: "cash-session-1",
             label: "Evento Julho - aberto em 10/07/2026, 09:00",
+            openingAmountInReais: 150.5,
           },
         ]}
       />,
     );
 
-    expect(screen.getByLabelText("Caixa aberto")).toBeInTheDocument();
     expect(
-      screen.getByRole("option", {
-        name: "Evento Julho - aberto em 10/07/2026, 09:00",
-      }),
+      screen.getByText("Evento Julho - aberto em 10/07/2026, 09:00"),
     ).toBeInTheDocument();
+    expect(screen.getByText("R$ 250,50")).toBeInTheDocument();
+    expect(screen.getByLabelText("Valor contado no caixa")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Fechar caixa" }),
     ).toBeInTheDocument();
@@ -47,13 +52,33 @@ describe("CloseCashSessionForm", () => {
     mockActionState({
       fieldErrors: {
         cashSessionId: "Informe o caixa aberto.",
+        countedAmountInReais: "Informe o valor contado em Reais.",
       },
       successMessage: "Caixa fechado com sucesso.",
     });
 
-    render(<CloseCashSessionForm action={vi.fn()} sessions={[]} />);
+    render(
+      <CloseCashSessionForm
+        action={vi.fn()}
+        sessions={[
+          {
+            canceledSalesCount: 0,
+            canceledSalesTotalInReais: 0,
+            completedSalesCount: 0,
+            completedSalesTotalInReais: 0,
+            expectedAmountInReais: 150.5,
+            id: "cash-session-1",
+            label: "Evento Julho",
+            openingAmountInReais: 150.5,
+          },
+        ]}
+      />,
+    );
 
     expect(screen.getByText("Informe o caixa aberto.")).toBeInTheDocument();
+    expect(
+      screen.getByText("Informe o valor contado em Reais."),
+    ).toBeInTheDocument();
     expect(screen.getByText("Caixa fechado com sucesso.")).toBeInTheDocument();
   });
 });

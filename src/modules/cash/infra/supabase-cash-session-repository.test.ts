@@ -5,7 +5,11 @@ import { SupabaseCashSessionRepository } from "./supabase-cash-session-repositor
 
 type FakeSupabaseCashSessionRow = {
   closed_at: string | null;
+  closed_by?: string | null;
+  counted_amount_in_cents?: number | null;
+  difference_amount_in_cents?: number | null;
   event_id: string;
+  expected_amount_in_cents?: number | null;
   id: string;
   opened_at: string;
   opening_amount_in_cents: number;
@@ -35,6 +39,8 @@ class FakeSupabaseCashSessionClient {
   public eqFilters: Array<{ column: string; value: unknown }> = [];
   public insertedPayload?: unknown;
   public orderedBy?: { ascending: boolean; column: string };
+  public rpcArgs?: unknown;
+  public rpcFunctionName?: string;
   public selectedColumns?: string;
   public updatedPayload?: unknown;
 
@@ -46,6 +52,13 @@ class FakeSupabaseCashSessionClient {
     },
     private readonly listResponse: FakeSupabaseListResponse = {
       data: [],
+      error: null,
+    },
+    private readonly rpcResponse: {
+      data: string | null;
+      error: { code?: string; message?: string } | null;
+    } = {
+      data: "cash-session-1",
       error: null,
     },
   ) {}
@@ -92,6 +105,13 @@ class FakeSupabaseCashSessionClient {
         };
       },
     };
+  }
+
+  async rpc(functionName: "close_cash_session", args: unknown) {
+    this.rpcFunctionName = functionName;
+    this.rpcArgs = args;
+
+    return this.rpcResponse;
   }
 
   private createFilterBuilder() {
@@ -256,22 +276,33 @@ describe("SupabaseCashSessionRepository", () => {
   });
 
   it("updates a cash session when closing it", async () => {
-    const supabaseClient = new FakeSupabaseCashSessionClient({
-      data: {
-        closed_at: "2026-07-10T18:00:00.000Z",
-        event_id: "event-1",
-        id: "cash-session-1",
-        opened_at: "2026-07-10T12:00:00.000Z",
-        opening_amount_in_cents: 15050,
-        operator_id: "operator-1",
-        status: "closed",
+    const supabaseClient = new FakeSupabaseCashSessionClient(
+      {
+        data: null,
+        error: null,
       },
-      error: null,
-    });
+      {
+        data: {
+          closed_at: "2026-07-10T18:00:00.000Z",
+          closed_by: "operator-1",
+          counted_amount_in_cents: 26075,
+          difference_amount_in_cents: 1025,
+          event_id: "event-1",
+          expected_amount_in_cents: 25050,
+          id: "cash-session-1",
+          opened_at: "2026-07-10T12:00:00.000Z",
+          opening_amount_in_cents: 15050,
+          operator_id: "operator-1",
+          status: "closed",
+        },
+        error: null,
+      },
+    );
     const repository = new SupabaseCashSessionRepository(supabaseClient);
 
     const result = await repository.update({
       closedAt: new Date("2026-07-10T18:00:00.000Z"),
+      countedAmountInReais: 260.75,
       eventId: "event-1",
       id: "cash-session-1",
       openedAt: new Date("2026-07-10T12:00:00.000Z"),
@@ -280,9 +311,11 @@ describe("SupabaseCashSessionRepository", () => {
       status: "closed",
     });
 
-    expect(supabaseClient.updatedPayload).toEqual({
-      closed_at: "2026-07-10T18:00:00.000Z",
-      status: "closed",
+    expect(supabaseClient.rpcFunctionName).toBe("close_cash_session");
+    expect(supabaseClient.rpcArgs).toEqual({
+      p_cash_session_id: "cash-session-1",
+      p_closed_at: "2026-07-10T18:00:00.000Z",
+      p_counted_amount_in_cents: 26075,
     });
     expect(supabaseClient.eqFilters).toEqual([
       { column: "id", value: "cash-session-1" },
@@ -294,6 +327,9 @@ describe("SupabaseCashSessionRepository", () => {
       expect(result.session.closedAt).toEqual(
         new Date("2026-07-10T18:00:00.000Z"),
       );
+      expect(result.session.countedAmountInReais).toBe(260.75);
+      expect(result.session.expectedAmountInReais).toBe(250.5);
+      expect(result.session.differenceAmountInReais).toBe(10.25);
     }
   });
 

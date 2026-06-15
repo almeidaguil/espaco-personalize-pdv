@@ -63,6 +63,7 @@ describe("closeCashSessionActionService", () => {
       {},
       createFormData({
         cashSessionId: "cash-session-1",
+        countedAmountInReais: "260,75",
       }),
       {
         cashSessionRepository,
@@ -77,6 +78,7 @@ describe("closeCashSessionActionService", () => {
     expect(cashSessionRepository.updatedSession).toMatchObject({
       closedAt: new Date("2026-07-10T18:00:00.000Z"),
       id: "cash-session-1",
+      countedAmountInReais: 260.75,
       operatorId: "operator-1",
       status: "closed",
     });
@@ -87,6 +89,7 @@ describe("closeCashSessionActionService", () => {
       {},
       createFormData({
         cashSessionId: "",
+        countedAmountInReais: "",
       }),
       {
         cashSessionRepository: new FakeCashSessionRepository(),
@@ -98,6 +101,7 @@ describe("closeCashSessionActionService", () => {
     expect(result).toEqual({
       fieldErrors: {
         cashSessionId: "Informe o caixa aberto.",
+        countedAmountInReais: "Informe o valor contado em Reais.",
       },
       formError: undefined,
     });
@@ -108,6 +112,7 @@ describe("closeCashSessionActionService", () => {
       {},
       createFormData({
         cashSessionId: "cash-session-1",
+        countedAmountInReais: "260,75",
       }),
       {
         cashSessionRepository: new FakeCashSessionRepository({
@@ -138,9 +143,13 @@ function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
   };
 }
 
-function createFormData(input: { cashSessionId: string }): FormData {
+function createFormData(input: {
+  cashSessionId: string;
+  countedAmountInReais: string;
+}): FormData {
   const formData = new FormData();
   formData.set("cashSessionId", input.cashSessionId);
+  formData.set("countedAmountInReais", input.countedAmountInReais);
 
   return formData;
 }

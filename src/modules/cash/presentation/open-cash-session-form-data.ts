@@ -5,7 +5,9 @@ export function parseOpenCashSessionFormData(
 ): OpenCashSessionUseCaseInput {
   return {
     eventId: getTrimmedString(formData, "eventId"),
-    openingAmountInReais: parseBrlAmount(formData.get("openingAmountInReais")),
+    openingAmountInReais: parseBrlCurrencyInput(
+      getTrimmedString(formData, "openingAmountInReais"),
+    ),
   };
 }
 
@@ -15,11 +17,7 @@ function getTrimmedString(formData: FormData, key: string): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
-function parseBrlAmount(value: FormDataEntryValue | null): number {
-  if (typeof value !== "string") {
-    return Number.NaN;
-  }
-
+export function parseBrlCurrencyInput(value: string): number {
   const normalizedValue = value
     .trim()
     .replace(/^R\$\s?/, "")

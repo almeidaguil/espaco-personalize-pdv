@@ -1,6 +1,12 @@
 export type CashSessionActionState = {
   fieldErrors?: Partial<
-    Record<"cashSessionId" | "eventId" | "openingAmountInReais", string>
+    Record<
+      | "cashSessionId"
+      | "countedAmountInReais"
+      | "eventId"
+      | "openingAmountInReais",
+      string
+    >
   >;
   formError?: string;
   successMessage?: string;

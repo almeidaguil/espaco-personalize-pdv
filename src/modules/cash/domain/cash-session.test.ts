@@ -112,12 +112,14 @@ describe("closeCashSession", () => {
     expect(
       closeCashSession({
         closedAt,
+        countedAmountInReais: 255.75,
         session,
       }),
     ).toEqual({
       session: {
         ...session,
         closedAt,
+        countedAmountInReais: 255.75,
         status: "closed",
       },
       success: true,
@@ -133,6 +135,7 @@ describe("closeCashSession", () => {
 
     const result = closeCashSession({
       closedAt: new Date("2026-07-10T23:00:00.000Z"),
+      countedAmountInReais: 255.75,
       session,
     });
 
@@ -150,6 +153,7 @@ describe("closeCashSession", () => {
   it("rejects close dates before open dates", () => {
     const result = closeCashSession({
       closedAt: new Date("2026-07-10T11:00:00.000Z"),
+      countedAmountInReais: 255.75,
       session: createOpenSession(),
     });
 
@@ -158,6 +162,24 @@ describe("closeCashSession", () => {
         {
           field: "closedAt",
           message: "Cash session close date must be after open date.",
+        },
+      ],
+      success: false,
+    });
+  });
+
+  it("rejects invalid counted amounts", () => {
+    const result = closeCashSession({
+      closedAt: new Date("2026-07-10T22:00:00.000Z"),
+      countedAmountInReais: 10.999,
+      session: createOpenSession(),
+    });
+
+    expect(result).toEqual({
+      errors: [
+        {
+          field: "countedAmountInReais",
+          message: "Counted amount can have at most 2 decimal places.",
         },
       ],
       success: false,

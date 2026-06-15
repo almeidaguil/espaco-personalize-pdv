@@ -8,7 +8,11 @@ import type { CashSession, CashSessionStatus } from "../domain/cash-session";
 
 type SupabaseCashSessionRow = {
   closed_at: string | null;
+  closed_by?: string | null;
+  counted_amount_in_cents?: number | null;
+  difference_amount_in_cents?: number | null;
   event_id: string;
+  expected_amount_in_cents?: number | null;
   id: string;
   opened_at: string;
   opening_amount_in_cents: number;
@@ -27,8 +31,9 @@ type SupabaseCashSessionInsert = {
 };
 
 type SupabaseCashSessionUpdate = {
-  closed_at: string | null;
-  status: CashSessionStatus;
+  p_cash_session_id: string;
+  p_closed_at: string;
+  p_counted_amount_in_cents: number;
 };
 
 type SupabaseError = {
@@ -83,10 +88,17 @@ export type SupabaseCashSessionClient = {
       };
     };
   };
+  rpc(
+    functionName: "close_cash_session",
+    args: SupabaseCashSessionUpdate,
+  ): PromiseLike<{
+    data: string | null;
+    error: SupabaseError | null;
+  }>;
 };
 
 const cashSessionColumns =
-  "id,event_id,operator_id,opening_amount_in_cents,status,opened_at,closed_at" as const;
+  "id,event_id,operator_id,opening_amount_in_cents,status,opened_at,closed_at,counted_amount_in_cents,expected_amount_in_cents,difference_amount_in_cents,closed_by" as const;
 
 export class SupabaseCashSessionRepository implements CashSessionRepository {
   constructor(private readonly supabaseClient: SupabaseCashSessionClient) {}
@@ -187,12 +199,31 @@ export class SupabaseCashSessionRepository implements CashSessionRepository {
   }
 
   async update(session: CashSession): Promise<SaveCashSessionResult> {
+    if (!session.closedAt || session.countedAmountInReais === undefined) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
+    const { data: closedSessionId, error: closeError } =
+      await this.supabaseClient.rpc(
+        "close_cash_session",
+        toCashSessionUpdate(session),
+      );
+
+    if (closeError || closedSessionId !== session.id) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
     const { data, error } = await this.supabaseClient
       .from("cash_sessions")
-      .update(toCashSessionUpdate(session))
-      .eq("id", session.id)
       .select(cashSessionColumns)
-      .single();
+      .eq("id", session.id)
+      .maybeSingle();
 
     if (error || !data) {
       return {
@@ -222,15 +253,28 @@ function toCashSessionInsert(session: CashSession): SupabaseCashSessionInsert {
 
 function toCashSessionUpdate(session: CashSession): SupabaseCashSessionUpdate {
   return {
-    closed_at: session.closedAt?.toISOString() ?? null,
-    status: session.status,
+    p_cash_session_id: session.id,
+    p_closed_at: session.closedAt?.toISOString() ?? "",
+    p_counted_amount_in_cents: Math.round(
+      (session.countedAmountInReais ?? Number.NaN) * 100,
+    ),
   };
 }
 
 function toCashSession(row: SupabaseCashSessionRow): CashSession {
   return {
     ...(row.closed_at ? { closedAt: new Date(row.closed_at) } : {}),
+    ...(row.closed_by ? { closedBy: row.closed_by } : {}),
+    ...(row.counted_amount_in_cents != null
+      ? { countedAmountInReais: row.counted_amount_in_cents / 100 }
+      : {}),
+    ...(row.difference_amount_in_cents != null
+      ? { differenceAmountInReais: row.difference_amount_in_cents / 100 }
+      : {}),
     eventId: row.event_id,
+    ...(row.expected_amount_in_cents != null
+      ? { expectedAmountInReais: row.expected_amount_in_cents / 100 }
+      : {}),
     id: row.id,
     openedAt: new Date(row.opened_at),
     openingAmountInReais: row.opening_amount_in_cents / 100,
