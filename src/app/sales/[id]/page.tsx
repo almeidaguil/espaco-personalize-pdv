@@ -7,6 +7,8 @@ import {
   SupabaseSaleDetailRepository,
   type SupabaseSaleDetailClient,
 } from "@/modules/sales/infra/supabase-sale-detail-repository";
+import { cancelSaleAction } from "@/modules/sales/presentation/cancel-sale-action";
+import { CancelSaleForm } from "@/modules/sales/presentation/cancel-sale-form";
 import { SaleDetailCard } from "@/modules/sales/presentation/sale-detail-card";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -78,6 +80,11 @@ export default async function SaleDetailsPage({
         </header>
 
         <SaleDetailCard sale={result.sale} />
+        <CancelSaleForm
+          action={cancelSaleAction}
+          isCanceled={result.sale.status === "canceled"}
+          saleId={result.sale.id}
+        />
       </section>
     </main>
   );
