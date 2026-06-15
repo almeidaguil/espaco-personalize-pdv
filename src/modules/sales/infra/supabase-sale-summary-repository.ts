@@ -6,6 +6,7 @@ import type {
 } from "../application/sale-summary-repository";
 
 type SupabaseSaleSummaryRow = {
+  cash_session_id: string;
   completed_at: string;
   event_id: string;
   events: {
@@ -38,7 +39,7 @@ export type SupabaseSaleSummaryClient = {
 };
 
 const saleSummaryColumns =
-  "id,event_id,status,total_in_cents,completed_at,events(name)" as const;
+  "id,event_id,cash_session_id,status,total_in_cents,completed_at,events(name)" as const;
 
 export class SupabaseSaleSummaryRepository implements SaleSummaryRepository {
   constructor(private readonly supabaseClient: SupabaseSaleSummaryClient) {}
@@ -65,6 +66,7 @@ export class SupabaseSaleSummaryRepository implements SaleSummaryRepository {
 
 function toSaleSummary(row: SupabaseSaleSummaryRow): SaleSummary {
   return {
+    cashSessionId: row.cash_session_id,
     completedAt: new Date(row.completed_at),
     eventId: row.event_id,
     eventName: row.events?.name ?? "Evento sem nome",
