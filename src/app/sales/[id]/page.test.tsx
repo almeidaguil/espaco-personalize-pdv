@@ -18,6 +18,10 @@ vi.mock("@/modules/sales/infra/supabase-sale-detail-repository", () => ({
   SupabaseSaleDetailRepository: vi.fn(),
 }));
 
+vi.mock("@/modules/sales/presentation/cancel-sale-action", () => ({
+  cancelSaleAction: vi.fn(),
+}));
+
 const getSaleDetailUseCaseMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/sales/application/get-sale-detail-use-case", () => ({
@@ -64,6 +68,9 @@ describe("SaleDetailsPage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Evento Julho")).toBeInTheDocument();
     expect(screen.getByText("Chaveiro Polvo")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Cancelar venda" }),
+    ).toBeInTheDocument();
   });
 
   it("renders not found for missing sales", async () => {
