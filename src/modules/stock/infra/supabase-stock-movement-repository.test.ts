@@ -9,7 +9,11 @@ type FakeStockMovementRow = {
   product_id: string;
   quantity_change: number;
   sale_id: string | null;
-  type: "initial_adjustment" | "manual_adjustment" | "sale";
+  type:
+    | "initial_adjustment"
+    | "manual_adjustment"
+    | "sale"
+    | "sale_cancellation";
 };
 
 type FakeSupabaseResponse<TData> = {
@@ -152,6 +156,41 @@ describe("SupabaseStockMovementRepository", () => {
       quantity_change: -2,
       sale_id: "sale-1",
       type: "sale",
+    });
+    expect(result).toEqual({
+      movement,
+      success: true,
+    });
+  });
+
+  it("saves sale cancellation stock movements with sale references", async () => {
+    const movement = createMovement({
+      quantityChange: 2,
+      saleId: "sale-1",
+      type: "sale_cancellation",
+    });
+    const supabaseClient = new FakeSupabaseStockMovementClient({
+      data: {
+        created_at: "2026-06-10T12:00:00.000Z",
+        id: "movement-1",
+        product_id: "product-1",
+        quantity_change: 2,
+        sale_id: "sale-1",
+        type: "sale_cancellation",
+      },
+      error: null,
+    });
+    const repository = new SupabaseStockMovementRepository(supabaseClient);
+
+    const result = await repository.save(movement);
+
+    expect(supabaseClient.insertedPayload).toEqual({
+      created_at: "2026-06-10T12:00:00.000Z",
+      id: "movement-1",
+      product_id: "product-1",
+      quantity_change: 2,
+      sale_id: "sale-1",
+      type: "sale_cancellation",
     });
     expect(result).toEqual({
       movement,
