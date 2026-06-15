@@ -7,7 +7,8 @@ const navigationItems = [
   { href: "/products", label: "Produtos" },
   { href: "/events", label: "Eventos" },
   { href: "/stock", label: "Estoque" },
-  { href: "/cash/open", label: "Caixa" },
+  { href: "/cash/open", label: "Abrir caixa" },
+  { href: "/cash/close", label: "Fechar caixa" },
   { href: "/pdv", label: "PDV" },
 ] as const;
 
