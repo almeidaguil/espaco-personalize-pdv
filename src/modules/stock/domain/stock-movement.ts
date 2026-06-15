@@ -1,7 +1,8 @@
 export type StockMovementType =
   | "initial_adjustment"
   | "manual_adjustment"
-  | "sale";
+  | "sale"
+  | "sale_cancellation";
 
 export type StockMovement = {
   createdAt: Date;
@@ -88,10 +89,26 @@ export function createStockMovement(
     }
   }
 
-  if (input.type !== "sale" && saleId) {
+  if (input.type === "sale_cancellation") {
+    if (!saleId) {
+      errors.push({
+        field: "saleId",
+        message: "Sale cancellation stock movements must reference a sale.",
+      });
+    }
+
+    if (input.quantityChange <= 0) {
+      errors.push({
+        field: "quantityChange",
+        message: "Sale cancellation stock movements must increase stock.",
+      });
+    }
+  }
+
+  if (!["sale", "sale_cancellation"].includes(input.type) && saleId) {
     errors.push({
       field: "saleId",
-      message: "Only sale stock movements can reference a sale.",
+      message: "Only sale-related stock movements can reference a sale.",
     });
   }
 

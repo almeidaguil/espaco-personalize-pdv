@@ -51,6 +51,31 @@ describe("createStockMovement", () => {
     });
   });
 
+  it("creates a sale cancellation movement linked to a sale", () => {
+    const createdAt = new Date("2026-06-10T12:00:00.000Z");
+
+    const result = createStockMovement({
+      createdAt,
+      id: "movement-1",
+      productId: "product-1",
+      quantityChange: 2,
+      saleId: "sale-1",
+      type: "sale_cancellation",
+    });
+
+    expect(result).toEqual({
+      movement: {
+        createdAt,
+        id: "movement-1",
+        productId: "product-1",
+        quantityChange: 2,
+        saleId: "sale-1",
+        type: "sale_cancellation",
+      },
+      success: true,
+    });
+  });
+
   it("rejects sale movements without a sale reference", () => {
     const result = createStockMovement({
       createdAt: new Date("2026-06-10T12:00:00.000Z"),
@@ -106,7 +131,48 @@ describe("createStockMovement", () => {
       errors: [
         {
           field: "saleId",
-          message: "Only sale stock movements can reference a sale.",
+          message: "Only sale-related stock movements can reference a sale.",
+        },
+      ],
+      success: false,
+    });
+  });
+
+  it("rejects sale cancellation movements without a sale reference", () => {
+    const result = createStockMovement({
+      createdAt: new Date("2026-06-10T12:00:00.000Z"),
+      id: "movement-1",
+      productId: "product-1",
+      quantityChange: 2,
+      type: "sale_cancellation",
+    });
+
+    expect(result).toEqual({
+      errors: [
+        {
+          field: "saleId",
+          message: "Sale cancellation stock movements must reference a sale.",
+        },
+      ],
+      success: false,
+    });
+  });
+
+  it("rejects sale cancellation movements that do not increase stock", () => {
+    const result = createStockMovement({
+      createdAt: new Date("2026-06-10T12:00:00.000Z"),
+      id: "movement-1",
+      productId: "product-1",
+      quantityChange: -2,
+      saleId: "sale-1",
+      type: "sale_cancellation",
+    });
+
+    expect(result).toEqual({
+      errors: [
+        {
+          field: "quantityChange",
+          message: "Sale cancellation stock movements must increase stock.",
         },
       ],
       success: false,
