@@ -1,8 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { PdvCart } from "./pdv-cart";
+import type { SaleActionState } from "./sale-action-state";
 
 describe("PdvCart", () => {
   it("adds products and updates the preview total", async () => {
@@ -10,6 +11,8 @@ describe("PdvCart", () => {
 
     render(
       <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -37,6 +40,8 @@ describe("PdvCart", () => {
 
     render(
       <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -63,6 +68,8 @@ describe("PdvCart", () => {
 
     render(
       <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -79,7 +86,7 @@ describe("PdvCart", () => {
     expect(screen.getByText("Troco R$ 5,00")).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Finalizar venda" }),
-    ).toBeDisabled();
+    ).toBeEnabled();
   });
 
   it("shows the missing amount when cash payment is insufficient", async () => {
@@ -87,6 +94,8 @@ describe("PdvCart", () => {
 
     render(
       <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -104,10 +113,79 @@ describe("PdvCart", () => {
   });
 
   it("renders an empty products state", () => {
-    render(<PdvCart products={[]} />);
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={[]}
+      />,
+    );
 
     expect(
       screen.getByText("Nenhum produto ativo disponivel para venda."),
     ).toBeInTheDocument();
   });
+
+  it("submits the sale intent to the server action", async () => {
+    const user = userEvent.setup();
+    const action = createAction();
+
+    render(
+      <PdvCart
+        action={action}
+        cashSessions={createCashSessions()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInReais: 15,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.type(screen.getByLabelText("Valor recebido"), "20,00");
+    await user.click(screen.getByRole("button", { name: "Finalizar venda" }));
+
+    expect(action).toHaveBeenCalled();
+    const formData = action.mock.calls[0]?.[1] as FormData;
+    expect(formData.get("cashSessionId")).toBe("cash-session-1");
+    expect(formData.get("eventId")).toBe("event-1");
+    expect(formData.get("amountReceivedInReais")).toBe("20,00");
+    expect(formData.get("itemsJson")).toBe(
+      JSON.stringify([
+        {
+          productId: "product-1",
+          quantity: 1,
+        },
+      ]),
+    );
+  });
 });
+
+function createAction() {
+  return vi.fn(
+    async (
+      _previousState: SaleActionState,
+      _formData: FormData,
+    ): Promise<SaleActionState> => {
+      void _previousState;
+      void _formData;
+
+      return {
+        successMessage: "Venda finalizada com sucesso.",
+      };
+    },
+  );
+}
+
+function createCashSessions() {
+  return [
+    {
+      eventId: "event-1",
+      eventName: "Evento Julho",
+      id: "cash-session-1",
+    },
+  ];
+}
