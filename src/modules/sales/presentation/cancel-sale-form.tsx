@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import type { CancelSaleActionState } from "./cancel-sale-action-state";
 
@@ -21,6 +21,8 @@ export function CancelSaleForm({
   saleId,
 }: CancelSaleFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [isConfirmed, setIsConfirmed] = useState(false);
+  const isSubmitDisabled = isPending || isCanceled || !isConfirmed;
 
   return (
     <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
@@ -46,9 +48,23 @@ export function CancelSaleForm({
 
       <form action={formAction} className="mt-4" noValidate>
         <input name="saleId" type="hidden" value={saleId} />
+        <label className="mb-4 flex items-start gap-3 rounded-md border border-red-100 bg-red-50 px-3 py-3 text-sm text-red-900">
+          <input
+            checked={isConfirmed}
+            className="mt-1 h-4 w-4 accent-red-700"
+            disabled={isPending || isCanceled}
+            name="confirmCancellation"
+            onChange={(event) => setIsConfirmed(event.target.checked)}
+            type="checkbox"
+          />
+          <span>
+            Confirmo que esta venda deve ser cancelada e que o estoque sera
+            devolvido automaticamente.
+          </span>
+        </label>
         <button
           className="h-11 w-full rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-65 sm:w-auto"
-          disabled={isPending || isCanceled}
+          disabled={isSubmitDisabled}
           type="submit"
         >
           {isCanceled

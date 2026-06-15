@@ -25,10 +25,15 @@ export async function cancelSaleActionService(
   formData: FormData,
   dependencies: CancelSaleActionServiceDependencies,
 ): Promise<CancelSaleActionState> {
-  const result = await cancelSaleUseCase(
-    parseCancelSaleFormData(formData),
-    dependencies,
-  );
+  const input = parseCancelSaleFormData(formData);
+
+  if (!input.confirmCancellation) {
+    return {
+      formError: "Confirme o cancelamento antes de continuar.",
+    };
+  }
+
+  const result = await cancelSaleUseCase(input.saleId, dependencies);
 
   if (!result.success) {
     return {
