@@ -23,6 +23,22 @@ describe("StockMovementsOverview", () => {
             quantityChange: -3,
             type: "manual_adjustment",
           },
+          {
+            createdAt: new Date("2026-06-10T13:00:00.000Z"),
+            id: "movement-2",
+            productId: "product-1",
+            productLabel: "Caneca personalizada",
+            quantityChange: -1,
+            type: "sale",
+          },
+          {
+            createdAt: new Date("2026-06-10T14:00:00.000Z"),
+            id: "movement-3",
+            productId: "product-1",
+            productLabel: "Caneca personalizada",
+            quantityChange: 1,
+            type: "sale_cancellation",
+          },
         ]}
       />,
     );
@@ -33,10 +49,12 @@ describe("StockMovementsOverview", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Movimentacoes" }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText("Caneca personalizada")).toHaveLength(2);
+    expect(screen.getAllByText("Caneca personalizada")).toHaveLength(4);
     expect(screen.getByText("7")).toBeInTheDocument();
     expect(screen.getByText("-3")).toBeInTheDocument();
     expect(screen.getByText("Ajuste manual")).toBeInTheDocument();
+    expect(screen.getByText("Venda")).toBeInTheDocument();
+    expect(screen.getByText("Cancelamento de venda")).toBeInTheDocument();
   });
 
   it("renders empty states", () => {
