@@ -87,6 +87,8 @@ class FakeProductRepository implements ProductRepository {
 }
 
 class FakeStockMovementRepository implements StockMovementRepository {
+  public savedMovements: StockMovement[] = [];
+
   constructor(private readonly movements: StockMovement[] = []) {}
 
   async listAll(): Promise<StockMovement[]> {
@@ -100,9 +102,22 @@ class FakeStockMovementRepository implements StockMovementRepository {
   }
 
   async save(movement: StockMovement): Promise<SaveStockMovementResult> {
+    this.savedMovements.push(movement);
+
     return {
       movement,
       success: true,
+    };
+  }
+}
+
+class FailingSaveStockMovementRepository extends FakeStockMovementRepository {
+  async save(movement: StockMovement): Promise<SaveStockMovementResult> {
+    this.savedMovements.push(movement);
+
+    return {
+      error: "unknown",
+      success: false,
     };
   }
 }
@@ -127,17 +142,19 @@ class FakeSaleRepository implements SaleRepository {
 describe("createSaleUseCase", () => {
   it("creates a sale using trusted product data and available stock", async () => {
     const saleRepository = new FakeSaleRepository();
+    const stockMovementRepository = new FakeStockMovementRepository([
+      createStockMovement(3),
+    ]);
 
     const result = await createSaleUseCase(createInput(), {
       cashSessionRepository: new FakeCashSessionRepository(),
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
+      generateStockMovementId: () => "movement-sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository(),
       saleRepository,
-      stockMovementRepository: new FakeStockMovementRepository([
-        createStockMovement(3),
-      ]),
+      stockMovementRepository,
     });
 
     expect(result.success).toBe(true);
@@ -161,6 +178,16 @@ describe("createSaleUseCase", () => {
       },
       totalInReais: 30,
     });
+    expect(stockMovementRepository.savedMovements).toEqual([
+      {
+        createdAt: new Date("2026-07-10T12:00:00.000Z"),
+        id: "movement-sale-1",
+        productId: "product-1",
+        quantityChange: -2,
+        saleId: "sale-1",
+        type: "sale",
+      },
+    ]);
   });
 
   it("rejects sales when there is no open cash session", async () => {
@@ -171,6 +198,7 @@ describe("createSaleUseCase", () => {
       }),
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
+      generateStockMovementId: () => "movement-sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository(),
       saleRepository: new FakeSaleRepository(),
@@ -196,6 +224,7 @@ describe("createSaleUseCase", () => {
       }),
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
+      generateStockMovementId: () => "movement-sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository(),
       saleRepository: new FakeSaleRepository(),
@@ -215,6 +244,7 @@ describe("createSaleUseCase", () => {
       cashSessionRepository: new FakeCashSessionRepository(),
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
+      generateStockMovementId: () => "movement-sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository({
         products: [{ ...createProduct(), isActive: false }],
@@ -237,6 +267,7 @@ describe("createSaleUseCase", () => {
       cashSessionRepository: new FakeCashSessionRepository(),
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
+      generateStockMovementId: () => "movement-sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository(),
       saleRepository: new FakeSaleRepository(),
@@ -247,6 +278,26 @@ describe("createSaleUseCase", () => {
 
     expect(result).toEqual({
       formError: "Estoque insuficiente para Chaveiro Polvo (CHAVEIRO-001).",
+      success: false,
+    });
+  });
+
+  it("returns an error when sale stock movement cannot be saved", async () => {
+    const result = await createSaleUseCase(createInput(), {
+      cashSessionRepository: new FakeCashSessionRepository(),
+      currentUserProfileRepository: createCurrentUserProfileRepository(),
+      generateSaleId: () => "sale-1",
+      generateStockMovementId: () => "movement-sale-1",
+      getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+      productRepository: new FakeProductRepository(),
+      saleRepository: new FakeSaleRepository(),
+      stockMovementRepository: new FailingSaveStockMovementRepository([
+        createStockMovement(3),
+      ]),
+    });
+
+    expect(result).toEqual({
+      formError: "Nao foi possivel baixar o estoque da venda.",
       success: false,
     });
   });
@@ -264,6 +315,7 @@ describe("createSaleUseCase", () => {
         cashSessionRepository: new FakeCashSessionRepository(),
         currentUserProfileRepository: createCurrentUserProfileRepository(),
         generateSaleId: () => "sale-1",
+        generateStockMovementId: () => "movement-sale-1",
         getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
         productRepository: new FakeProductRepository(),
         saleRepository: new FakeSaleRepository(),
