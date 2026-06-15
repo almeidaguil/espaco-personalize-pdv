@@ -85,7 +85,7 @@ describe("Home", () => {
         .getAllByRole("link", { name: /Fechar caixa/ })
         .some((link) => link.getAttribute("href") === "/cash/close"),
     ).toBe(true);
-    expect(screen.getAllByText("Disponivel")).toHaveLength(5);
+    expect(screen.getAllByText("Disponivel")).toHaveLength(6);
   });
 
   it("guides the operator to create an event when none is active", async () => {

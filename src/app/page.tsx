@@ -68,9 +68,9 @@ const modules = [
     title: "Caixa",
   },
   {
-    description: "Vendas registradas e exportacoes.",
+    description: "Vendas por evento, cancelamentos e exportacao CSV.",
     href: "/reports",
-    status: "Em breve",
+    status: "Disponivel",
     title: "Relatorios",
   },
 ] as const;
