@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { CurrentUserProfileRepository } from "@/modules/auth/application/current-user-profile-repository";
-import type {
-  SaveStockMovementResult,
-  StockMovementRepository,
-} from "@/modules/stock/application/stock-movement-repository";
-import type { StockMovement } from "@/modules/stock/domain/stock-movement";
 
 import type {
   CancelSaleInput,
@@ -48,42 +43,18 @@ class FakeSaleCancellationRepository implements SaleCancellationRepository {
   }
 }
 
-class FakeStockMovementRepository implements StockMovementRepository {
-  public savedMovements: StockMovement[] = [];
-
-  async listAll(): Promise<StockMovement[]> {
-    return [];
-  }
-
-  async listByProductId(): Promise<StockMovement[]> {
-    return [];
-  }
-
-  async save(movement: StockMovement): Promise<SaveStockMovementResult> {
-    this.savedMovements.push(movement);
-
-    return {
-      movement,
-      success: true,
-    };
-  }
-}
-
 describe("cancelSaleActionService", () => {
   it("cancels a sale from form data", async () => {
     const saleCancellationRepository = new FakeSaleCancellationRepository();
-    const stockMovementRepository = new FakeStockMovementRepository();
 
     const result = await cancelSaleActionService(
       {},
       createFormData("sale-1", true),
       {
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateStockMovementId: () => "stock-movement-cancel-1",
         getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
         saleCancellationRepository,
         saleDetailRepository: new FakeSaleDetailRepository(),
-        stockMovementRepository,
       },
     );
 
@@ -94,16 +65,6 @@ describe("cancelSaleActionService", () => {
       canceledAt: new Date("2026-07-10T15:00:00.000Z"),
       saleId: "sale-1",
     });
-    expect(stockMovementRepository.savedMovements).toEqual([
-      {
-        createdAt: new Date("2026-07-10T15:00:00.000Z"),
-        id: "stock-movement-cancel-1",
-        productId: "product-1",
-        quantityChange: 2,
-        saleId: "sale-1",
-        type: "sale_cancellation",
-      },
-    ]);
   });
 
   it("requires cancellation confirmation", async () => {
@@ -112,11 +73,9 @@ describe("cancelSaleActionService", () => {
       createFormData("sale-1", false),
       {
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateStockMovementId: () => "stock-movement-cancel-1",
         getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
         saleCancellationRepository: new FakeSaleCancellationRepository(),
         saleDetailRepository: new FakeSaleDetailRepository(),
-        stockMovementRepository: new FakeStockMovementRepository(),
       },
     );
 
@@ -128,11 +87,9 @@ describe("cancelSaleActionService", () => {
   it("returns use case errors", async () => {
     const result = await cancelSaleActionService({}, createFormData("", true), {
       currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: () => "stock-movement-cancel-1",
       getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
       saleCancellationRepository: new FakeSaleCancellationRepository(),
       saleDetailRepository: new FakeSaleDetailRepository(),
-      stockMovementRepository: new FakeStockMovementRepository(),
     });
 
     expect(result).toEqual({
@@ -146,14 +103,12 @@ describe("cancelSaleActionService", () => {
       createFormData("sale-1", true),
       {
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateStockMovementId: () => "stock-movement-cancel-1",
         getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
         saleCancellationRepository: new FakeSaleCancellationRepository({
           error: "unknown",
           success: false,
         }),
         saleDetailRepository: new FakeSaleDetailRepository(),
-        stockMovementRepository: new FakeStockMovementRepository(),
       },
     );
 

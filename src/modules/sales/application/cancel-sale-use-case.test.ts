@@ -1,11 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import type { CurrentUserProfileRepository } from "@/modules/auth/application/current-user-profile-repository";
-import type {
-  SaveStockMovementResult,
-  StockMovementRepository,
-} from "@/modules/stock/application/stock-movement-repository";
-import type { StockMovement } from "@/modules/stock/domain/stock-movement";
 
 import { cancelSaleUseCase } from "./cancel-sale-use-case";
 import type {
@@ -47,38 +42,6 @@ class FakeSaleCancellationRepository implements SaleCancellationRepository {
   }
 }
 
-class FakeStockMovementRepository implements StockMovementRepository {
-  public savedMovements: StockMovement[] = [];
-
-  async listAll(): Promise<StockMovement[]> {
-    return [];
-  }
-
-  async listByProductId(): Promise<StockMovement[]> {
-    return [];
-  }
-
-  async save(movement: StockMovement): Promise<SaveStockMovementResult> {
-    this.savedMovements.push(movement);
-
-    return {
-      movement,
-      success: true,
-    };
-  }
-}
-
-class FailingStockMovementRepository extends FakeStockMovementRepository {
-  async save(movement: StockMovement): Promise<SaveStockMovementResult> {
-    this.savedMovements.push(movement);
-
-    return {
-      error: "unknown",
-      success: false,
-    };
-  }
-}
-
 describe("cancelSaleUseCase", () => {
   it("cancels a completed sale and restores stock for every item", async () => {
     const saleCancellationRepository = new FakeSaleCancellationRepository();
@@ -86,15 +49,12 @@ describe("cancelSaleUseCase", () => {
       sale: createSaleDetail(),
       success: true,
     });
-    const stockMovementRepository = new FakeStockMovementRepository();
 
     const result = await cancelSaleUseCase(" sale-1 ", {
       currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: createSequentialIdGenerator(),
       getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
       saleCancellationRepository,
       saleDetailRepository,
-      stockMovementRepository,
     });
 
     expect(result).toEqual({
@@ -105,24 +65,6 @@ describe("cancelSaleUseCase", () => {
       canceledAt: new Date("2026-07-10T15:00:00.000Z"),
       saleId: "sale-1",
     });
-    expect(stockMovementRepository.savedMovements).toEqual([
-      {
-        createdAt: new Date("2026-07-10T15:00:00.000Z"),
-        id: "stock-movement-1",
-        productId: "product-1",
-        quantityChange: 2,
-        saleId: "sale-1",
-        type: "sale_cancellation",
-      },
-      {
-        createdAt: new Date("2026-07-10T15:00:00.000Z"),
-        id: "stock-movement-2",
-        productId: "product-2",
-        quantityChange: 1,
-        saleId: "sale-1",
-        type: "sale_cancellation",
-      },
-    ]);
   });
 
   it("rejects blank sale ids", async () => {
@@ -134,11 +76,9 @@ describe("cancelSaleUseCase", () => {
 
     const result = await cancelSaleUseCase(" ", {
       currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: createSequentialIdGenerator(),
       getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
       saleCancellationRepository,
       saleDetailRepository,
-      stockMovementRepository: new FakeStockMovementRepository(),
     });
 
     expect(result).toEqual({
@@ -157,14 +97,12 @@ describe("cancelSaleUseCase", () => {
           success: false,
         }),
       },
-      generateStockMovementId: createSequentialIdGenerator(),
       getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
       saleCancellationRepository: new FakeSaleCancellationRepository(),
       saleDetailRepository: new FakeSaleDetailRepository({
         sale: createSaleDetail(),
         success: true,
       }),
-      stockMovementRepository: new FakeStockMovementRepository(),
     });
 
     expect(result).toEqual({
@@ -176,14 +114,12 @@ describe("cancelSaleUseCase", () => {
   it("rejects missing sales", async () => {
     const result = await cancelSaleUseCase("sale-1", {
       currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: createSequentialIdGenerator(),
       getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
       saleCancellationRepository: new FakeSaleCancellationRepository(),
       saleDetailRepository: new FakeSaleDetailRepository({
         error: "not_found",
         success: false,
       }),
-      stockMovementRepository: new FakeStockMovementRepository(),
     });
 
     expect(result).toEqual({
@@ -194,11 +130,9 @@ describe("cancelSaleUseCase", () => {
 
   it("rejects already canceled sales", async () => {
     const saleCancellationRepository = new FakeSaleCancellationRepository();
-    const stockMovementRepository = new FakeStockMovementRepository();
 
     const result = await cancelSaleUseCase("sale-1", {
       currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: createSequentialIdGenerator(),
       getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
       saleCancellationRepository,
       saleDetailRepository: new FakeSaleDetailRepository({
@@ -208,7 +142,6 @@ describe("cancelSaleUseCase", () => {
         },
         success: true,
       }),
-      stockMovementRepository,
     });
 
     expect(result).toEqual({
@@ -216,15 +149,11 @@ describe("cancelSaleUseCase", () => {
       success: false,
     });
     expect(saleCancellationRepository.receivedInput).toBeUndefined();
-    expect(stockMovementRepository.savedMovements).toEqual([]);
   });
 
   it("returns an error when sale cancellation cannot be persisted", async () => {
-    const stockMovementRepository = new FakeStockMovementRepository();
-
     const result = await cancelSaleUseCase("sale-1", {
       currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: createSequentialIdGenerator(),
       getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
       saleCancellationRepository: new FakeSaleCancellationRepository({
         error: "unknown",
@@ -234,31 +163,10 @@ describe("cancelSaleUseCase", () => {
         sale: createSaleDetail(),
         success: true,
       }),
-      stockMovementRepository,
     });
 
     expect(result).toEqual({
       formError: "Nao foi possivel cancelar a venda.",
-      success: false,
-    });
-    expect(stockMovementRepository.savedMovements).toEqual([]);
-  });
-
-  it("returns an error when stock restoration cannot be saved", async () => {
-    const result = await cancelSaleUseCase("sale-1", {
-      currentUserProfileRepository: createCurrentUserProfileRepository(),
-      generateStockMovementId: createSequentialIdGenerator(),
-      getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
-      saleCancellationRepository: new FakeSaleCancellationRepository(),
-      saleDetailRepository: new FakeSaleDetailRepository({
-        sale: createSaleDetail(),
-        success: true,
-      }),
-      stockMovementRepository: new FailingStockMovementRepository(),
-    });
-
-    expect(result).toEqual({
-      formError: "Nao foi possivel devolver o estoque da venda.",
       success: false,
     });
   });
@@ -306,15 +214,5 @@ function createSaleDetail(): SaleDetail {
     },
     status: "completed",
     totalInReais: 55,
-  };
-}
-
-function createSequentialIdGenerator(): () => string {
-  let index = 0;
-
-  return () => {
-    index += 1;
-
-    return `stock-movement-${index}`;
   };
 }

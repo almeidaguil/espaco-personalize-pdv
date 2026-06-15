@@ -4,9 +4,9 @@ import type {
   SaleCancellationRepository,
 } from "../application/sale-cancellation-repository";
 
-type SupabaseSaleCancellationUpdate = {
-  canceled_at: string;
-  status: "canceled";
+type CancelSaleArgs = {
+  p_canceled_at: string;
+  p_sale_id: string;
 };
 
 type SupabaseError = {
@@ -14,24 +14,13 @@ type SupabaseError = {
   message?: string;
 };
 
-type SupabaseUpdateResult = PromiseLike<{
-  data: unknown;
+type SupabaseRpcResult = PromiseLike<{
+  data: string | null;
   error: SupabaseError | null;
 }>;
 
 export type SupabaseSaleCancellationClient = {
-  from(table: "sales"): {
-    update(payload: SupabaseSaleCancellationUpdate): {
-      eq(
-        column: "id",
-        value: string,
-      ): {
-        select(columns: string): {
-          single(): SupabaseUpdateResult;
-        };
-      };
-    };
-  };
+  rpc(functionName: "cancel_sale", args: CancelSaleArgs): SupabaseRpcResult;
 };
 
 export class SupabaseSaleCancellationRepository implements SaleCancellationRepository {
@@ -40,17 +29,12 @@ export class SupabaseSaleCancellationRepository implements SaleCancellationRepos
   ) {}
 
   async cancel(input: CancelSaleInput): Promise<CancelSaleResult> {
-    const { error } = await this.supabaseClient
-      .from("sales")
-      .update({
-        canceled_at: input.canceledAt.toISOString(),
-        status: "canceled",
-      })
-      .eq("id", input.saleId)
-      .select("id")
-      .single();
+    const { data, error } = await this.supabaseClient.rpc("cancel_sale", {
+      p_canceled_at: input.canceledAt.toISOString(),
+      p_sale_id: input.saleId,
+    });
 
-    if (error) {
+    if (error || data !== input.saleId) {
       return {
         error: "unknown",
         success: false,

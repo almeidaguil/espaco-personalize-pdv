@@ -1,17 +1,11 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-
 import { revalidatePath } from "next/cache";
 
 import {
   SupabaseCurrentUserProfileRepository,
   type SupabaseCurrentUserProfileClient,
 } from "@/modules/auth/infra/supabase-current-user-profile-repository";
-import {
-  SupabaseStockMovementRepository,
-  type SupabaseStockMovementClient,
-} from "@/modules/stock/infra/supabase-stock-movement-repository";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 import {
@@ -37,16 +31,12 @@ export async function cancelSaleAction(
     currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
       supabaseClient as unknown as SupabaseCurrentUserProfileClient,
     ),
-    generateStockMovementId: randomUUID,
     getCurrentDate: () => new Date(),
     saleCancellationRepository: new SupabaseSaleCancellationRepository(
       supabaseClient as unknown as SupabaseSaleCancellationClient,
     ),
     saleDetailRepository: new SupabaseSaleDetailRepository(
       supabaseClient as unknown as SupabaseSaleDetailClient,
-    ),
-    stockMovementRepository: new SupabaseStockMovementRepository(
-      supabaseClient as unknown as SupabaseStockMovementClient,
     ),
   });
 
