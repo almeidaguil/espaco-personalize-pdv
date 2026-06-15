@@ -33,8 +33,10 @@ import {
 } from "@/modules/products/infra/supabase-product-repository";
 import {
   PdvCart,
+  type PdvCartCashSession,
   type PdvCartProduct,
 } from "@/modules/sales/presentation/pdv-cart";
+import { createSaleAction } from "@/modules/sales/presentation/create-sale-action";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -127,6 +129,14 @@ export default async function PdvPage() {
               </section>
             ) : (
               <PdvCart
+                action={createSaleAction}
+                cashSessions={
+                  cashSessionsResult.success
+                    ? cashSessionsResult.sessions.map((session) =>
+                        toPdvCartCashSession(session, eventNames),
+                      )
+                    : []
+                }
                 products={productsResult.products
                   .filter((product) => product.isActive)
                   .map(toPdvCartProduct)}
@@ -165,5 +175,16 @@ function toPdvCartProduct(product: Product): PdvCartProduct {
     name: product.name,
     priceInReais: product.price.toReais(),
     ...(product.sku ? { sku: product.sku } : {}),
+  };
+}
+
+function toPdvCartCashSession(
+  session: CashSession,
+  eventNames: Map<string, string>,
+): PdvCartCashSession {
+  return {
+    eventId: session.eventId,
+    eventName: eventNames.get(session.eventId) ?? "Evento sem nome",
+    id: session.id,
   };
 }

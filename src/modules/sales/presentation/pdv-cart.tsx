@@ -1,6 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
+
+import type { SaleActionState } from "./sale-action-state";
 
 export type PdvCartProduct = {
   id: string;
@@ -13,7 +15,18 @@ type CartItem = PdvCartProduct & {
   quantity: number;
 };
 
+export type PdvCartCashSession = {
+  eventId: string;
+  eventName: string;
+  id: string;
+};
+
 type PdvCartProps = {
+  action: (
+    previousState: SaleActionState,
+    formData: FormData,
+  ) => Promise<SaleActionState>;
+  cashSessions: PdvCartCashSession[];
   products: PdvCartProduct[];
 };
 
@@ -22,9 +35,14 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
 });
 
-export function PdvCart({ products }: PdvCartProps) {
+export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
+  const [state, formAction, isPending] = useActionState(action, {});
   const [items, setItems] = useState<CartItem[]>([]);
   const [receivedAmountInput, setReceivedAmountInput] = useState("");
+  const [cashSessionId, setCashSessionId] = useState(cashSessions[0]?.id ?? "");
+  const selectedCashSession = cashSessions.find(
+    (session) => session.id === cashSessionId,
+  );
   const receivedAmountInReais = parseBrlAmount(receivedAmountInput);
   const totalInReais = useMemo(
     () =>
@@ -37,9 +55,28 @@ export function PdvCart({ products }: PdvCartProps) {
   const paymentDifferenceInReais = receivedAmountInReais - totalInReais;
   const hasCartItems = items.length > 0;
   const hasValidReceivedAmount = Number.isFinite(receivedAmountInReais);
+  const canSubmit =
+    Boolean(selectedCashSession) &&
+    hasCartItems &&
+    hasValidReceivedAmount &&
+    paymentDifferenceInReais >= 0 &&
+    !isPending;
 
   return (
-    <section className="grid gap-3 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+    <form
+      action={formAction}
+      className="grid gap-3 rounded-md border border-slate-200 bg-white p-5 shadow-sm"
+    >
+      <input
+        name="eventId"
+        type="hidden"
+        value={selectedCashSession?.eventId ?? ""}
+      />
+      <input
+        name="itemsJson"
+        type="hidden"
+        value={JSON.stringify(toSaleItems(items))}
+      />
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
           Carrinho
@@ -145,6 +182,32 @@ export function PdvCart({ products }: PdvCartProps) {
         <div className="grid gap-2">
           <label
             className="text-sm font-medium text-slate-700"
+            htmlFor="cashSessionId"
+          >
+            Caixa da venda
+          </label>
+          <select
+            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+            id="cashSessionId"
+            name="cashSessionId"
+            onChange={(event) => setCashSessionId(event.target.value)}
+            value={cashSessionId}
+          >
+            {cashSessions.length === 0 ? (
+              <option value="">Nenhum caixa aberto</option>
+            ) : (
+              cashSessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.eventName}
+                </option>
+              ))
+            )}
+          </select>
+        </div>
+
+        <div className="grid gap-2">
+          <label
+            className="text-sm font-medium text-slate-700"
             htmlFor="receivedAmount"
           >
             Valor recebido
@@ -153,7 +216,7 @@ export function PdvCart({ products }: PdvCartProps) {
             className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
             id="receivedAmount"
             inputMode="decimal"
-            name="receivedAmount"
+            name="amountReceivedInReais"
             onChange={(event) => setReceivedAmountInput(event.target.value)}
             placeholder="50,00"
             type="text"
@@ -181,15 +244,26 @@ export function PdvCart({ products }: PdvCartProps) {
           )}
         </div>
 
+        {state.successMessage ? (
+          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-700">
+            {state.successMessage}
+          </p>
+        ) : null}
+        {state.formError ? (
+          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-700">
+            {state.formError}
+          </p>
+        ) : null}
+
         <button
-          className="h-11 rounded-md bg-slate-300 px-4 text-sm font-semibold text-slate-600"
-          disabled
-          type="button"
+          className="h-11 rounded-md bg-[#1e3275] px-4 text-sm font-semibold text-white transition hover:bg-[#17275c] disabled:bg-slate-300 disabled:text-slate-600"
+          disabled={!canSubmit}
+          type="submit"
         >
-          Finalizar venda
+          {isPending ? "Finalizando..." : "Finalizar venda"}
         </button>
       </div>
-    </section>
+    </form>
   );
 
   function addProduct(product: PdvCartProduct) {
@@ -223,6 +297,13 @@ export function PdvCart({ products }: PdvCartProps) {
       }),
     );
   }
+}
+
+function toSaleItems(items: CartItem[]) {
+  return items.map((item) => ({
+    productId: item.id,
+    quantity: item.quantity,
+  }));
 }
 
 function parseBrlAmount(value: string): number {
