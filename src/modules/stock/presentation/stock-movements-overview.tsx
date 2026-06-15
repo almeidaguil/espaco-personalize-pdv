@@ -111,7 +111,14 @@ export function StockMovementsOverview({
 }
 
 function formatMovementType(type: StockMovementSummaryItem["type"]): string {
-  return type === "initial_adjustment" ? "Ajuste inicial" : "Ajuste manual";
+  const labels: Record<StockMovementSummaryItem["type"], string> = {
+    initial_adjustment: "Ajuste inicial",
+    manual_adjustment: "Ajuste manual",
+    sale: "Venda",
+    sale_cancellation: "Cancelamento de venda",
+  };
+
+  return labels[type];
 }
 
 function formatQuantityChange(quantityChange: number): string {
