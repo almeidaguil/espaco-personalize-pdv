@@ -1,5 +1,7 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { OfflineStatus } from "@/shared/components/offline-status";
+import { ServiceWorkerRegistration } from "@/shared/components/service-worker-registration";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +15,29 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Espaco Personalize PDV",
+  applicationName: "Espaco Personalize PDV",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "EP PDV",
+  },
   description: "Sistema privado para vendas presenciais em eventos.",
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    apple: "/apple-touch-icon.png",
+    icon: [
+      { sizes: "192x192", type: "image/png", url: "/icons/icon-192.png" },
+      { sizes: "512x512", type: "image/png", url: "/icons/icon-512.png" },
+    ],
+  },
+  manifest: "/manifest.webmanifest",
+  title: "Espaco Personalize PDV",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#1e3275",
 };
 
 export default function RootLayout({
@@ -27,7 +50,11 @@ export default function RootLayout({
       lang="pt-BR"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <ServiceWorkerRegistration />
+        <OfflineStatus />
+        {children}
+      </body>
     </html>
   );
 }
