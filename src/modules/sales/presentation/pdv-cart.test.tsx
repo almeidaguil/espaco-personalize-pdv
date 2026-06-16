@@ -112,6 +112,70 @@ describe("PdvCart", () => {
     expect(screen.getByText("Falta R$ 5,00")).toBeInTheDocument();
   });
 
+  it("filters products by name and SKU", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInReais: 15,
+            sku: "CHAVEIRO-001",
+          },
+          {
+            id: "product-2",
+            name: "Caneca Personalizada",
+            priceInReais: 35,
+            sku: "CANECA-001",
+          },
+        ]}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Buscar produto"), "caneca");
+
+    expect(screen.getByText("Caneca Personalizada")).toBeInTheDocument();
+    expect(screen.queryByText("Chaveiro Polvo")).not.toBeInTheDocument();
+    expect(screen.getByText("1 produto(s) encontrado(s)")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Buscar produto"));
+    await user.type(screen.getByLabelText("Buscar produto"), "chaveiro-001");
+
+    expect(screen.getByText("Chaveiro Polvo")).toBeInTheDocument();
+    expect(screen.queryByText("Caneca Personalizada")).not.toBeInTheDocument();
+  });
+
+  it("paginates products for faster scanning", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={Array.from({ length: 9 }, (_, index) => ({
+          id: `product-${index + 1}`,
+          name: `Produto ${index + 1}`,
+          priceInReais: 10 + index,
+          sku: `SKU-${index + 1}`,
+        }))}
+      />,
+    );
+
+    expect(screen.getByText("Pagina 1 de 2")).toBeInTheDocument();
+    expect(screen.getByText("Produto 1")).toBeInTheDocument();
+    expect(screen.queryByText("Produto 9")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Proxima" }));
+
+    expect(screen.getByText("Pagina 2 de 2")).toBeInTheDocument();
+    expect(screen.getByText("Produto 9")).toBeInTheDocument();
+    expect(screen.queryByText("Produto 1")).not.toBeInTheDocument();
+  });
+
   it("renders an empty products state", () => {
     render(
       <PdvCart

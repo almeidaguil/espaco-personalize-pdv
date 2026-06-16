@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { PdvEventSelector } from "./pdv-event-selector";
 
 describe("PdvEventSelector", () => {
-  it("renders active event options for PDV", () => {
+  it("renders the active event context for PDV", () => {
     render(
       <PdvEventSelector
         events={[
@@ -27,12 +27,11 @@ describe("PdvEventSelector", () => {
     expect(
       screen.getByRole("heading", {
         level: 2,
-        name: "Selecione o evento da venda",
+        name: "Evento ativo da operacao",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/Evento Julho/)).toBeChecked();
-    expect(screen.getByLabelText(/Evento Agosto/)).not.toBeChecked();
+    expect(screen.getByText("Evento Julho")).toBeInTheDocument();
     expect(screen.getByText(/Centro de Eventos/)).toBeInTheDocument();
-    expect(screen.getByText(/Sem local/)).toBeInTheDocument();
+    expect(screen.queryByText("Evento Agosto")).not.toBeInTheDocument();
   });
 });

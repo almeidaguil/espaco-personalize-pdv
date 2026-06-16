@@ -94,8 +94,8 @@ export default async function PdvPage() {
           </p>
           <h1 className="mt-1 text-2xl font-semibold">PDV</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
-            Comece selecionando o evento ativo da operacao. O carrinho e o
-            pagamento entram nas proximas entregas.
+            Venda rapidamente no evento ativo usando produtos, caixa aberto,
+            pagamento em dinheiro e troco calculado.
           </p>
         </header>
 
