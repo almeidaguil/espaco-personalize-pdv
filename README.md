@@ -25,3 +25,4 @@ Sistema privado, mobile first e PWA para vendas presenciais em eventos, estoque,
 - [Plano de execucao incremental](docs/plano-execucao-incremental.md)
 - [Padroes tecnicos](docs/padroes-tecnicos.md)
 - [Gate E2E de release](docs/e2e-release-gate.md)
+- [Manual do usuario final](docs/manual-usuario-final.md)
