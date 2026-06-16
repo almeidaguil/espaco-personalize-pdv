@@ -26,6 +26,8 @@ class FakeSupabaseEventClient {
   public eqValue?: unknown;
   public orderedColumn?: string;
   public orderOptions?: unknown;
+  public rpcArgs?: unknown;
+  public rpcFunctionName?: string;
   public selectedColumns?: string;
 
   constructor(
@@ -34,6 +36,13 @@ class FakeSupabaseEventClient {
       data: FakeSupabaseEventRow[] | null;
       error: FakeSupabaseResponse["error"];
     } = { data: [], error: null },
+    private readonly rpcResponse: {
+      data: string | null;
+      error: FakeSupabaseResponse["error"];
+    } = {
+      data: "event-1",
+      error: null,
+    },
   ) {}
 
   from(table: "events") {
@@ -79,6 +88,13 @@ class FakeSupabaseEventClient {
         };
       },
     };
+  }
+
+  async rpc(functionName: "close_event", args: unknown) {
+    this.rpcFunctionName = functionName;
+    this.rpcArgs = args;
+
+    return this.rpcResponse;
   }
 }
 
@@ -284,5 +300,41 @@ describe("SupabaseEventRepository", () => {
       expect(result.events).toHaveLength(1);
       expect(result.events[0]?.isActive).toBe(true);
     }
+  });
+
+  it("closes an event through RPC", async () => {
+    const supabaseClient = new FakeSupabaseEventClient({
+      data: null,
+      error: null,
+    });
+    const repository = new SupabaseEventRepository(supabaseClient);
+
+    await expect(repository.close("event-1")).resolves.toEqual({
+      success: true,
+    });
+    expect(supabaseClient.rpcFunctionName).toBe("close_event");
+    expect(supabaseClient.rpcArgs).toEqual({
+      p_event_id: "event-1",
+    });
+  });
+
+  it("maps open cash session event close errors", async () => {
+    const repository = new SupabaseEventRepository(
+      new FakeSupabaseEventClient(
+        { data: null, error: null },
+        { data: [], error: null },
+        {
+          data: null,
+          error: {
+            message: "Event has open cash sessions.",
+          },
+        },
+      ),
+    );
+
+    await expect(repository.close("event-1")).resolves.toEqual({
+      error: "open_cash_sessions",
+      success: false,
+    });
   });
 });

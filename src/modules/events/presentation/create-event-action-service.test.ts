@@ -15,6 +15,12 @@ class FakeEventRepository implements EventRepository {
 
   constructor(private readonly saveResult?: SaveEventResult) {}
 
+  async close() {
+    return {
+      success: true as const,
+    };
+  }
+
   async list(): Promise<ListEventsResult> {
     return {
       events: [],

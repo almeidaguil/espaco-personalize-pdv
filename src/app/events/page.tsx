@@ -11,6 +11,7 @@ import {
   EventList,
   type EventListItem,
 } from "@/modules/events/presentation/event-list";
+import { closeEventAction } from "@/modules/events/presentation/close-event-action";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -69,7 +70,10 @@ export default async function EventsPage() {
             Nenhum evento cadastrado ainda.
           </section>
         ) : (
-          <EventList events={result.events.map(toEventListItem)} />
+          <EventList
+            action={closeEventAction}
+            events={result.events.map(toEventListItem)}
+          />
         )}
       </section>
     </main>

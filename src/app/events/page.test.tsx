@@ -11,6 +11,10 @@ vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
   SupabaseEventRepository: vi.fn(),
 }));
 
+vi.mock("@/modules/events/presentation/close-event-action", () => ({
+  closeEventAction: vi.fn(),
+}));
+
 const listEventsUseCaseMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/events/application/list-events-use-case", () => ({
