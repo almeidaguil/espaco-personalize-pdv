@@ -26,3 +26,4 @@ Sistema privado, mobile first e PWA para vendas presenciais em eventos, estoque,
 - [Padroes tecnicos](docs/padroes-tecnicos.md)
 - [Gate E2E de release](docs/e2e-release-gate.md)
 - [Manual do usuario final](docs/manual-usuario-final.md)
+- [Checklist de go-live](docs/checklist-go-live.md)
