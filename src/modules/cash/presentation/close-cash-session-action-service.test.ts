@@ -12,6 +12,7 @@ import { closeCashSessionActionService } from "./close-cash-session-action-servi
 
 class FakeCashSessionRepository implements CashSessionRepository {
   public updatedSession?: CashSession;
+  public updateOptions?: { adminPassword?: string };
 
   constructor(
     private readonly findResult: FindOpenCashSessionResult = {
@@ -45,7 +46,11 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async update(session: CashSession): Promise<SaveCashSessionResult> {
+  async update(
+    session: CashSession,
+    options?: { adminPassword?: string },
+  ): Promise<SaveCashSessionResult> {
+    this.updateOptions = options;
     this.updatedSession = session;
 
     return {
@@ -64,6 +69,7 @@ describe("closeCashSessionActionService", () => {
       createFormData({
         cashSessionId: "cash-session-1",
         countedAmountInReais: "260,75",
+        adminPassword: "123456",
       }),
       {
         cashSessionRepository,
@@ -81,6 +87,9 @@ describe("closeCashSessionActionService", () => {
       countedAmountInReais: 260.75,
       operatorId: "operator-1",
       status: "closed",
+    });
+    expect(cashSessionRepository.updateOptions).toEqual({
+      adminPassword: "123456",
     });
   });
 
@@ -144,10 +153,14 @@ function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
 }
 
 function createFormData(input: {
+  adminPassword?: string;
   cashSessionId: string;
   countedAmountInReais: string;
 }): FormData {
   const formData = new FormData();
+  if (input.adminPassword) {
+    formData.set("adminPassword", input.adminPassword);
+  }
   formData.set("cashSessionId", input.cashSessionId);
   formData.set("countedAmountInReais", input.countedAmountInReais);
 

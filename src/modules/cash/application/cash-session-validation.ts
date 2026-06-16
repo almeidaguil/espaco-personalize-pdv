@@ -16,6 +16,7 @@ export const openCashSessionSchema = z.object({
 });
 
 export const closeCashSessionSchema = z.object({
+  adminPassword: z.string().trim().optional(),
   cashSessionId: z.string().trim().min(1, "Informe o caixa aberto."),
   countedAmountInReais: z
     .number({ error: "Informe o valor contado em Reais." })

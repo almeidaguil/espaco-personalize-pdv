@@ -300,19 +300,25 @@ describe("SupabaseCashSessionRepository", () => {
     );
     const repository = new SupabaseCashSessionRepository(supabaseClient);
 
-    const result = await repository.update({
-      closedAt: new Date("2026-07-10T18:00:00.000Z"),
-      countedAmountInReais: 260.75,
-      eventId: "event-1",
-      id: "cash-session-1",
-      openedAt: new Date("2026-07-10T12:00:00.000Z"),
-      openingAmountInReais: 150.5,
-      operatorId: "operator-1",
-      status: "closed",
-    });
+    const result = await repository.update(
+      {
+        closedAt: new Date("2026-07-10T18:00:00.000Z"),
+        countedAmountInReais: 260.75,
+        eventId: "event-1",
+        id: "cash-session-1",
+        openedAt: new Date("2026-07-10T12:00:00.000Z"),
+        openingAmountInReais: 150.5,
+        operatorId: "operator-1",
+        status: "closed",
+      },
+      {
+        adminPassword: "123456",
+      },
+    );
 
     expect(supabaseClient.rpcFunctionName).toBe("close_cash_session");
     expect(supabaseClient.rpcArgs).toEqual({
+      p_admin_password: "123456",
       p_cash_session_id: "cash-session-1",
       p_closed_at: "2026-07-10T18:00:00.000Z",
       p_counted_amount_in_cents: 26075,
@@ -331,6 +337,47 @@ describe("SupabaseCashSessionRepository", () => {
       expect(result.session.expectedAmountInReais).toBe(250.5);
       expect(result.session.differenceAmountInReais).toBe(10.25);
     }
+  });
+
+  it("maps admin password RPC failures", async () => {
+    const supabaseClient = new FakeSupabaseCashSessionClient(
+      {
+        data: null,
+        error: null,
+      },
+      {
+        data: null,
+        error: null,
+      },
+      {
+        data: [],
+        error: null,
+      },
+      {
+        data: null,
+        error: {
+          message:
+            "Admin password is required to close a cash session with shortage.",
+        },
+      },
+    );
+    const repository = new SupabaseCashSessionRepository(supabaseClient);
+
+    const result = await repository.update({
+      closedAt: new Date("2026-07-10T18:00:00.000Z"),
+      countedAmountInReais: 200,
+      eventId: "event-1",
+      id: "cash-session-1",
+      openedAt: new Date("2026-07-10T12:00:00.000Z"),
+      openingAmountInReais: 150.5,
+      operatorId: "operator-1",
+      status: "closed",
+    });
+
+    expect(result).toEqual({
+      error: "admin_password_required",
+      success: false,
+    });
   });
 
   it("lists open cash sessions by operator", async () => {

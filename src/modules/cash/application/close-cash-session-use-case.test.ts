@@ -12,6 +12,7 @@ import type { CashSession } from "../domain/cash-session";
 
 class FakeCashSessionRepository implements CashSessionRepository {
   public findByIdInput?: { cashSessionId: string; operatorId: string };
+  public updateOptions?: { adminPassword?: string };
   public updatedSession?: CashSession;
 
   constructor(
@@ -52,7 +53,11 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async update(session: CashSession): Promise<SaveCashSessionResult> {
+  async update(
+    session: CashSession,
+    options?: { adminPassword?: string },
+  ): Promise<SaveCashSessionResult> {
+    this.updateOptions = options;
     this.updatedSession = session;
 
     return (
@@ -70,6 +75,7 @@ describe("closeCashSessionUseCase", () => {
 
     const result = await closeCashSessionUseCase(
       {
+        adminPassword: "123456",
         cashSessionId: " cash-session-1 ",
         countedAmountInReais: 260.75,
       },
@@ -94,6 +100,9 @@ describe("closeCashSessionUseCase", () => {
       openingAmountInReais: 150.5,
       operatorId: "operator-1",
       status: "closed",
+    });
+    expect(cashSessionRepository.updateOptions).toEqual({
+      adminPassword: "123456",
     });
   });
 
@@ -197,6 +206,36 @@ describe("closeCashSessionUseCase", () => {
 
     expect(result).toEqual({
       formError: "Nao foi possivel fechar o caixa.",
+      success: false,
+    });
+  });
+
+  it("maps admin password failures to a shortage form error", async () => {
+    const cashSessionRepository = new FakeCashSessionRepository(
+      {
+        session: createCashSession(),
+        success: true,
+      },
+      {
+        error: "admin_password_required",
+        success: false,
+      },
+    );
+
+    const result = await closeCashSessionUseCase(
+      {
+        cashSessionId: "cash-session-1",
+        countedAmountInReais: 200,
+      },
+      {
+        cashSessionRepository,
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
+      },
+    );
+
+    expect(result).toEqual({
+      formError: "Informe a senha administrativa para fechar caixa com falta.",
       success: false,
     });
   });
