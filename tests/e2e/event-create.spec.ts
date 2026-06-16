@@ -30,6 +30,7 @@ test("admin creates an event and sees it in the events list", async ({
   await page.getByLabel("Local").fill(eventLocation);
   await page.getByLabel("Inicio").fill("2026-07-10T09:00");
   await page.getByLabel("Termino").fill("2026-07-10T18:00");
+  await page.getByLabel("Evento ativo").uncheck();
   await page.getByRole("button", { name: "Salvar evento" }).click();
 
   await expect(page.getByText("Evento cadastrado com sucesso.")).toBeVisible();
@@ -40,7 +41,7 @@ test("admin creates an event and sees it in the events list", async ({
 
   await expect(eventCard).toBeVisible();
   await expect(eventCard.getByText(eventLocation)).toBeVisible();
-  await expect(eventCard.getByText("Ativo")).toBeVisible();
+  await expect(eventCard.getByText("Inativo")).toBeVisible();
 });
 
 async function authenticatePage(page: Page) {

@@ -17,46 +17,23 @@ test.skip(
 );
 
 test("admin opens and closes a cash session for an event", async ({ page }) => {
-  const uniqueSuffix = crypto.randomUUID();
-  const eventName = `Fechamento E2E ${uniqueSuffix}`;
-  const eventLocation = `Local Fechamento E2E ${uniqueSuffix}`;
-
   await authenticatePage(page);
-
-  await page.goto("/events/new");
-  await page.getByLabel("Nome do evento").fill(eventName);
-  await page.getByLabel("Local").fill(eventLocation);
-  await page.getByLabel("Inicio").fill("2026-07-12T09:00");
-  await page.getByLabel("Termino").fill("2026-07-12T18:00");
-  await page.getByRole("button", { name: "Salvar evento" }).click();
-
-  await expect(page.getByText("Evento cadastrado com sucesso.")).toBeVisible();
+  await closeAllOpenCashSessions(page);
 
   await page.goto("/cash/open");
 
-  const openEventOptionValue = await page
-    .locator("select#eventId option", { hasText: eventName })
-    .getAttribute("value");
+  const activeEvent = await getFirstSelectableOption(page, "eventId");
 
-  expect(openEventOptionValue).not.toBeNull();
+  expect(activeEvent).not.toBeNull();
 
-  await page.getByLabel("Evento").selectOption(openEventOptionValue ?? "");
+  await page.getByLabel("Evento").selectOption(activeEvent?.value ?? "");
   await page.getByLabel("Valor inicial").fill("150,50");
   await page.getByRole("button", { name: "Abrir caixa" }).click();
 
   await expect(page.getByText("Caixa aberto com sucesso.")).toBeVisible();
 
   await page.goto("/cash/close");
-
-  const closeCashOptionValue = await page
-    .locator("select#cashSessionId option", { hasText: eventName })
-    .getAttribute("value");
-
-  expect(closeCashOptionValue).not.toBeNull();
-
-  await page
-    .getByLabel("Caixa aberto")
-    .selectOption(closeCashOptionValue ?? "");
+  await page.getByLabel("Valor contado no caixa").fill("150,50");
   await page.getByRole("button", { name: "Fechar caixa" }).click();
 
   await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
@@ -129,5 +106,34 @@ function readEnvFile(path: string): Record<string, string | undefined> {
     );
   } catch {
     return {};
+  }
+}
+
+async function getFirstSelectableOption(page: Page, selectId: string) {
+  return page.locator(`select#${selectId} option`).evaluateAll((options) => {
+    const option = options.find(
+      (candidate): candidate is HTMLOptionElement =>
+        candidate instanceof HTMLOptionElement && candidate.value !== "",
+    );
+
+    return option
+      ? { label: option.textContent ?? "", value: option.value }
+      : null;
+  });
+}
+
+async function closeAllOpenCashSessions(page: Page) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await page.goto("/cash/close");
+
+    const closeButton = page.getByRole("button", { name: "Fechar caixa" });
+
+    if ((await closeButton.count()) === 0) {
+      return;
+    }
+
+    await page.getByLabel("Valor contado no caixa").first().fill("999999,00");
+    await closeButton.first().click();
+    await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
   }
 }

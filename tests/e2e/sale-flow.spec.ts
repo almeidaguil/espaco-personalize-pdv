@@ -20,13 +20,12 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
   const uniqueSuffix = crypto.randomUUID();
   const productName = `Venda E2E Produto ${uniqueSuffix}`;
   const productSku = `VENDA-E2E-${uniqueSuffix.slice(0, 8)}`;
-  const eventName = `Venda E2E Evento ${uniqueSuffix}`;
 
   await authenticatePage(page);
+  await closeAllOpenCashSessions(page);
   await createProduct(page, productName, productSku);
   await addInitialStock(page, productName, 3);
-  await createEvent(page, eventName, uniqueSuffix);
-  await openCashSession(page, eventName);
+  const eventName = await openCashSession(page);
   await createSale(page, productName, eventName);
   await cancelSale(page, eventName);
 
@@ -43,6 +42,8 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
       .filter({ hasText: "Cancelamento de venda" })
       .first(),
   ).toBeVisible();
+
+  await closeAllOpenCashSessions(page);
 });
 
 async function createProduct(page: Page, productName: string, sku: string) {
@@ -75,41 +76,27 @@ async function addInitialStock(
   await expect(page.getByText("Estoque ajustado com sucesso.")).toBeVisible();
 }
 
-async function createEvent(
-  page: Page,
-  eventName: string,
-  uniqueSuffix: string,
-) {
-  await page.goto("/events/new");
-  await page.getByLabel("Nome do evento").fill(eventName);
-  await page.getByLabel("Local").fill(`Local Venda E2E ${uniqueSuffix}`);
-  await page.getByLabel("Inicio").fill("2026-07-13T09:00");
-  await page.getByLabel("Termino").fill("2026-07-13T18:00");
-  await page.getByRole("button", { name: "Salvar evento" }).click();
-
-  await expect(page.getByText("Evento cadastrado com sucesso.")).toBeVisible();
-}
-
-async function openCashSession(page: Page, eventName: string) {
+async function openCashSession(page: Page) {
   await page.goto("/cash/open");
 
-  const eventOptionValue = await page
-    .locator("select#eventId option", { hasText: eventName })
-    .getAttribute("value");
+  const activeEvent = await getFirstSelectableOption(page, "eventId");
 
-  expect(eventOptionValue).not.toBeNull();
+  expect(activeEvent).not.toBeNull();
 
-  await page.getByLabel("Evento").selectOption(eventOptionValue ?? "");
+  await page.getByLabel("Evento").selectOption(activeEvent?.value ?? "");
   await page.getByLabel("Valor inicial").fill("100,00");
   await page.getByRole("button", { name: "Abrir caixa" }).click();
 
   await expect(page.getByText("Caixa aberto com sucesso.")).toBeVisible();
+
+  return getEventNameFromOption(activeEvent?.label ?? "");
 }
 
 async function createSale(page: Page, productName: string, eventName: string) {
   await page.goto("/pdv");
   await expect(page.getByText(eventName).first()).toBeVisible();
 
+  await page.getByLabel("Buscar produto").fill(productName);
   await page
     .locator("article", { hasText: productName })
     .getByRole("button", { name: "Adicionar" })
@@ -135,6 +122,7 @@ async function cancelSale(page: Page, eventName: string) {
       name: /Confirmo que esta venda deve ser cancelada/,
     })
     .check();
+  await page.getByLabel("Senha administrativa").fill("123456");
   await page.getByRole("button", { name: "Cancelar venda" }).click();
 
   await expect(page.getByText("Venda cancelada com sucesso.")).toBeVisible();
@@ -213,5 +201,38 @@ function readEnvFile(path: string): Record<string, string | undefined> {
     );
   } catch {
     return {};
+  }
+}
+
+function getEventNameFromOption(label: string) {
+  return label.split(" · ")[0]?.split(" Â· ")[0] ?? label;
+}
+
+async function getFirstSelectableOption(page: Page, selectId: string) {
+  return page.locator(`select#${selectId} option`).evaluateAll((options) => {
+    const option = options.find(
+      (candidate): candidate is HTMLOptionElement =>
+        candidate instanceof HTMLOptionElement && candidate.value !== "",
+    );
+
+    return option
+      ? { label: option.textContent ?? "", value: option.value }
+      : null;
+  });
+}
+
+async function closeAllOpenCashSessions(page: Page) {
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    await page.goto("/cash/close");
+
+    const closeButton = page.getByRole("button", { name: "Fechar caixa" });
+
+    if ((await closeButton.count()) === 0) {
+      return;
+    }
+
+    await page.getByLabel("Valor contado no caixa").first().fill("999999,00");
+    await closeButton.first().click();
+    await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
   }
 }
