@@ -3,7 +3,10 @@ import Link from "next/link";
 
 import { listProductsUseCase } from "@/modules/products/application/list-products-use-case";
 import type { Product } from "@/modules/products/domain/product";
-import { SupabaseProductRepository } from "@/modules/products/infra/supabase-product-repository";
+import {
+  SupabaseProductRepository,
+  type SupabaseProductClient,
+} from "@/modules/products/infra/supabase-product-repository";
 import {
   ProductList,
   type ProductListItem,
@@ -23,7 +26,9 @@ const brlFormatter = new Intl.NumberFormat("pt-BR", {
 
 export default async function ProductsPage() {
   const supabaseClient = await createSupabaseServerClient();
-  const productRepository = new SupabaseProductRepository(supabaseClient);
+  const productRepository = new SupabaseProductRepository(
+    supabaseClient as unknown as SupabaseProductClient,
+  );
   const result = await listProductsUseCase({ productRepository });
 
   return (
@@ -43,7 +48,8 @@ export default async function ProductsPage() {
               </p>
               <h1 className="mt-1 text-2xl font-semibold">Produtos</h1>
               <p className="mt-2 text-sm leading-6 text-slate-600">
-                Consulte os produtos disponiveis para venda nos eventos.
+                Consulte e ajuste os produtos disponiveis para venda nos
+                eventos.
               </p>
             </div>
             <Link

@@ -24,4 +24,27 @@ describe("ProductForm", () => {
       screen.getByRole("button", { name: "Salvar produto" }),
     ).toBeInTheDocument();
   });
+
+  it("renders initial values for editing", () => {
+    render(
+      <ProductForm
+        action={vi.fn()}
+        initialValues={{
+          isActive: false,
+          name: "Caneca premium",
+          priceInReais: "42,50",
+          sku: "CANECA-002",
+        }}
+        submitLabel="Salvar alteracoes"
+      />,
+    );
+
+    expect(screen.getByDisplayValue("Caneca premium")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("42,50")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("CANECA-002")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Salvar alteracoes" }),
+    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Produto ativo")).not.toBeChecked();
+  });
 });

@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 
-import { expect, type Page, test } from "@playwright/test";
 import { createBrowserClient } from "@supabase/ssr";
+import { expect, type Page, test } from "@playwright/test";
 
 const e2eUserEmail = process.env.E2E_USER_EMAIL;
 const e2eUserPassword = process.env.E2E_USER_PASSWORD;

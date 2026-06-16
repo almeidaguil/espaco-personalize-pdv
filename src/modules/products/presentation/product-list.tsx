@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export type ProductListItem = {
   id: string;
   isActive: boolean;
@@ -41,6 +43,15 @@ export function ProductList({ products }: ProductListProps) {
           <strong className="mt-4 block text-lg text-[#1e3275]">
             {product.priceLabel}
           </strong>
+
+          <div className="mt-4 flex justify-end">
+            <Link
+              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275] hover:bg-[#1e3275]/5"
+              href={`/products/${product.id}/edit`}
+            >
+              Editar
+            </Link>
+          </div>
         </li>
       ))}
     </ul>

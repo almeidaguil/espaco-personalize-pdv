@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import type { ProductRepository } from "@/modules/products/application/product-repository";
+import type {
+  FindProductByIdResult,
+  ProductRepository,
+} from "@/modules/products/application/product-repository";
 import { Money } from "@/modules/products/domain/money";
 import type { Product } from "@/modules/products/domain/product";
 
@@ -10,6 +13,13 @@ import { listStockMovementsSummaryUseCase } from "./list-stock-movements-summary
 
 class FakeProductRepository implements ProductRepository {
   constructor(private readonly products: Product[]) {}
+
+  async findById(): Promise<FindProductByIdResult> {
+    return {
+      error: "not_found",
+      success: false,
+    };
+  }
 
   async list() {
     return {
@@ -24,9 +34,23 @@ class FakeProductRepository implements ProductRepository {
       success: true as const,
     };
   }
+
+  async update(product: Product) {
+    return {
+      product,
+      success: true as const,
+    };
+  }
 }
 
 class FailingProductRepository implements ProductRepository {
+  async findById() {
+    return {
+      error: "not_found" as const,
+      success: false as const,
+    };
+  }
+
   async list() {
     return {
       error: "unknown" as const,
@@ -35,6 +59,13 @@ class FailingProductRepository implements ProductRepository {
   }
 
   async save() {
+    return {
+      error: "unknown" as const,
+      success: false as const,
+    };
+  }
+
+  async update() {
     return {
       error: "unknown" as const,
       success: false as const,
