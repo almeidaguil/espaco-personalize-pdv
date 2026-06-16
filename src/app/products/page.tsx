@@ -7,10 +7,8 @@ import {
   SupabaseProductRepository,
   type SupabaseProductClient,
 } from "@/modules/products/infra/supabase-product-repository";
-import {
-  ProductList,
-  type ProductListItem,
-} from "@/modules/products/presentation/product-list";
+import { type ProductListItem } from "@/modules/products/presentation/product-list";
+import { ProductCatalog } from "@/modules/products/presentation/product-catalog";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -70,7 +68,7 @@ export default async function ProductsPage() {
             Nenhum produto cadastrado ainda.
           </section>
         ) : (
-          <ProductList products={result.products.map(toProductListItem)} />
+          <ProductCatalog products={result.products.map(toProductListItem)} />
         )}
       </section>
     </main>
