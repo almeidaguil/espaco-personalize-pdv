@@ -16,6 +16,7 @@ describe("listEventsUseCase", () => {
       },
     ];
     const eventRepository: EventRepository = {
+      close: async () => ({ success: true }),
       list: async () => ({ events, success: true }),
       listActive: async () => ({ events: [], success: true }),
       save: async () => ({ error: "unknown", success: false }),
@@ -29,6 +30,7 @@ describe("listEventsUseCase", () => {
 
   it("maps repository errors to a presentation-safe message", async () => {
     const eventRepository: EventRepository = {
+      close: async () => ({ success: true }),
       list: async () => ({ error: "unknown", success: false }),
       listActive: async () => ({ events: [], success: true }),
       save: async () => ({ error: "unknown", success: false }),

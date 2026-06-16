@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { EventList } from "./event-list";
 
@@ -7,6 +7,7 @@ describe("EventList", () => {
   it("renders event summary cards", () => {
     render(
       <EventList
+        action={vi.fn()}
         events={[
           {
             id: "event-1",
@@ -34,5 +35,8 @@ describe("EventList", () => {
     expect(screen.getByText("Evento Agosto")).toBeInTheDocument();
     expect(screen.getByText("Sem local")).toBeInTheDocument();
     expect(screen.getByText("Inativo")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Finalizar evento" }),
+    ).toBeInTheDocument();
   });
 });

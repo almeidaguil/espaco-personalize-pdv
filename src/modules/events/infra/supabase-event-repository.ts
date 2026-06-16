@@ -1,4 +1,5 @@
 import type {
+  CloseEventResult,
   EventRepository,
   ListEventsResult,
   SaveEventResult,
@@ -61,12 +62,36 @@ export type SupabaseEventClient = {
       ): SupabaseEventListResult;
     };
   };
+  rpc(
+    functionName: "close_event",
+    args: { p_event_id: string },
+  ): PromiseLike<{
+    data: string | null;
+    error: SupabaseError | null;
+  }>;
 };
 
 const eventColumns = "id,name,location,starts_at,ends_at,is_active" as const;
 
 export class SupabaseEventRepository implements EventRepository {
   constructor(private readonly supabaseClient: SupabaseEventClient) {}
+
+  async close(eventId: string): Promise<CloseEventResult> {
+    const { data, error } = await this.supabaseClient.rpc("close_event", {
+      p_event_id: eventId,
+    });
+
+    if (error || data !== eventId) {
+      return {
+        error: getCloseEventError(error),
+        success: false,
+      };
+    }
+
+    return {
+      success: true,
+    };
+  }
 
   async listActive(): Promise<ListEventsResult> {
     const { data, error } = await this.supabaseClient
@@ -126,6 +151,23 @@ export class SupabaseEventRepository implements EventRepository {
       success: true,
     };
   }
+}
+
+function getCloseEventError(
+  error: SupabaseError | null,
+): "already_closed" | "open_cash_sessions" | "unknown" {
+  const errorText =
+    `${error?.code ?? ""} ${error?.message ?? ""}`.toLowerCase();
+
+  if (errorText.includes("open cash sessions")) {
+    return "open_cash_sessions";
+  }
+
+  if (errorText.includes("already closed")) {
+    return "already_closed";
+  }
+
+  return "unknown";
 }
 
 function toEventInsert(event: Event): SupabaseEventInsert {
