@@ -18,6 +18,7 @@ describe("PdvCart", () => {
             id: "product-1",
             name: "Chaveiro Polvo",
             priceInReais: 15,
+            quantityOnHand: 5,
             sku: "CHAVEIRO-001",
           },
         ]}
@@ -47,6 +48,7 @@ describe("PdvCart", () => {
             id: "product-1",
             name: "Chaveiro Polvo",
             priceInReais: 15,
+            quantityOnHand: 5,
           },
         ]}
       />,
@@ -75,6 +77,7 @@ describe("PdvCart", () => {
             id: "product-1",
             name: "Chaveiro Polvo",
             priceInReais: 15,
+            quantityOnHand: 5,
           },
         ]}
       />,
@@ -101,6 +104,7 @@ describe("PdvCart", () => {
             id: "product-1",
             name: "Chaveiro Polvo",
             priceInReais: 15,
+            quantityOnHand: 5,
           },
         ]}
       />,
@@ -124,12 +128,14 @@ describe("PdvCart", () => {
             id: "product-1",
             name: "Chaveiro Polvo",
             priceInReais: 15,
+            quantityOnHand: 5,
             sku: "CHAVEIRO-001",
           },
           {
             id: "product-2",
             name: "Caneca Personalizada",
             priceInReais: 35,
+            quantityOnHand: 5,
             sku: "CANECA-001",
           },
         ]}
@@ -160,6 +166,7 @@ describe("PdvCart", () => {
           id: `product-${index + 1}`,
           name: `Produto ${index + 1}`,
           priceInReais: 10 + index,
+          quantityOnHand: 5,
           sku: `SKU-${index + 1}`,
         }))}
       />,
@@ -203,6 +210,7 @@ describe("PdvCart", () => {
             id: "product-1",
             name: "Chaveiro Polvo",
             priceInReais: 15,
+            quantityOnHand: 5,
           },
         ]}
       />,
@@ -217,6 +225,7 @@ describe("PdvCart", () => {
     expect(formData.get("cashSessionId")).toBe("cash-session-1");
     expect(formData.get("eventId")).toBe("event-1");
     expect(formData.get("amountReceivedInReais")).toBe("20,00");
+    expect(formData.get("paymentMethod")).toBe("cash");
     expect(formData.get("itemsJson")).toBe(
       JSON.stringify([
         {
@@ -225,6 +234,76 @@ describe("PdvCart", () => {
         },
       ]),
     );
+  });
+
+  it("supports non-cash payment methods", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInReais: 15,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.selectOptions(
+      screen.getByLabelText("Forma de pagamento"),
+      "pix",
+    );
+
+    expect(screen.getByDisplayValue("15,00")).toBeInTheDocument();
+    expect(screen.getByText("Pix no valor de R$ 15,00")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Finalizar venda" }),
+    ).toBeEnabled();
+  });
+
+  it("blocks products without stock and stops at the stock limit", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={[
+          {
+            id: "product-1",
+            name: "Produto sem estoque",
+            priceInReais: 15,
+            quantityOnHand: 0,
+          },
+          {
+            id: "product-2",
+            name: "Produto limitado",
+            priceInReais: 20,
+            quantityOnHand: 2,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: "Sem estoque" })).toBeDisabled();
+
+    await user.click(screen.getAllByRole("button", { name: "Adicionar" })[0]!);
+    await user.click(
+      screen.getByRole("button", {
+        name: "Adicionar uma unidade de Produto limitado",
+      }),
+    );
+
+    expect(screen.getByText("2 x R$ 20,00")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Limite no carrinho" }),
+    ).toBeDisabled();
   });
 });
 

@@ -36,6 +36,11 @@ import {
   type PdvCartCashSession,
   type PdvCartProduct,
 } from "@/modules/sales/presentation/pdv-cart";
+import { calculateStockBalance } from "@/modules/stock/domain/stock-balance";
+import {
+  SupabaseStockMovementRepository,
+  type SupabaseStockMovementClient,
+} from "@/modules/stock/infra/supabase-stock-movement-repository";
 import { createSaleAction } from "@/modules/sales/presentation/create-sale-action";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -58,25 +63,48 @@ export default async function PdvPage() {
   const currentUserProfileClient =
     supabaseClient as unknown as SupabaseCurrentUserProfileClient;
   const productClient = supabaseClient as unknown as SupabaseProductClient;
+  const stockMovementClient =
+    supabaseClient as unknown as SupabaseStockMovementClient;
   const eventRepository = new SupabaseEventRepository(eventClient);
-  const [eventsResult, cashSessionsResult, productsResult] = await Promise.all([
-    listActiveEventsUseCase({ eventRepository }),
-    listOpenCashSessionsUseCase({
-      cashSessionRepository: new SupabaseCashSessionRepository(
-        cashSessionClient,
-      ),
-      currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
-        currentUserProfileClient,
-      ),
-    }),
-    listProductsUseCase({
-      productRepository: new SupabaseProductRepository(productClient),
-    }),
-  ]);
+  const productRepository = new SupabaseProductRepository(productClient);
+  const stockMovementRepository = new SupabaseStockMovementRepository(
+    stockMovementClient,
+  );
+  const [eventsResult, cashSessionsResult, productsResult, stockMovements] =
+    await Promise.all([
+      listActiveEventsUseCase({ eventRepository }),
+      listOpenCashSessionsUseCase({
+        cashSessionRepository: new SupabaseCashSessionRepository(
+          cashSessionClient,
+        ),
+        currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
+          currentUserProfileClient,
+        ),
+      }),
+      listProductsUseCase({
+        productRepository,
+      }),
+      stockMovementRepository.listAll(),
+    ]);
   const eventNames = new Map(
     eventsResult.success
       ? eventsResult.events.map((event) => [event.id, event.name])
       : [],
+  );
+  const stockMovementsByProductId = new Map<string, typeof stockMovements>();
+
+  for (const movement of stockMovements) {
+    const productMovements =
+      stockMovementsByProductId.get(movement.productId) ?? [];
+    productMovements.push(movement);
+    stockMovementsByProductId.set(movement.productId, productMovements);
+  }
+
+  const stockQuantitiesByProductId = new Map(
+    (productsResult.success ? productsResult.products : []).map((product) => [
+      product.id,
+      calculateStockBalance(stockMovementsByProductId.get(product.id) ?? []),
+    ]),
   );
 
   return (
@@ -95,7 +123,8 @@ export default async function PdvPage() {
           <h1 className="mt-1 text-2xl font-semibold">PDV</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">
             Venda rapidamente no evento ativo usando produtos, caixa aberto,
-            pagamento em dinheiro e troco calculado.
+            forma de pagamento registrada e troco calculado quando a venda for
+            em dinheiro.
           </p>
         </header>
 
@@ -139,7 +168,12 @@ export default async function PdvPage() {
                 }
                 products={productsResult.products
                   .filter((product) => product.isActive)
-                  .map(toPdvCartProduct)}
+                  .map((product) =>
+                    toPdvCartProduct(
+                      product,
+                      stockQuantitiesByProductId.get(product.id) ?? 0,
+                    ),
+                  )}
               />
             )}
           </>
@@ -169,11 +203,15 @@ function toPdvCashStatusItem(
   };
 }
 
-function toPdvCartProduct(product: Product): PdvCartProduct {
+function toPdvCartProduct(
+  product: Product,
+  quantityOnHand: number,
+): PdvCartProduct {
   return {
     id: product.id,
     name: product.name,
     priceInReais: product.price.toReais(),
+    quantityOnHand,
     ...(product.sku ? { sku: product.sku } : {}),
   };
 }

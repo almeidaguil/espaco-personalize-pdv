@@ -167,4 +167,66 @@ describe("createSale", () => {
       success: false,
     });
   });
+
+  it("creates card payments without change when the amount matches the total", () => {
+    const result = createSale({
+      cashSessionId: "cash-session-1",
+      completedAt: new Date("2026-07-10T12:00:00.000Z"),
+      eventId: "event-1",
+      id: "sale-1",
+      items: [
+        {
+          productId: "product-1",
+          productName: "Chaveiro Polvo",
+          quantity: 2,
+          unitPriceInReais: 15,
+        },
+      ],
+      payment: {
+        amountInReais: 30,
+        method: "pix",
+      },
+    });
+
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.sale.payment).toEqual({
+        amountInReais: 30,
+        changeInReais: 0,
+        method: "pix",
+      });
+    }
+  });
+
+  it("rejects non-cash payments when the amount differs from the total", () => {
+    const result = createSale({
+      cashSessionId: "cash-session-1",
+      completedAt: new Date("2026-07-10T12:00:00.000Z"),
+      eventId: "event-1",
+      id: "sale-1",
+      items: [
+        {
+          productId: "product-1",
+          productName: "Chaveiro Polvo",
+          quantity: 2,
+          unitPriceInReais: 15,
+        },
+      ],
+      payment: {
+        amountInReais: 25,
+        method: "credit_card",
+      },
+    });
+
+    expect(result).toEqual({
+      errors: [
+        {
+          field: "payment",
+          message: "Non-cash payments must match the sale total exactly.",
+        },
+      ],
+      success: false,
+    });
+  });
 });

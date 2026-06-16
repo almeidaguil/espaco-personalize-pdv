@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { paymentMethods } from "../domain/sale";
 
 export const createSaleSchema = z.object({
   cashSessionId: z.string().trim().min(1, "Informe o caixa."),
@@ -25,7 +26,7 @@ export const createSaleSchema = z.object({
           1e-8,
         "Informe o valor recebido com no maximo 2 casas decimais.",
       ),
-    method: z.literal("cash"),
+    method: z.enum(paymentMethods),
   }),
 });
 

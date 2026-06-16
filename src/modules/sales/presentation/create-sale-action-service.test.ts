@@ -144,6 +144,32 @@ describe("createSaleActionService", () => {
     });
   });
 
+  it("creates a pix sale with exact payment and zero change", async () => {
+    const saleRepository = new FakeSaleRepository();
+    const formData = createFormData();
+    formData.set("paymentMethod", "pix");
+    formData.set("amountReceivedInReais", "30,00");
+
+    const result = await createSaleActionService({}, formData, {
+      cashSessionRepository: new FakeCashSessionRepository(),
+      currentUserProfileRepository: createCurrentUserProfileRepository(),
+      generateSaleId: () => "sale-1",
+      getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+      productRepository: new FakeProductRepository(),
+      saleRepository,
+      stockMovementRepository: new FakeStockMovementRepository(),
+    });
+
+    expect(result).toEqual({
+      successMessage: "Venda finalizada com sucesso.",
+    });
+    expect(saleRepository.savedSale?.payment).toEqual({
+      amountInReais: 30,
+      changeInReais: 0,
+      method: "pix",
+    });
+  });
+
   it("returns validation errors from invalid form data", async () => {
     const result = await createSaleActionService({}, new FormData(), {
       cashSessionRepository: new FakeCashSessionRepository(),
@@ -224,6 +250,7 @@ function createFormData(): FormData {
     ]),
   );
   formData.set("amountReceivedInReais", "50,00");
+  formData.set("paymentMethod", "cash");
 
   return formData;
 }

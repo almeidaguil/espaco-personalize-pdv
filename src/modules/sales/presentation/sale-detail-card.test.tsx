@@ -37,6 +37,7 @@ describe("SaleDetailCard", () => {
     expect(screen.getAllByText("R$ 30,00")).toHaveLength(2);
     expect(screen.getByText("Chaveiro Polvo")).toBeInTheDocument();
     expect(screen.getByText("2 x R$ 15,00")).toBeInTheDocument();
+    expect(screen.getByText("Dinheiro")).toBeInTheDocument();
     expect(screen.getByText("Troco")).toBeInTheDocument();
     expect(screen.getByText("R$ 20,00")).toBeInTheDocument();
   });

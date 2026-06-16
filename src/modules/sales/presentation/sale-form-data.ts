@@ -1,3 +1,5 @@
+import type { PaymentMethod } from "../domain/sale";
+
 type SaleItemFormInput = {
   productId: string;
   quantity: number;
@@ -12,7 +14,7 @@ export function parseCreateSaleFormData(formData: FormData) {
       amountInReais: parseBrlAmount(
         formData.get("amountReceivedInReais")?.toString() ?? "",
       ),
-      method: "cash",
+      method: parsePaymentMethod(formData.get("paymentMethod")?.toString()),
     },
   };
 }
@@ -46,4 +48,15 @@ function parseBrlAmount(value: string): number {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function parsePaymentMethod(value?: string): PaymentMethod {
+  switch (value) {
+    case "pix":
+    case "credit_card":
+    case "debit_card":
+      return value;
+    default:
+      return "cash";
+  }
 }

@@ -59,6 +59,12 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
 
       <div className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
         <div className="flex justify-between gap-3 text-sm">
+          <span className="text-slate-600">Metodo</span>
+          <strong className="text-slate-950">
+            {formatPaymentMethod(sale.payment.method)}
+          </strong>
+        </div>
+        <div className="flex justify-between gap-3 text-sm">
           <span className="text-slate-600">Pagamento</span>
           <strong className="text-slate-950">
             {moneyFormatter.format(sale.payment.amountInReais)}
@@ -73,4 +79,15 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
       </div>
     </section>
   );
+}
+
+function formatPaymentMethod(method: SaleDetail["payment"]["method"]): string {
+  const labels = {
+    cash: "Dinheiro",
+    credit_card: "Cartao de credito",
+    debit_card: "Cartao de debito",
+    pix: "Pix",
+  } as const;
+
+  return labels[method];
 }

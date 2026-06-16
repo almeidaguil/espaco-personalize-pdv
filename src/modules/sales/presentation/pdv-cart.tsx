@@ -2,12 +2,14 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import type { PaymentMethod } from "../domain/sale";
 import type { SaleActionState } from "./sale-action-state";
 
 export type PdvCartProduct = {
   id: string;
   name: string;
   priceInReais: number;
+  quantityOnHand: number;
   sku?: string;
 };
 
@@ -36,18 +38,24 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
 });
 
 const productsPerPage = 8;
+const paymentMethodLabels: Record<PaymentMethod, string> = {
+  cash: "Dinheiro",
+  credit_card: "Cartao de credito",
+  debit_card: "Cartao de debito",
+  pix: "Pix",
+};
 
 export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   const [state, formAction, isPending] = useActionState(action, {});
   const [items, setItems] = useState<CartItem[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [productPage, setProductPage] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [receivedAmountInput, setReceivedAmountInput] = useState("");
   const [cashSessionId, setCashSessionId] = useState(cashSessions[0]?.id ?? "");
   const selectedCashSession = cashSessions.find(
     (session) => session.id === cashSessionId,
   );
-  const receivedAmountInReais = parseBrlAmount(receivedAmountInput);
   const totalInReais = useMemo(
     () =>
       items.reduce(
@@ -68,14 +76,27 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
     (productPage - 1) * productsPerPage,
     productPage * productsPerPage,
   );
-  const paymentDifferenceInReais = receivedAmountInReais - totalInReais;
   const hasCartItems = items.length > 0;
+  const hasAvailableStockForItems = items.every(
+    (item) => item.quantityOnHand > 0 && item.quantity <= item.quantityOnHand,
+  );
+  const effectiveReceivedAmountInput =
+    paymentMethod === "cash"
+      ? receivedAmountInput
+      : totalInReais > 0
+        ? formatBrlAmount(totalInReais)
+        : "";
+  const receivedAmountInReais = parseBrlAmount(effectiveReceivedAmountInput);
+  const paymentDifferenceInReais = receivedAmountInReais - totalInReais;
   const hasValidReceivedAmount = Number.isFinite(receivedAmountInReais);
   const canSubmit =
     Boolean(selectedCashSession) &&
     hasCartItems &&
     hasValidReceivedAmount &&
-    paymentDifferenceInReais >= 0 &&
+    hasAvailableStockForItems &&
+    (paymentMethod === "cash"
+      ? paymentDifferenceInReais >= 0
+      : paymentDifferenceInReais === 0) &&
     !isPending;
 
   return (
@@ -93,6 +114,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         type="hidden"
         value={JSON.stringify(toSaleItems(items))}
       />
+      <input name="paymentMethod" type="hidden" value={paymentMethod} />
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
           Carrinho
@@ -135,27 +157,14 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
           ) : (
             <div className="grid gap-2">
               {visibleProducts.map((product) => (
-                <article
-                  className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center"
+                <ProductListItem
                   key={product.id}
-                >
-                  <div>
-                    <h3 className="text-sm font-semibold text-slate-950">
-                      {product.name}
-                    </h3>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {product.sku ?? "Sem SKU"} -{" "}
-                      {moneyFormatter.format(product.priceInReais)}
-                    </p>
-                  </div>
-                  <button
-                    className="min-h-11 rounded-md bg-[#1e3275] px-3 text-sm font-semibold text-white transition hover:bg-[#17275c]"
-                    onClick={() => addProduct(product)}
-                    type="button"
-                  >
-                    Adicionar
-                  </button>
-                </article>
+                  onAdd={() => addProduct(product)}
+                  product={product}
+                  quantityInCart={
+                    items.find((item) => item.id === product.id)?.quantity ?? 0
+                  }
+                />
               ))}
             </div>
           )}
@@ -282,9 +291,36 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         <div className="grid gap-2">
           <label
             className="text-sm font-medium text-slate-700"
+            htmlFor="paymentMethod"
+          >
+            Forma de pagamento
+          </label>
+          <select
+            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+            id="paymentMethod"
+            onChange={(event) =>
+              setPaymentMethod(event.target.value as PaymentMethod)
+            }
+            value={paymentMethod}
+          >
+            {(
+              Object.entries(paymentMethodLabels) as Array<
+                [PaymentMethod, string]
+              >
+            ).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="grid gap-2">
+          <label
+            className="text-sm font-medium text-slate-700"
             htmlFor="receivedAmount"
           >
-            Valor recebido
+            {paymentMethod === "cash" ? "Valor recebido" : "Valor do pagamento"}
           </label>
           <input
             className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
@@ -292,16 +328,32 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
             inputMode="decimal"
             name="amountReceivedInReais"
             onChange={(event) => setReceivedAmountInput(event.target.value)}
-            placeholder="50,00"
+            placeholder={paymentMethod === "cash" ? "50,00" : "Total da venda"}
+            readOnly={paymentMethod !== "cash"}
             type="text"
-            value={receivedAmountInput}
+            value={effectiveReceivedAmountInput}
           />
+          {paymentMethod !== "cash" ? (
+            <p className="text-xs leading-5 text-slate-500">
+              Para {paymentMethodLabels[paymentMethod].toLowerCase()}, o sistema
+              registra o valor exato da venda.
+            </p>
+          ) : null}
         </div>
 
         <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
           {!hasCartItems ? (
             <p className="text-sm text-slate-600">
               Adicione itens para calcular o pagamento.
+            </p>
+          ) : !hasAvailableStockForItems ? (
+            <p className="text-sm font-semibold text-red-700">
+              Ajuste o carrinho para respeitar o estoque disponivel.
+            </p>
+          ) : paymentMethod !== "cash" ? (
+            <p className="text-sm font-semibold text-slate-700">
+              {paymentMethodLabels[paymentMethod]} no valor de{" "}
+              {moneyFormatter.format(totalInReais)}
             </p>
           ) : !hasValidReceivedAmount ? (
             <p className="text-sm text-slate-600">
@@ -345,7 +397,15 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
       const existingItem = currentItems.find((item) => item.id === product.id);
 
       if (!existingItem) {
+        if (product.quantityOnHand <= 0) {
+          return currentItems;
+        }
+
         return [...currentItems, { ...product, quantity: 1 }];
+      }
+
+      if (existingItem.quantity >= existingItem.quantityOnHand) {
+        return currentItems;
       }
 
       return currentItems.map((item) =>
@@ -376,6 +436,48 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
       }),
     );
   }
+}
+
+type ProductListItemProps = {
+  onAdd: () => void;
+  product: PdvCartProduct;
+  quantityInCart: number;
+};
+
+function ProductListItem({
+  onAdd,
+  product,
+  quantityInCart,
+}: ProductListItemProps) {
+  const hasStock = product.quantityOnHand > 0;
+  const reachedStockLimit = quantityInCart >= product.quantityOnHand;
+
+  return (
+    <article className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
+      <div>
+        <h3 className="text-sm font-semibold text-slate-950">{product.name}</h3>
+        <p className="mt-1 text-sm text-slate-600">
+          {product.sku ?? "Sem SKU"} -{" "}
+          {moneyFormatter.format(product.priceInReais)}
+        </p>
+        <p className="mt-1 text-xs font-medium text-slate-500">
+          Estoque disponivel: {product.quantityOnHand}
+        </p>
+      </div>
+      <button
+        className="min-h-11 rounded-md bg-[#1e3275] px-3 text-sm font-semibold text-white transition hover:bg-[#17275c] disabled:bg-slate-300 disabled:text-slate-600"
+        disabled={!hasStock || reachedStockLimit}
+        onClick={onAdd}
+        type="button"
+      >
+        {!hasStock
+          ? "Sem estoque"
+          : reachedStockLimit
+            ? "Limite no carrinho"
+            : "Adicionar"}
+      </button>
+    </article>
+  );
 }
 
 function toSaleItems(items: CartItem[]) {
@@ -426,4 +528,8 @@ function parseBrlAmount(value: string): number {
   }
 
   return Number(normalizedValue);
+}
+
+function formatBrlAmount(value: number): string {
+  return value.toFixed(2).replace(".", ",");
 }

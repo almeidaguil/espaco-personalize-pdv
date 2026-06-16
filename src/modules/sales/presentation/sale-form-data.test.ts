@@ -7,6 +7,7 @@ describe("parseCreateSaleFormData", () => {
     const formData = new FormData();
     formData.set("cashSessionId", "cash-session-1");
     formData.set("eventId", "event-1");
+    formData.set("paymentMethod", "cash");
     formData.set(
       "itemsJson",
       JSON.stringify([
@@ -30,6 +31,19 @@ describe("parseCreateSaleFormData", () => {
       payment: {
         amountInReais: 50,
         method: "cash",
+      },
+    });
+  });
+
+  it("parses pix payments", () => {
+    const formData = new FormData();
+    formData.set("paymentMethod", "pix");
+    formData.set("amountReceivedInReais", "30,00");
+
+    expect(parseCreateSaleFormData(formData)).toMatchObject({
+      payment: {
+        amountInReais: 30,
+        method: "pix",
       },
     });
   });
