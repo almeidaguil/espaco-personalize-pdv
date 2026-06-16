@@ -29,7 +29,13 @@ export async function cancelSaleActionService(
     };
   }
 
-  const result = await cancelSaleUseCase(input.saleId, dependencies);
+  const result = await cancelSaleUseCase(
+    {
+      adminPassword: input.adminPassword,
+      saleId: input.saleId,
+    },
+    dependencies,
+  );
 
   if (!result.success) {
     return {

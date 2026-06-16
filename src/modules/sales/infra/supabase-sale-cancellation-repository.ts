@@ -5,6 +5,7 @@ import type {
 } from "../application/sale-cancellation-repository";
 
 type CancelSaleArgs = {
+  p_admin_password?: string | null;
   p_canceled_at: string;
   p_sale_id: string;
 };
@@ -30,13 +31,16 @@ export class SupabaseSaleCancellationRepository implements SaleCancellationRepos
 
   async cancel(input: CancelSaleInput): Promise<CancelSaleResult> {
     const { data, error } = await this.supabaseClient.rpc("cancel_sale", {
+      p_admin_password: input.adminPassword ?? null,
       p_canceled_at: input.canceledAt.toISOString(),
       p_sale_id: input.saleId,
     });
 
     if (error || data !== input.saleId) {
       return {
-        error: "unknown",
+        error: isAdminPasswordRequiredError(error)
+          ? "admin_password_required"
+          : "unknown",
         success: false,
       };
     }
@@ -45,4 +49,11 @@ export class SupabaseSaleCancellationRepository implements SaleCancellationRepos
       success: true,
     };
   }
+}
+
+function isAdminPasswordRequiredError(error: SupabaseError | null): boolean {
+  const errorText =
+    `${error?.code ?? ""} ${error?.message ?? ""}`.toLowerCase();
+
+  return errorText.includes("admin password is required");
 }
