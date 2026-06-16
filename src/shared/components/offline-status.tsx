@@ -3,27 +3,38 @@
 import { useEffect, useState } from "react";
 
 export function OfflineStatus() {
-  const [isOnline, setIsOnline] = useState(() => {
-    if (typeof navigator === "undefined") {
-      return true;
-    }
-
-    return navigator.onLine;
-  });
+  const [isOnline, setIsOnline] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
+    async function verifyConnection() {
+      const nextIsOnline =
+        navigator.onLine || (await canReachApplicationShell());
+
+      if (isMounted) {
+        setIsOnline(nextIsOnline);
+      }
+    }
+
     function handleOnline() {
       setIsOnline(true);
     }
 
-    function handleOffline() {
-      setIsOnline(false);
+    async function handleOffline() {
+      const nextIsOnline = await canReachApplicationShell();
+
+      if (isMounted) {
+        setIsOnline(nextIsOnline);
+      }
     }
 
+    void verifyConnection();
     window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
 
     return () => {
+      isMounted = false;
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
@@ -39,4 +50,17 @@ export function OfflineStatus() {
       voltar.
     </div>
   );
+}
+
+async function canReachApplicationShell(): Promise<boolean> {
+  try {
+    const response = await fetch("/manifest.webmanifest", {
+      cache: "no-store",
+      method: "HEAD",
+    });
+
+    return response.ok;
+  } catch {
+    return false;
+  }
 }

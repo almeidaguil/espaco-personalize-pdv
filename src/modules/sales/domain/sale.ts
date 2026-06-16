@@ -1,4 +1,11 @@
-export type PaymentMethod = "cash";
+export const paymentMethods = [
+  "cash",
+  "pix",
+  "credit_card",
+  "debit_card",
+] as const;
+
+export type PaymentMethod = (typeof paymentMethods)[number];
 export type SaleStatus = "completed" | "canceled";
 
 export type SaleItem = {
@@ -33,9 +40,9 @@ export type CreateSaleItemInput = {
   unitPriceInReais: number;
 };
 
-export type CreateCashPaymentInput = {
+export type CreatePaymentInput = {
   amountInReais: number;
-  method: "cash";
+  method: PaymentMethod;
 };
 
 export type CreateSaleInput = {
@@ -44,7 +51,7 @@ export type CreateSaleInput = {
   eventId: string;
   id: string;
   items: CreateSaleItemInput[];
-  payment: CreateCashPaymentInput;
+  payment: CreatePaymentInput;
 };
 
 export type SaleValidationError = {
@@ -136,15 +143,8 @@ export function createSale(input: CreateSaleInput): CreateSaleResult {
     items.reduce((total, item) => total + item.totalInReais, 0),
   );
 
-  if (
-    items.length > 0 &&
-    Number.isFinite(input.payment.amountInReais) &&
-    input.payment.amountInReais < totalInReais
-  ) {
-    errors.push({
-      field: "payment",
-      message: "Payment amount must cover the sale total.",
-    });
+  if (items.length > 0 && Number.isFinite(input.payment.amountInReais)) {
+    validatePaymentAgainstTotal(input.payment, totalInReais, errors);
   }
 
   if (errors.length > 0) {
@@ -163,7 +163,7 @@ export function createSale(input: CreateSaleInput): CreateSaleResult {
       items,
       payment: {
         amountInReais: input.payment.amountInReais,
-        changeInReais: roundBrl(input.payment.amountInReais - totalInReais),
+        changeInReais: getPaymentChangeInReais(input.payment, totalInReais),
         method: input.payment.method,
       },
       status: "completed",
@@ -214,6 +214,41 @@ function validateSaleItem(item: SaleItem, errors: SaleValidationError[]): void {
       message: "Sale item unit price can have at most 2 decimal places.",
     });
   }
+}
+
+function validatePaymentAgainstTotal(
+  payment: CreatePaymentInput,
+  totalInReais: number,
+  errors: SaleValidationError[],
+): void {
+  if (payment.method === "cash") {
+    if (payment.amountInReais < totalInReais) {
+      errors.push({
+        field: "payment",
+        message: "Payment amount must cover the sale total.",
+      });
+    }
+
+    return;
+  }
+
+  if (payment.amountInReais !== totalInReais) {
+    errors.push({
+      field: "payment",
+      message: "Non-cash payments must match the sale total exactly.",
+    });
+  }
+}
+
+function getPaymentChangeInReais(
+  payment: CreatePaymentInput,
+  totalInReais: number,
+): number {
+  if (payment.method !== "cash") {
+    return 0;
+  }
+
+  return roundBrl(payment.amountInReais - totalInReais);
 }
 
 function isValidDate(value: Date): boolean {

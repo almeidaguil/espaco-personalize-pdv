@@ -282,6 +282,38 @@ describe("createSaleUseCase", () => {
       success: false,
     });
   });
+
+  it("accepts pix payments when the amount matches the total", async () => {
+    const saleRepository = new FakeSaleRepository();
+
+    const result = await createSaleUseCase(
+      {
+        ...createInput(),
+        payment: {
+          amountInReais: 30,
+          method: "pix",
+        },
+      },
+      {
+        cashSessionRepository: new FakeCashSessionRepository(),
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        generateSaleId: () => "sale-1",
+        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+        productRepository: new FakeProductRepository(),
+        saleRepository,
+        stockMovementRepository: new FakeStockMovementRepository([
+          createStockMovement(3),
+        ]),
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(saleRepository.savedSale?.payment).toEqual({
+      amountInReais: 30,
+      changeInReais: 0,
+      method: "pix",
+    });
+  });
 });
 
 function createInput() {

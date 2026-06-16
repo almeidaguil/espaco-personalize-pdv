@@ -26,6 +26,14 @@ vi.mock("@/modules/products/infra/supabase-product-repository", () => ({
   SupabaseProductRepository: vi.fn(),
 }));
 
+vi.mock("@/modules/stock/infra/supabase-stock-movement-repository", () => ({
+  SupabaseStockMovementRepository: class {
+    async listAll() {
+      return [];
+    }
+  },
+}));
+
 vi.mock("@/modules/sales/presentation/pdv-cart", () => ({
   PdvCart: () => <section aria-label="Carrinho do PDV" />,
 }));

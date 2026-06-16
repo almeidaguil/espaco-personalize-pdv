@@ -95,6 +95,46 @@ describe("SupabaseSaleRepository", () => {
       success: false,
     });
   });
+
+  it("maps non-cash payment methods to the RPC payload", async () => {
+    const supabaseClient = new FakeSupabaseSaleClient({
+      data: "sale-1",
+      error: null,
+    });
+    const repository = new SupabaseSaleRepository(supabaseClient);
+    const sale = {
+      ...createSale(),
+      payment: {
+        amountInReais: 30,
+        changeInReais: 0,
+        method: "pix" as const,
+      },
+    };
+
+    await expect(repository.save(sale)).resolves.toEqual({
+      sale,
+      success: true,
+    });
+
+    expect(supabaseClient.rpcArgs).toEqual({
+      p_cash_session_id: "cash-session-1",
+      p_completed_at: "2026-07-10T12:00:00.000Z",
+      p_event_id: "event-1",
+      p_items: [
+        {
+          product_id: "product-1",
+          quantity: 2,
+        },
+      ],
+      p_payment: {
+        amount_in_cents: 3000,
+        change_in_cents: 0,
+        method: "pix",
+      },
+      p_sale_id: "sale-1",
+      p_total_in_cents: 3000,
+    });
+  });
 });
 
 function createSale(): Sale {
