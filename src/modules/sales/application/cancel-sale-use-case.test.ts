@@ -50,18 +50,25 @@ describe("cancelSaleUseCase", () => {
       success: true,
     });
 
-    const result = await cancelSaleUseCase(" sale-1 ", {
-      currentUserProfileRepository: createCurrentUserProfileRepository(),
-      getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
-      saleCancellationRepository,
-      saleDetailRepository,
-    });
+    const result = await cancelSaleUseCase(
+      {
+        adminPassword: "123456",
+        saleId: " sale-1 ",
+      },
+      {
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
+        saleCancellationRepository,
+        saleDetailRepository,
+      },
+    );
 
     expect(result).toEqual({
       success: true,
     });
     expect(saleDetailRepository.receivedId).toBe("sale-1");
     expect(saleCancellationRepository.receivedInput).toEqual({
+      adminPassword: "123456",
       canceledAt: new Date("2026-07-10T15:00:00.000Z"),
       saleId: "sale-1",
     });
@@ -167,6 +174,31 @@ describe("cancelSaleUseCase", () => {
 
     expect(result).toEqual({
       formError: "Nao foi possivel cancelar a venda.",
+      success: false,
+    });
+  });
+
+  it("maps admin password failures to a form error", async () => {
+    const result = await cancelSaleUseCase(
+      {
+        saleId: "sale-1",
+      },
+      {
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        getCurrentDate: () => new Date("2026-07-10T15:00:00.000Z"),
+        saleCancellationRepository: new FakeSaleCancellationRepository({
+          error: "admin_password_required",
+          success: false,
+        }),
+        saleDetailRepository: new FakeSaleDetailRepository({
+          sale: createSaleDetail(),
+          success: true,
+        }),
+      },
+    );
+
+    expect(result).toEqual({
+      formError: "Informe a senha administrativa para cancelar a venda.",
       success: false,
     });
   });

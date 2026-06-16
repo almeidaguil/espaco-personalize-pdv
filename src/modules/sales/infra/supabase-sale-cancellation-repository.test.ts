@@ -39,6 +39,7 @@ describe("SupabaseSaleCancellationRepository", () => {
 
     await expect(
       repository.cancel({
+        adminPassword: "123456",
         canceledAt: new Date("2026-07-10T15:00:00.000Z"),
         saleId: "sale-1",
       }),
@@ -48,6 +49,7 @@ describe("SupabaseSaleCancellationRepository", () => {
 
     expect(supabaseClient.functionName).toBe("cancel_sale");
     expect(supabaseClient.rpcArgs).toEqual({
+      p_admin_password: "123456",
       p_canceled_at: "2026-07-10T15:00:00.000Z",
       p_sale_id: "sale-1",
     });
@@ -90,6 +92,27 @@ describe("SupabaseSaleCancellationRepository", () => {
       }),
     ).resolves.toEqual({
       error: "unknown",
+      success: false,
+    });
+  });
+
+  it("maps admin password RPC failures", async () => {
+    const repository = new SupabaseSaleCancellationRepository(
+      new FakeSupabaseSaleCancellationClient({
+        data: null,
+        error: {
+          message: "Admin password is required to cancel a sale.",
+        },
+      }),
+    );
+
+    await expect(
+      repository.cancel({
+        canceledAt: new Date("2026-07-10T15:00:00.000Z"),
+        saleId: "sale-1",
+      }),
+    ).resolves.toEqual({
+      error: "admin_password_required",
       success: false,
     });
   });

@@ -62,6 +62,7 @@ describe("cancelSaleActionService", () => {
       successMessage: "Venda cancelada com sucesso.",
     });
     expect(saleCancellationRepository.receivedInput).toEqual({
+      adminPassword: "123456",
       canceledAt: new Date("2026-07-10T15:00:00.000Z"),
       saleId: "sale-1",
     });
@@ -161,6 +162,7 @@ function createFormData(
   confirmCancellation: boolean,
 ): FormData {
   const formData = new FormData();
+  formData.set("adminPassword", "123456");
   formData.set("saleId", saleId);
   if (confirmCancellation) {
     formData.set("confirmCancellation", "on");

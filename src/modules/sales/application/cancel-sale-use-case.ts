@@ -22,9 +22,12 @@ type CancelSaleUseCaseDependencies = {
 };
 
 export async function cancelSaleUseCase(
-  saleIdInput: string,
+  input: { adminPassword?: string; saleId: string } | string,
   dependencies: CancelSaleUseCaseDependencies,
 ): Promise<CancelSaleUseCaseResult> {
+  const saleIdInput = typeof input === "string" ? input : input.saleId;
+  const adminPassword =
+    typeof input === "string" ? undefined : input.adminPassword;
   const saleId = saleIdInput.trim();
 
   if (!saleId) {
@@ -79,13 +82,17 @@ export async function cancelSaleUseCase(
 
   const canceledAt = dependencies.getCurrentDate();
   const cancelResult = await dependencies.saleCancellationRepository.cancel({
+    adminPassword,
     canceledAt,
     saleId: saleDetailResult.sale.id,
   });
 
   if (!cancelResult.success) {
     return {
-      formError: "Nao foi possivel cancelar a venda.",
+      formError:
+        cancelResult.error === "admin_password_required"
+          ? "Informe a senha administrativa para cancelar a venda."
+          : "Nao foi possivel cancelar a venda.",
       success: false,
     };
   }

@@ -30,7 +30,8 @@ export function CancelSaleForm({
         <h2 className="text-base font-semibold text-slate-950">Cancelamento</h2>
         <p className="text-sm leading-6 text-slate-600">
           Ao cancelar, o estoque dos itens vendidos volta automaticamente e o
-          historico da venda permanece registrado.
+          historico da venda permanece registrado. Esta acao exige senha
+          administrativa.
         </p>
       </div>
 
@@ -48,6 +49,22 @@ export function CancelSaleForm({
 
       <form action={formAction} className="mt-4" noValidate>
         <input name="saleId" type="hidden" value={saleId} />
+        <div className="mb-4 grid gap-2">
+          <label
+            className="text-sm font-medium text-slate-700"
+            htmlFor="adminPassword"
+          >
+            Senha administrativa
+          </label>
+          <input
+            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+            disabled={isPending || isCanceled}
+            id="adminPassword"
+            name="adminPassword"
+            placeholder="Senha temporaria"
+            type="password"
+          />
+        </div>
         <label className="mb-4 flex items-start gap-3 rounded-md border border-red-100 bg-red-50 px-3 py-3 text-sm text-red-900">
           <input
             checked={isConfirmed}

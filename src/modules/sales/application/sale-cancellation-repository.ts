@@ -1,4 +1,5 @@
 export type CancelSaleInput = {
+  adminPassword?: string;
   canceledAt: Date;
   saleId: string;
 };
@@ -8,7 +9,7 @@ export type CancelSaleResult =
       success: true;
     }
   | {
-      error: "unknown";
+      error: "admin_password_required" | "unknown";
       success: false;
     };
 

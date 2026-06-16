@@ -29,6 +29,7 @@ describe("CancelSaleForm", () => {
     expect(
       screen.getByRole("heading", { level: 2, name: "Cancelamento" }),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Senha administrativa")).toBeInTheDocument();
     const button = screen.getByRole("button", { name: "Cancelar venda" });
     const checkbox = screen.getByRole("checkbox", {
       name: /Confirmo que esta venda deve ser cancelada/,
