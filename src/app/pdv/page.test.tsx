@@ -101,7 +101,8 @@ describe("PdvPage", () => {
         name: "Caixa aberto para venda",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText(/Evento Julho/)).toBeChecked();
+    expect(screen.getByText("Evento ativo da operacao")).toBeInTheDocument();
+    expect(screen.getAllByText("Evento Julho").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Carrinho do PDV")).toBeInTheDocument();
   });
 

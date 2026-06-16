@@ -35,9 +35,13 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
 });
 
+const productsPerPage = 8;
+
 export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   const [state, formAction, isPending] = useActionState(action, {});
   const [items, setItems] = useState<CartItem[]>([]);
+  const [productSearchTerm, setProductSearchTerm] = useState("");
+  const [productPage, setProductPage] = useState(1);
   const [receivedAmountInput, setReceivedAmountInput] = useState("");
   const [cashSessionId, setCashSessionId] = useState(cashSessions[0]?.id ?? "");
   const selectedCashSession = cashSessions.find(
@@ -51,6 +55,18 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         0,
       ),
     [items],
+  );
+  const filteredProducts = useMemo(
+    () => filterProducts(products, productSearchTerm),
+    [productSearchTerm, products],
+  );
+  const totalProductPages = Math.max(
+    1,
+    Math.ceil(filteredProducts.length / productsPerPage),
+  );
+  const visibleProducts = filteredProducts.slice(
+    (productPage - 1) * productsPerPage,
+    productPage * productsPerPage,
   );
   const paymentDifferenceInReais = receivedAmountInReais - totalInReais;
   const hasCartItems = items.length > 0;
@@ -91,31 +107,89 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
           Nenhum produto ativo disponivel para venda.
         </p>
       ) : (
-        <div className="grid gap-2">
-          {products.map((product) => (
-            <article
-              className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3"
-              key={product.id}
+        <section className="grid gap-3">
+          <div className="grid gap-2">
+            <label
+              className="text-sm font-semibold text-slate-700"
+              htmlFor="productSearch"
             >
-              <div>
-                <h3 className="text-sm font-semibold text-slate-950">
-                  {product.name}
-                </h3>
-                <p className="mt-1 text-sm text-slate-600">
-                  {product.sku ?? "Sem SKU"} -{" "}
-                  {moneyFormatter.format(product.priceInReais)}
-                </p>
-              </div>
+              Buscar produto
+            </label>
+            <input
+              className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+              id="productSearch"
+              onChange={(event) => updateProductSearchTerm(event.target.value)}
+              placeholder="Nome ou SKU"
+              type="search"
+              value={productSearchTerm}
+            />
+            <p className="text-xs font-medium text-slate-500">
+              {filteredProducts.length} produto(s) encontrado(s)
+            </p>
+          </div>
+
+          {visibleProducts.length === 0 ? (
+            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+              Nenhum produto encontrado para esta busca.
+            </p>
+          ) : (
+            <div className="grid gap-2">
+              {visibleProducts.map((product) => (
+                <article
+                  className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center"
+                  key={product.id}
+                >
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-950">
+                      {product.name}
+                    </h3>
+                    <p className="mt-1 text-sm text-slate-600">
+                      {product.sku ?? "Sem SKU"} -{" "}
+                      {moneyFormatter.format(product.priceInReais)}
+                    </p>
+                  </div>
+                  <button
+                    className="min-h-11 rounded-md bg-[#1e3275] px-3 text-sm font-semibold text-white transition hover:bg-[#17275c]"
+                    onClick={() => addProduct(product)}
+                    type="button"
+                  >
+                    Adicionar
+                  </button>
+                </article>
+              ))}
+            </div>
+          )}
+
+          {totalProductPages > 1 ? (
+            <div className="flex items-center justify-between gap-3">
               <button
-                className="h-10 rounded-md bg-[#1e3275] px-3 text-sm font-semibold text-white transition hover:bg-[#17275c]"
-                onClick={() => addProduct(product)}
+                className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275] disabled:border-slate-200 disabled:text-slate-400"
+                disabled={productPage === 1}
+                onClick={() =>
+                  setProductPage((currentPage) => Math.max(1, currentPage - 1))
+                }
                 type="button"
               >
-                Adicionar
+                Anterior
               </button>
-            </article>
-          ))}
-        </div>
+              <span className="text-sm font-semibold text-slate-600">
+                Pagina {productPage} de {totalProductPages}
+              </span>
+              <button
+                className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275] disabled:border-slate-200 disabled:text-slate-400"
+                disabled={productPage === totalProductPages}
+                onClick={() =>
+                  setProductPage((currentPage) =>
+                    Math.min(totalProductPages, currentPage + 1),
+                  )
+                }
+                type="button"
+              >
+                Proxima
+              </button>
+            </div>
+          ) : null}
+        </section>
       )}
 
       <div className="rounded-md border border-slate-200">
@@ -147,7 +221,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
                 <div className="flex items-center gap-2">
                   <button
                     aria-label={`Remover uma unidade de ${item.name}`}
-                    className="h-9 w-9 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                    className="h-11 w-11 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
                     onClick={() => decrementProduct(item.id)}
                     type="button"
                   >
@@ -158,7 +232,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
                   </span>
                   <button
                     aria-label={`Adicionar uma unidade de ${item.name}`}
-                    className="h-9 w-9 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                    className="h-11 w-11 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
                     onClick={() => addProduct(item)}
                     type="button"
                   >
@@ -178,7 +252,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         </div>
       </div>
 
-      <div className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 p-3">
+      <div className="sticky bottom-0 z-10 -mx-5 grid gap-3 border-t border-slate-200 bg-slate-50 p-5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sm:static sm:mx-0 sm:rounded-md sm:border sm:p-3 sm:shadow-none">
         <div className="grid gap-2">
           <label
             className="text-sm font-medium text-slate-700"
@@ -256,7 +330,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         ) : null}
 
         <button
-          className="h-11 rounded-md bg-[#1e3275] px-4 text-sm font-semibold text-white transition hover:bg-[#17275c] disabled:bg-slate-300 disabled:text-slate-600"
+          className="min-h-12 rounded-md bg-[#1e3275] px-4 text-sm font-semibold text-white transition hover:bg-[#17275c] disabled:bg-slate-300 disabled:text-slate-600"
           disabled={!canSubmit}
           type="submit"
         >
@@ -282,6 +356,11 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
     });
   }
 
+  function updateProductSearchTerm(searchTerm: string) {
+    setProductSearchTerm(searchTerm);
+    setProductPage(1);
+  }
+
   function decrementProduct(productId: string) {
     setItems((currentItems) =>
       currentItems.flatMap((item) => {
@@ -304,6 +383,35 @@ function toSaleItems(items: CartItem[]) {
     productId: item.id,
     quantity: item.quantity,
   }));
+}
+
+function filterProducts(
+  products: PdvCartProduct[],
+  searchTerm: string,
+): PdvCartProduct[] {
+  const normalizedSearchTerm = normalizeSearchTerm(searchTerm);
+
+  if (!normalizedSearchTerm) {
+    return products;
+  }
+
+  return products.filter((product) => {
+    const productName = normalizeSearchTerm(product.name);
+    const productSku = normalizeSearchTerm(product.sku ?? "");
+
+    return (
+      productName.includes(normalizedSearchTerm) ||
+      productSku.includes(normalizedSearchTerm)
+    );
+  });
+}
+
+function normalizeSearchTerm(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .toLowerCase();
 }
 
 function parseBrlAmount(value: string): number {
