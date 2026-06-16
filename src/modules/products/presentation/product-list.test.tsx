@@ -32,5 +32,9 @@ describe("ProductList", () => {
     expect(screen.getByText("Chaveiro")).toBeInTheDocument();
     expect(screen.getByText("Sem SKU")).toBeInTheDocument();
     expect(screen.getByText("Inativo")).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Editar" })[0]).toHaveAttribute(
+      "href",
+      "/products/product-1/edit",
+    );
   });
 });

@@ -9,9 +9,11 @@ import type {
 } from "@/modules/cash/application/cash-session-repository";
 import type { CashSession } from "@/modules/cash/domain/cash-session";
 import type {
+  FindProductByIdResult,
   ListProductsResult,
   ProductRepository,
   SaveProductResult,
+  UpdateProductResult,
 } from "@/modules/products/application/product-repository";
 import { Money } from "@/modules/products/domain/money";
 import type { Product } from "@/modules/products/domain/product";
@@ -74,11 +76,25 @@ class FakeProductRepository implements ProductRepository {
     },
   ) {}
 
+  async findById(): Promise<FindProductByIdResult> {
+    return {
+      error: "not_found",
+      success: false,
+    };
+  }
+
   async list(): Promise<ListProductsResult> {
     return this.result;
   }
 
   async save(product: Product): Promise<SaveProductResult> {
+    return {
+      product,
+      success: true,
+    };
+  }
+
+  async update(product: Product): Promise<UpdateProductResult> {
     return {
       product,
       success: true,
@@ -328,7 +344,7 @@ function createInput() {
     ],
     payment: {
       amountInReais: 50,
-      method: "cash",
+      method: "cash" as const,
     },
   };
 }

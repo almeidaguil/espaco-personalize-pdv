@@ -1,8 +1,8 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
 
-import { createProductUseCase } from "../application/create-product-use-case";
+import { updateProductUseCase } from "../application/update-product-use-case";
 import {
   SupabaseProductRepository,
   type SupabaseProductClient,
@@ -10,13 +10,14 @@ import {
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 import {
-  createEmptyProductFormValues,
+  createProductFormValuesFromProduct,
   getProductFormValues,
   parseCreateProductFormData,
 } from "./product-form-data";
 import type { ProductActionState } from "./product-action-state";
 
-export async function createProductAction(
+export async function updateProductAction(
+  productId: string,
   _previousState: ProductActionState,
   formData: FormData,
 ): Promise<ProductActionState> {
@@ -26,10 +27,10 @@ export async function createProductAction(
     supabaseClient as unknown as SupabaseProductClient,
   );
 
-  const result = await createProductUseCase(
+  const result = await updateProductUseCase(
+    productId,
     parseCreateProductFormData(formData),
     {
-      generateProductId: randomUUID,
       productRepository,
     },
   );
@@ -42,8 +43,18 @@ export async function createProductAction(
     };
   }
 
+  revalidatePath("/products");
+  revalidatePath(`/products/${productId}/edit`);
+  revalidatePath("/pdv");
+  revalidatePath("/stock");
+
   return {
-    successMessage: "Produto cadastrado com sucesso.",
-    values: createEmptyProductFormValues(),
+    successMessage: "Produto atualizado com sucesso.",
+    values: createProductFormValuesFromProduct({
+      isActive: result.product.isActive,
+      name: result.product.name,
+      priceInReais: result.product.price.toReais(),
+      sku: result.product.sku,
+    }),
   };
 }

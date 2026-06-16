@@ -2,7 +2,11 @@
 
 import { useActionState } from "react";
 
-import type { ProductActionState } from "./product-action-state";
+import type {
+  ProductActionState,
+  ProductFormValues,
+} from "./product-action-state";
+import { createEmptyProductFormValues } from "./product-form-data";
 
 const initialState: ProductActionState = {};
 
@@ -11,13 +15,21 @@ type ProductFormProps = {
     previousState: ProductActionState,
     formData: FormData,
   ) => Promise<ProductActionState>;
+  initialValues?: ProductFormValues;
+  submitLabel?: string;
 };
 
-export function ProductForm({ action }: ProductFormProps) {
+export function ProductForm({
+  action,
+  initialValues = createEmptyProductFormValues(),
+  submitLabel = "Salvar produto",
+}: ProductFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const values = state.values ?? initialValues;
+  const formKey = JSON.stringify(values);
 
   return (
-    <form action={formAction} className="grid gap-4" noValidate>
+    <form action={formAction} className="grid gap-4" key={formKey} noValidate>
       <div className="grid gap-2">
         <label className="text-sm font-medium text-slate-700" htmlFor="name">
           Nome do produto
@@ -25,6 +37,7 @@ export function ProductForm({ action }: ProductFormProps) {
         <input
           autoComplete="off"
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          defaultValue={values.name}
           id="name"
           name="name"
           placeholder="Caneca personalizada"
@@ -44,6 +57,7 @@ export function ProductForm({ action }: ProductFormProps) {
         </label>
         <input
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          defaultValue={values.priceInReais}
           id="priceInReais"
           inputMode="decimal"
           name="priceInReais"
@@ -64,6 +78,7 @@ export function ProductForm({ action }: ProductFormProps) {
         <input
           autoComplete="off"
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          defaultValue={values.sku}
           id="sku"
           name="sku"
           placeholder="CANECA-001"
@@ -78,7 +93,7 @@ export function ProductForm({ action }: ProductFormProps) {
       <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-700">
         <input
           className="h-4 w-4 rounded border-slate-300 text-[#1e3275] focus:ring-[#1e3275]"
-          defaultChecked
+          defaultChecked={values.isActive}
           name="isActive"
           type="checkbox"
           value="true"
@@ -103,7 +118,7 @@ export function ProductForm({ action }: ProductFormProps) {
         disabled={isPending}
         type="submit"
       >
-        {isPending ? "Salvando..." : "Salvar produto"}
+        {isPending ? "Salvando..." : submitLabel}
       </button>
     </form>
   );

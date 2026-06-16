@@ -1,9 +1,11 @@
 import { Money } from "../domain/money";
 import type { Product } from "../domain/product";
 import type {
+  FindProductByIdResult,
   ListProductsResult,
   ProductRepository,
   SaveProductResult,
+  UpdateProductResult,
 } from "../application/product-repository";
 
 type SupabaseProductRow = {
@@ -33,6 +35,11 @@ type SupabaseSingleProductResult = PromiseLike<{
   error: SupabaseError | null;
 }>;
 
+type SupabaseMaybeSingleProductResult = PromiseLike<{
+  data: SupabaseProductRow | null;
+  error: SupabaseError | null;
+}>;
+
 type SupabaseProductListResult = PromiseLike<{
   data: SupabaseProductRow[] | null;
   error: SupabaseError | null;
@@ -46,16 +53,59 @@ export type SupabaseProductClient = {
       };
     };
     select(columns: string): {
+      eq(
+        column: "id",
+        value: string,
+      ): {
+        maybeSingle(): SupabaseMaybeSingleProductResult;
+      };
       order(
         column: "name",
         options: { ascending: true },
       ): SupabaseProductListResult;
+    };
+    update(payload: SupabaseProductInsert): {
+      eq(
+        column: "id",
+        value: string,
+      ): {
+        select(columns: string): {
+          maybeSingle(): SupabaseMaybeSingleProductResult;
+        };
+      };
     };
   };
 };
 
 export class SupabaseProductRepository implements ProductRepository {
   constructor(private readonly supabaseClient: SupabaseProductClient) {}
+
+  async findById(productId: string): Promise<FindProductByIdResult> {
+    const { data, error } = await this.supabaseClient
+      .from("products")
+      .select("id,name,sku,price_in_cents,is_active")
+      .eq("id", productId)
+      .maybeSingle();
+
+    if (error) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
+    if (!data) {
+      return {
+        error: "not_found",
+        success: false,
+      };
+    }
+
+    return {
+      product: toProduct(data),
+      success: true,
+    };
+  }
 
   async list(): Promise<ListProductsResult> {
     const { data, error } = await this.supabaseClient
@@ -93,6 +143,34 @@ export class SupabaseProductRepository implements ProductRepository {
     if (!data) {
       return {
         error: "unknown",
+        success: false,
+      };
+    }
+
+    return {
+      product: toProduct(data),
+      success: true,
+    };
+  }
+
+  async update(product: Product): Promise<UpdateProductResult> {
+    const { data, error } = await this.supabaseClient
+      .from("products")
+      .update(toProductInsert(product))
+      .eq("id", product.id)
+      .select("id,name,sku,price_in_cents,is_active")
+      .maybeSingle();
+
+    if (error) {
+      return {
+        error: isSkuUniqueViolation(error) ? "sku_already_exists" : "unknown",
+        success: false,
+      };
+    }
+
+    if (!data) {
+      return {
+        error: "not_found",
         success: false,
       };
     }

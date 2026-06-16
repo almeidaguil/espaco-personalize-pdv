@@ -3,7 +3,10 @@ import Link from "next/link";
 
 import { listProductsUseCase } from "@/modules/products/application/list-products-use-case";
 import type { Product } from "@/modules/products/domain/product";
-import { SupabaseProductRepository } from "@/modules/products/infra/supabase-product-repository";
+import {
+  SupabaseProductRepository,
+  type SupabaseProductClient,
+} from "@/modules/products/infra/supabase-product-repository";
 import { listStockMovementsSummaryUseCase } from "@/modules/stock/application/list-stock-movements-summary-use-case";
 import {
   SupabaseStockMovementRepository,
@@ -26,7 +29,9 @@ export const dynamic = "force-dynamic";
 
 export default async function StockPage() {
   const supabaseClient = await createSupabaseServerClient();
-  const productRepository = new SupabaseProductRepository(supabaseClient);
+  const productRepository = new SupabaseProductRepository(
+    supabaseClient as unknown as SupabaseProductClient,
+  );
   const stockMovementClient =
     supabaseClient as unknown as SupabaseStockMovementClient;
   const stockMovementRepository = new SupabaseStockMovementRepository(

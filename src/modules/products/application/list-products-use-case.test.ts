@@ -17,8 +17,10 @@ describe("listProductsUseCase", () => {
       },
     ];
     const productRepository: ProductRepository = {
+      findById: async () => ({ error: "not_found", success: false }),
       list: async () => ({ products, success: true }),
       save: async () => ({ error: "unknown", success: false }),
+      update: async () => ({ error: "unknown", success: false }),
     };
 
     await expect(listProductsUseCase({ productRepository })).resolves.toEqual({
@@ -29,8 +31,10 @@ describe("listProductsUseCase", () => {
 
   it("maps repository errors to a presentation-safe message", async () => {
     const productRepository: ProductRepository = {
+      findById: async () => ({ error: "not_found", success: false }),
       list: async () => ({ error: "unknown", success: false }),
       save: async () => ({ error: "unknown", success: false }),
+      update: async () => ({ error: "unknown", success: false }),
     };
 
     await expect(listProductsUseCase({ productRepository })).resolves.toEqual({
