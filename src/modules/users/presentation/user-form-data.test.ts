@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   parseCreateUserFormData,
+  parseResetUserPasswordFormData,
   parseSetUserAccessFormData,
   parseUpdateUserRoleFormData,
 } from "./user-form-data";
@@ -58,5 +59,27 @@ describe("user form data", () => {
       },
       success: true,
     });
+  });
+
+  it("parses password resets", () => {
+    const formData = new FormData();
+    formData.set("temporaryPassword", "temporary123");
+    formData.set("userId", "38dc5fe9-feae-4083-9736-46a253727e2a");
+
+    expect(parseResetUserPasswordFormData(formData)).toMatchObject({
+      data: {
+        temporaryPassword: "temporary123",
+        userId: "38dc5fe9-feae-4083-9736-46a253727e2a",
+      },
+      success: true,
+    });
+  });
+
+  it("rejects invalid password resets", () => {
+    const formData = new FormData();
+    formData.set("temporaryPassword", "123");
+    formData.set("userId", "invalid");
+
+    expect(parseResetUserPasswordFormData(formData).success).toBe(false);
   });
 });

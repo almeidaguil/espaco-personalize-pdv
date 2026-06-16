@@ -15,6 +15,7 @@ import { CreateUserForm } from "@/modules/users/presentation/create-user-form";
 import { ManagedUsersList } from "@/modules/users/presentation/managed-users-list";
 import {
   createManagedUserAction,
+  resetManagedUserPasswordAction,
   setManagedUserAccessAction,
   updateManagedUserRoleAction,
 } from "@/modules/users/presentation/user-actions";
@@ -116,6 +117,7 @@ export default async function SettingsPage() {
               <ManagedUsersList
                 accessAction={setManagedUserAccessAction}
                 currentAdminId={currentUserResult.profile.id}
+                passwordAction={resetManagedUserPasswordAction}
                 roleAction={updateManagedUserRoleAction}
                 users={usersResult.users}
               />

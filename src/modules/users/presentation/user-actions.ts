@@ -11,6 +11,7 @@ import { createSupabaseAdminClient } from "@/shared/lib/supabase/admin-client";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 import { createManagedUserUseCase } from "../application/create-managed-user-use-case";
+import { resetManagedUserPasswordUseCase } from "../application/reset-managed-user-password-use-case";
 import { setManagedUserAccessUseCase } from "../application/set-managed-user-access-use-case";
 import { updateManagedUserRoleUseCase } from "../application/update-managed-user-role-use-case";
 import {
@@ -20,6 +21,7 @@ import {
 import type { UserActionState } from "./user-action-state";
 import {
   parseCreateUserFormData,
+  parseResetUserPasswordFormData,
   parseSetUserAccessFormData,
   parseUpdateUserRoleFormData,
 } from "./user-form-data";
@@ -151,6 +153,44 @@ export async function setManagedUserAccessAction(
     successMessage: parsed.data.isActive
       ? "Usuario ativado."
       : "Usuario desativado.",
+  };
+}
+
+export async function resetManagedUserPasswordAction(
+  _previousState: UserActionState,
+  formData: FormData,
+): Promise<UserActionState> {
+  const context = await createUserActionContext();
+
+  if (!context.success) {
+    return {
+      formError: context.formError,
+    };
+  }
+
+  const parsed = parseResetUserPasswordFormData(formData);
+
+  if (!parsed.success) {
+    return {
+      fieldErrors: toFieldErrors(parsed.error.flatten().fieldErrors),
+    };
+  }
+
+  const result = await resetManagedUserPasswordUseCase(
+    parsed.data,
+    context.repository,
+  );
+
+  if (!result.success) {
+    return {
+      formError: "Nao foi possivel redefinir a senha do usuario.",
+    };
+  }
+
+  revalidatePath("/settings");
+
+  return {
+    successMessage: "Senha temporaria definida.",
   };
 }
 

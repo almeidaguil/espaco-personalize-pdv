@@ -22,6 +22,13 @@ const setUserAccessSchema = z.object({
   userId: z.string().trim().uuid("Usuario invalido."),
 });
 
+const resetUserPasswordSchema = z.object({
+  temporaryPassword: z
+    .string()
+    .min(8, "A senha temporaria deve ter pelo menos 8 caracteres."),
+  userId: z.string().trim().uuid("Usuario invalido."),
+});
+
 export function parseCreateUserFormData(formData: FormData) {
   return createUserSchema.safeParse({
     email: formData.get("email"),
@@ -40,6 +47,13 @@ export function parseUpdateUserRoleFormData(formData: FormData) {
 export function parseSetUserAccessFormData(formData: FormData) {
   return setUserAccessSchema.safeParse({
     isActive: formData.get("isActive"),
+    userId: formData.get("userId"),
+  });
+}
+
+export function parseResetUserPasswordFormData(formData: FormData) {
+  return resetUserPasswordSchema.safeParse({
+    temporaryPassword: formData.get("temporaryPassword"),
     userId: formData.get("userId"),
   });
 }
