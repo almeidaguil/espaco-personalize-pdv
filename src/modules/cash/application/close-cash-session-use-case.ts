@@ -90,11 +90,17 @@ export async function closeCashSessionUseCase(
 
   const updateResult = await dependencies.cashSessionRepository.update(
     closeResult.session,
+    {
+      adminPassword: parsedInput.data.adminPassword,
+    },
   );
 
   if (!updateResult.success) {
     return {
-      formError: "Nao foi possivel fechar o caixa.",
+      formError:
+        updateResult.error === "admin_password_required"
+          ? "Informe a senha administrativa para fechar caixa com falta."
+          : "Nao foi possivel fechar o caixa.",
       success: false,
     };
   }

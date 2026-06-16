@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { useActionState } from "react";
 import { describe, expect, it, vi } from "vitest";
 
@@ -46,6 +47,36 @@ describe("CloseCashSessionForm", () => {
     expect(
       screen.getByRole("button", { name: "Fechar caixa" }),
     ).toBeInTheDocument();
+  });
+
+  it("requires admin password when counted amount is lower than expected", async () => {
+    const user = userEvent.setup();
+    mockActionState({});
+
+    render(
+      <CloseCashSessionForm
+        action={vi.fn()}
+        sessions={[
+          {
+            canceledSalesCount: 0,
+            canceledSalesTotalInReais: 0,
+            completedSalesCount: 2,
+            completedSalesTotalInReais: 100,
+            expectedAmountInReais: 250.5,
+            id: "cash-session-1",
+            label: "Evento Julho",
+            openingAmountInReais: 150.5,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.queryByLabelText("Senha administrativa")).toBeNull();
+
+    await user.type(screen.getByLabelText("Valor contado no caixa"), "200,00");
+
+    expect(screen.getByText("Faltam R$ 50,50 no caixa.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Senha administrativa")).toBeInTheDocument();
   });
 
   it("renders field errors and success messages", () => {

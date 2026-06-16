@@ -6,7 +6,10 @@ export type SaveCashSessionResult =
       success: true;
     }
   | {
-      error: "open_session_already_exists" | "unknown";
+      error:
+        | "admin_password_required"
+        | "open_session_already_exists"
+        | "unknown";
       success: false;
     };
 
@@ -30,6 +33,10 @@ export type ListOpenCashSessionsResult =
       success: false;
     };
 
+export type CloseCashSessionPersistenceOptions = {
+  adminPassword?: string;
+};
+
 export type CashSessionRepository = {
   findOpenByIdAndOperator(input: {
     cashSessionId: string;
@@ -41,5 +48,8 @@ export type CashSessionRepository = {
   }): Promise<FindOpenCashSessionResult>;
   listOpenByOperator(operatorId: string): Promise<ListOpenCashSessionsResult>;
   save(session: CashSession): Promise<SaveCashSessionResult>;
-  update(session: CashSession): Promise<SaveCashSessionResult>;
+  update(
+    session: CashSession,
+    options?: CloseCashSessionPersistenceOptions,
+  ): Promise<SaveCashSessionResult>;
 };

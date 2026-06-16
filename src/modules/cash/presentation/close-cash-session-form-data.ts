@@ -4,7 +4,10 @@ import { parseBrlCurrencyInput } from "./open-cash-session-form-data";
 export function parseCloseCashSessionFormData(
   formData: FormData,
 ): CloseCashSessionUseCaseInput {
+  const adminPassword = getTrimmedString(formData, "adminPassword");
+
   return {
+    ...(adminPassword ? { adminPassword } : {}),
     cashSessionId: getTrimmedString(formData, "cashSessionId"),
     countedAmountInReais: parseBrlCurrencyInput(
       getTrimmedString(formData, "countedAmountInReais"),

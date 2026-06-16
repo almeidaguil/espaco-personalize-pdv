@@ -1,5 +1,6 @@
 import type {
   CashSessionRepository,
+  CloseCashSessionPersistenceOptions,
   FindOpenCashSessionResult,
   ListOpenCashSessionsResult,
   SaveCashSessionResult,
@@ -31,6 +32,7 @@ type SupabaseCashSessionInsert = {
 };
 
 type SupabaseCashSessionUpdate = {
+  p_admin_password?: string | null;
   p_cash_session_id: string;
   p_closed_at: string;
   p_counted_amount_in_cents: number;
@@ -198,7 +200,10 @@ export class SupabaseCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async update(session: CashSession): Promise<SaveCashSessionResult> {
+  async update(
+    session: CashSession,
+    options?: CloseCashSessionPersistenceOptions,
+  ): Promise<SaveCashSessionResult> {
     if (!session.closedAt || session.countedAmountInReais === undefined) {
       return {
         error: "unknown",
@@ -209,12 +214,14 @@ export class SupabaseCashSessionRepository implements CashSessionRepository {
     const { data: closedSessionId, error: closeError } =
       await this.supabaseClient.rpc(
         "close_cash_session",
-        toCashSessionUpdate(session),
+        toCashSessionUpdate(session, options),
       );
 
     if (closeError || closedSessionId !== session.id) {
       return {
-        error: "unknown",
+        error: isAdminPasswordRequiredError(closeError)
+          ? "admin_password_required"
+          : "unknown",
         success: false,
       };
     }
@@ -251,14 +258,26 @@ function toCashSessionInsert(session: CashSession): SupabaseCashSessionInsert {
   };
 }
 
-function toCashSessionUpdate(session: CashSession): SupabaseCashSessionUpdate {
+function toCashSessionUpdate(
+  session: CashSession,
+  options?: CloseCashSessionPersistenceOptions,
+): SupabaseCashSessionUpdate {
   return {
+    p_admin_password: options?.adminPassword ?? null,
     p_cash_session_id: session.id,
     p_closed_at: session.closedAt?.toISOString() ?? "",
     p_counted_amount_in_cents: Math.round(
       (session.countedAmountInReais ?? Number.NaN) * 100,
     ),
   };
+}
+
+function isAdminPasswordRequiredError(error: SupabaseError | null): boolean {
+  const errorText = `${error?.code ?? ""} ${error?.details ?? ""} ${
+    error?.message ?? ""
+  }`.toLowerCase();
+
+  return errorText.includes("admin password is required");
 }
 
 function toCashSession(row: SupabaseCashSessionRow): CashSession {
