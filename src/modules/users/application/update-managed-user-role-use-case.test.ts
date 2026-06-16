@@ -23,6 +23,12 @@ class FakeUserManagementRepository implements UserManagementRepository {
     };
   }
 
+  async resetPassword(): Promise<UserManagementResult> {
+    return {
+      success: true,
+    };
+  }
+
   async setAccess(): Promise<UserManagementResult> {
     return {
       success: true,

@@ -13,6 +13,10 @@ type ManagedUsersListProps = {
     formData: FormData,
   ) => Promise<UserActionState>;
   currentAdminId: string;
+  passwordAction: (
+    previousState: UserActionState,
+    formData: FormData,
+  ) => Promise<UserActionState>;
   roleAction: (
     previousState: UserActionState,
     formData: FormData,
@@ -23,6 +27,7 @@ type ManagedUsersListProps = {
 export function ManagedUsersList({
   accessAction,
   currentAdminId,
+  passwordAction,
   roleAction,
   users,
 }: ManagedUsersListProps) {
@@ -41,6 +46,7 @@ export function ManagedUsersList({
           accessAction={accessAction}
           currentAdminId={currentAdminId}
           key={user.id}
+          passwordAction={passwordAction}
           roleAction={roleAction}
           user={user}
         />
@@ -52,6 +58,7 @@ export function ManagedUsersList({
 type ManagedUserCardProps = {
   accessAction: ManagedUsersListProps["accessAction"];
   currentAdminId: string;
+  passwordAction: ManagedUsersListProps["passwordAction"];
   roleAction: ManagedUsersListProps["roleAction"];
   user: ManagedUser;
 };
@@ -59,6 +66,7 @@ type ManagedUserCardProps = {
 function ManagedUserCard({
   accessAction,
   currentAdminId,
+  passwordAction,
   roleAction,
   user,
 }: ManagedUserCardProps) {
@@ -68,6 +76,10 @@ function ManagedUserCard({
   );
   const [accessState, accessFormAction, isAccessPending] = useActionState(
     accessAction,
+    initialState,
+  );
+  const [passwordState, passwordFormAction, isPasswordPending] = useActionState(
+    passwordAction,
     initialState,
   );
   const isCurrentUser = currentAdminId === user.id;
@@ -103,7 +115,7 @@ function ManagedUserCard({
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_auto] sm:items-start">
+      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-start">
         <form action={roleFormAction} className="grid gap-2 sm:max-w-xs">
           <input name="userId" type="hidden" value={user.id} />
           <label
@@ -138,6 +150,46 @@ function ManagedUserCard({
           {roleState.successMessage ? (
             <p className="text-sm text-emerald-700">
               {roleState.successMessage}
+            </p>
+          ) : null}
+        </form>
+
+        <form action={passwordFormAction} className="grid gap-2">
+          <input name="userId" type="hidden" value={user.id} />
+          <label
+            className="text-xs font-semibold uppercase tracking-wide text-slate-500"
+            htmlFor={`temporary-password-${user.id}`}
+          >
+            Senha temporaria
+          </label>
+          <div className="flex gap-2">
+            <input
+              autoComplete="new-password"
+              className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+              id={`temporary-password-${user.id}`}
+              name="temporaryPassword"
+              placeholder="Minimo 8 caracteres"
+              type="password"
+            />
+            <button
+              className="h-11 rounded-md border border-[#1e3275] px-3 text-sm font-semibold text-[#1e3275] transition hover:bg-[#1e3275] hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
+              disabled={isPasswordPending}
+              type="submit"
+            >
+              Redefinir
+            </button>
+          </div>
+          {passwordState.fieldErrors?.temporaryPassword ? (
+            <p className="text-sm text-red-700">
+              {passwordState.fieldErrors.temporaryPassword}
+            </p>
+          ) : null}
+          {passwordState.formError ? (
+            <p className="text-sm text-red-700">{passwordState.formError}</p>
+          ) : null}
+          {passwordState.successMessage ? (
+            <p className="text-sm text-emerald-700">
+              {passwordState.successMessage}
             </p>
           ) : null}
         </form>

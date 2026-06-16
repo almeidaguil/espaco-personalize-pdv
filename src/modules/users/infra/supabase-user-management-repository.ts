@@ -6,6 +6,7 @@ import type { ManagedUser } from "../domain/managed-user";
 import type {
   CreateManagedUserInput,
   ListManagedUsersResult,
+  ResetManagedUserPasswordInput,
   SetManagedUserAccessInput,
   UpdateManagedUserRoleInput,
   UserManagementRepository,
@@ -49,6 +50,7 @@ export type SupabaseUserManagementClient = {
         userId: string,
         attributes: {
           ban_duration?: string;
+          password?: string;
         },
       ): PromiseLike<{
         data: {
@@ -163,6 +165,28 @@ export class SupabaseUserManagementRepository implements UserManagementRepositor
       input.userId,
       {
         ban_duration: input.isActive ? "none" : disabledBanDuration,
+      },
+    );
+
+    if (error) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
+    return {
+      success: true,
+    };
+  }
+
+  async resetPassword(
+    input: ResetManagedUserPasswordInput,
+  ): Promise<UserManagementResult> {
+    const { error } = await this.supabaseClient.auth.admin.updateUserById(
+      input.userId,
+      {
+        password: input.temporaryPassword,
       },
     );
 

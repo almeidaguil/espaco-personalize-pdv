@@ -20,6 +20,11 @@ export type SetManagedUserAccessInput = {
   userId: string;
 };
 
+export type ResetManagedUserPasswordInput = {
+  temporaryPassword: string;
+  userId: string;
+};
+
 export type UserManagementResult =
   | {
       success: true;
@@ -42,6 +47,9 @@ export type ListManagedUsersResult =
 export type UserManagementRepository = {
   create(input: CreateManagedUserInput): Promise<UserManagementResult>;
   list(): Promise<ListManagedUsersResult>;
+  resetPassword(
+    input: ResetManagedUserPasswordInput,
+  ): Promise<UserManagementResult>;
   setAccess(input: SetManagedUserAccessInput): Promise<UserManagementResult>;
   updateRole(input: UpdateManagedUserRoleInput): Promise<UserManagementResult>;
 };
