@@ -48,6 +48,7 @@ describe("ProductsPage", () => {
     );
     expect(screen.getByText("Caneca personalizada")).toBeInTheDocument();
     expect(screen.getByText("R$ 35,00")).toBeInTheDocument();
+    expect(screen.getByLabelText("Buscar produto")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Editar" })).toHaveAttribute(
       "href",
       "/products/product-1/edit",
