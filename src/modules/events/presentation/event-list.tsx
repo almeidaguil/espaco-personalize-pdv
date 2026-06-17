@@ -1,6 +1,9 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
+
+import { PaginationControls } from "@/shared/components/pagination-controls";
+
 import type { EventActionState } from "./event-action-state";
 
 export type EventListItem = {
@@ -20,9 +23,19 @@ type EventListProps = {
 };
 
 const initialState: EventActionState = {};
+const pageSize = 6;
 
 export function EventList({ action, events }: EventListProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [currentPage, setCurrentPage] = useState(1);
+  const sortedEvents = useMemo(
+    () => sortEventsByActiveStatus(events),
+    [events],
+  );
+  const visibleEvents = sortedEvents.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   return (
     <div className="grid gap-3">
@@ -37,7 +50,7 @@ export function EventList({ action, events }: EventListProps) {
         </p>
       ) : null}
       <ul className="grid gap-3">
-        {events.map((event) => (
+        {visibleEvents.map((event) => (
           <li
             className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
             key={event.id}
@@ -81,6 +94,23 @@ export function EventList({ action, events }: EventListProps) {
           </li>
         ))}
       </ul>
+      <PaginationControls
+        currentPage={currentPage}
+        itemLabel="eventos"
+        onPageChange={setCurrentPage}
+        pageSize={pageSize}
+        totalItems={sortedEvents.length}
+      />
     </div>
   );
+}
+
+function sortEventsByActiveStatus(events: EventListItem[]): EventListItem[] {
+  return [...events].sort((eventA, eventB) => {
+    if (eventA.isActive === eventB.isActive) {
+      return 0;
+    }
+
+    return eventA.isActive ? -1 : 1;
+  });
 }

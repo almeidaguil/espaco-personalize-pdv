@@ -1,3 +1,9 @@
+"use client";
+
+import { useState } from "react";
+
+import { PaginationControls } from "@/shared/components/pagination-controls";
+
 import type {
   StockMovementSummaryItem,
   StockProductBalanceSummary,
@@ -12,11 +18,24 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "short",
 });
+const balancesPageSize = 8;
+const movementsPageSize = 8;
 
 export function StockMovementsOverview({
   balances,
   movements,
 }: StockMovementsOverviewProps) {
+  const [balancesPage, setBalancesPage] = useState(1);
+  const [movementsPage, setMovementsPage] = useState(1);
+  const visibleBalances = balances.slice(
+    (balancesPage - 1) * balancesPageSize,
+    balancesPage * balancesPageSize,
+  );
+  const visibleMovements = movements.slice(
+    (movementsPage - 1) * movementsPageSize,
+    movementsPage * movementsPageSize,
+  );
+
   return (
     <section className="grid gap-4">
       <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -38,7 +57,7 @@ export function StockMovementsOverview({
           </p>
         ) : (
           <div className="mt-4 grid gap-2">
-            {balances.map((balance) => (
+            {visibleBalances.map((balance) => (
               <article
                 className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3"
                 key={balance.productId}
@@ -53,6 +72,13 @@ export function StockMovementsOverview({
             ))}
           </div>
         )}
+        <PaginationControls
+          currentPage={balancesPage}
+          itemLabel="produtos"
+          onPageChange={setBalancesPage}
+          pageSize={balancesPageSize}
+          totalItems={balances.length}
+        />
       </section>
 
       <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
@@ -74,7 +100,7 @@ export function StockMovementsOverview({
           </p>
         ) : (
           <div className="mt-4 grid gap-2">
-            {movements.map((movement) => (
+            {visibleMovements.map((movement) => (
               <article
                 className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3"
                 key={movement.id}
@@ -105,6 +131,13 @@ export function StockMovementsOverview({
             ))}
           </div>
         )}
+        <PaginationControls
+          currentPage={movementsPage}
+          itemLabel="movimentacoes"
+          onPageChange={setMovementsPage}
+          pageSize={movementsPageSize}
+          totalItems={movements.length}
+        />
       </section>
     </section>
   );
