@@ -26,7 +26,9 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
   await createProduct(page, productName, productSku);
   await addInitialStock(page, productName, 3);
   const eventName = await openCashSession(page);
-  await createSale(page, productName, eventName);
+  await createSale(page, productName, eventName, {
+    receivedAmount: "20,00",
+  });
   await cancelSale(page, eventName);
 
   await page.goto("/stock");
@@ -44,6 +46,39 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
   ).toBeVisible();
 
   await closeAllOpenCashSessions(page);
+});
+
+test("admin records non-cash sales and closes cash with reconciliation", async ({
+  page,
+}) => {
+  const uniqueSuffix = crypto.randomUUID();
+  const productName = `Pagamento E2E Produto ${uniqueSuffix}`;
+  const productSku = `PAG-E2E-${uniqueSuffix.slice(0, 8)}`;
+
+  await authenticatePage(page);
+  await closeAllOpenCashSessions(page);
+  await createProduct(page, productName, productSku);
+  await addInitialStock(page, productName, 4);
+  const eventName = await openCashSession(page);
+
+  await createSale(page, productName, eventName, {
+    paymentMethodLabel: "Pix",
+  });
+  await createSale(page, productName, eventName, {
+    paymentMethodLabel: "Cartao de credito",
+  });
+
+  await page.goto("/cash/close");
+  const cashCloseForm = page.locator("form", { hasText: eventName }).first();
+
+  await expect(cashCloseForm).toContainText("2 vendas concluidas");
+  await expect(cashCloseForm).toContainText("R$ 100,00");
+  await expect(cashCloseForm.getByLabel("Senha administrativa")).toHaveCount(0);
+
+  await cashCloseForm.getByLabel("Valor contado no caixa").fill("100,00");
+  await cashCloseForm.getByRole("button", { name: "Fechar caixa" }).click();
+
+  await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
 });
 
 async function createProduct(page: Page, productName: string, sku: string) {
@@ -69,7 +104,9 @@ async function addInitialStock(
 
   expect(productOptionValue).not.toBeNull();
 
-  await page.getByLabel("Produto").selectOption(productOptionValue ?? "");
+  await page
+    .getByLabel("Produto", { exact: true })
+    .selectOption(productOptionValue ?? "");
   await page.getByLabel("Quantidade").fill(String(quantity));
   await page.getByRole("button", { name: "Registrar ajuste" }).click();
 
@@ -92,7 +129,17 @@ async function openCashSession(page: Page) {
   return getEventNameFromOption(activeEvent?.label ?? "");
 }
 
-async function createSale(page: Page, productName: string, eventName: string) {
+type CreateSaleOptions = {
+  paymentMethodLabel?: "Cartao de credito" | "Cartao de debito" | "Pix";
+  receivedAmount?: string;
+};
+
+async function createSale(
+  page: Page,
+  productName: string,
+  eventName: string,
+  options: CreateSaleOptions = {},
+) {
   await page.goto("/pdv");
   await expect(page.getByText(eventName).first()).toBeVisible();
 
@@ -101,8 +148,21 @@ async function createSale(page: Page, productName: string, eventName: string) {
     .locator("article", { hasText: productName })
     .getByRole("button", { name: "Adicionar" })
     .click();
-  await page.getByLabel("Valor recebido").fill("20,00");
-  await expect(page.getByText("Troco R$ 5,00")).toBeVisible();
+
+  if (options.paymentMethodLabel) {
+    await page.getByLabel("Forma de pagamento").selectOption({
+      label: options.paymentMethodLabel,
+    });
+    await expect(
+      page.getByText(`${options.paymentMethodLabel} no valor de R$ 15,00`),
+    ).toBeVisible();
+  } else {
+    await page
+      .getByLabel("Valor recebido")
+      .fill(options.receivedAmount ?? "20,00");
+    await expect(page.getByText("Troco R$ 5,00")).toBeVisible();
+  }
+
   await page.getByRole("button", { name: "Finalizar venda" }).click();
 
   await expect(page.getByText("Venda finalizada com sucesso.")).toBeVisible();
