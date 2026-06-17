@@ -1,4 +1,8 @@
 import type { CurrentUserProfileRepository } from "@/modules/auth/application/current-user-profile-repository";
+import {
+  logServerError,
+  shouldLogUnexpectedActionError,
+} from "@/shared/lib/server-logger";
 
 import { closeCashSessionUseCase } from "../application/close-cash-session-use-case";
 import type { CashSessionRepository } from "../application/cash-session-repository";
@@ -23,6 +27,13 @@ export async function closeCashSessionActionService(
   );
 
   if (!result.success) {
+    if (shouldLogUnexpectedActionError(result.formError)) {
+      logServerError("cash.close.failed", {
+        formError: result.formError,
+        operation: "close-cash-session",
+      });
+    }
+
     return {
       fieldErrors: result.fieldErrors,
       formError: result.formError,

@@ -2,6 +2,10 @@ import type { CurrentUserProfileRepository } from "@/modules/auth/application/cu
 import type { CashSessionRepository } from "@/modules/cash/application/cash-session-repository";
 import type { ProductRepository } from "@/modules/products/application/product-repository";
 import type { StockMovementRepository } from "@/modules/stock/application/stock-movement-repository";
+import {
+  logServerError,
+  shouldLogUnexpectedActionError,
+} from "@/shared/lib/server-logger";
 
 import {
   createSaleUseCase,
@@ -33,6 +37,13 @@ export async function createSaleActionService(
   );
 
   if (!result.success) {
+    if (shouldLogUnexpectedActionError(result.formError)) {
+      logServerError("sale.create.failed", {
+        formError: result.formError,
+        operation: "create-sale",
+      });
+    }
+
     return {
       fieldErrors: result.fieldErrors,
       formError: result.formError,

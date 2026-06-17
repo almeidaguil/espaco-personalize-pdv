@@ -1,4 +1,8 @@
 import type { CurrentUserProfileRepository } from "@/modules/auth/application/current-user-profile-repository";
+import {
+  logServerError,
+  shouldLogUnexpectedActionError,
+} from "@/shared/lib/server-logger";
 
 import {
   cancelSaleUseCase,
@@ -38,6 +42,13 @@ export async function cancelSaleActionService(
   );
 
   if (!result.success) {
+    if (shouldLogUnexpectedActionError(result.formError)) {
+      logServerError("sale.cancel.failed", {
+        formError: result.formError,
+        operation: "cancel-sale",
+      });
+    }
+
     return {
       formError: result.formError,
     };
