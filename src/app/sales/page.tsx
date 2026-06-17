@@ -7,6 +7,7 @@ import {
   type SupabaseSaleSummaryClient,
 } from "@/modules/sales/infra/supabase-sale-summary-repository";
 import { SalesList } from "@/modules/sales/presentation/sales-list";
+import { LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -43,9 +44,12 @@ export default async function SalesPage() {
         </header>
 
         {!result.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            Nao foi possivel carregar as vendas.
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/sales", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message="Verifique sua conexao e tente carregar o historico novamente."
+            title="Nao foi possivel carregar as vendas."
+          />
         ) : (
           <SalesList sales={result.sales} />
         )}

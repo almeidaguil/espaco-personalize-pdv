@@ -12,6 +12,7 @@ import {
   OpenCashSessionForm,
   type OpenCashSessionEventOption,
 } from "@/modules/cash/presentation/open-cash-session-form";
+import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -59,13 +60,25 @@ export default async function OpenCashPage() {
         </header>
 
         {!result.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {result.formError}
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/cash/open", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message={
+              result.formError ??
+              "Verifique sua conexao e tente carregar os eventos ativos novamente."
+            }
+            title="Nao foi possivel carregar eventos ativos"
+          />
         ) : result.events.length === 0 ? (
-          <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
-            Nenhum evento ativo disponivel para abertura de caixa.
-          </section>
+          <EmptyState
+            actions={[
+              { href: "/events/new", label: "Criar evento" },
+              { href: "/events", label: "Ver eventos", variant: "secondary" },
+            ]}
+            eyebrow="Sem evento ativo"
+            message="O caixa sempre precisa estar vinculado a um evento ativo."
+            title="Nenhum evento ativo disponivel para abertura de caixa."
+          />
         ) : (
           <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
             <OpenCashSessionForm

@@ -136,9 +136,8 @@ describe("StockPage", () => {
     expect(
       screen.getByText(/Cadastre ou ative um produto/),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Novo produto" })).toHaveAttribute(
-      "href",
-      "/products/new",
-    );
+    expect(
+      screen.getByRole("link", { name: "Cadastrar produto" }),
+    ).toHaveAttribute("href", "/products/new");
   });
 });

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { EmptyState } from "@/shared/components/status-state";
 
 export type PdvCashStatusItem = {
   eventName: string;
@@ -13,24 +13,12 @@ type PdvCashStatusProps = {
 export function PdvCashStatus({ sessions }: PdvCashStatusProps) {
   if (sessions.length === 0) {
     return (
-      <section className="rounded-md border border-amber-200 bg-amber-50 p-5 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-          Caixa
-        </p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950">
-          Abra o caixa antes de vender
-        </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-700">
-          O PDV exige um caixa aberto para registrar vendas, pagamentos e
-          movimentacoes financeiras.
-        </p>
-        <Link
-          className="mt-4 inline-flex h-10 items-center justify-center rounded-md bg-[#1e3275] px-4 text-sm font-semibold text-white transition hover:bg-[#17275c]"
-          href="/cash/open"
-        >
-          Abrir caixa
-        </Link>
-      </section>
+      <EmptyState
+        actions={[{ href: "/cash/open", label: "Abrir caixa" }]}
+        eyebrow="Caixa"
+        message="O PDV exige um caixa aberto para registrar vendas, pagamentos e movimentacoes financeiras."
+        title="Abra o caixa antes de vender"
+      />
     );
   }
 

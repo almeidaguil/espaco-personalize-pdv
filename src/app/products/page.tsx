@@ -9,6 +9,7 @@ import {
 } from "@/modules/products/infra/supabase-product-repository";
 import { type ProductListItem } from "@/modules/products/presentation/product-list";
 import { ProductCatalog } from "@/modules/products/presentation/product-catalog";
+import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -60,13 +61,22 @@ export default async function ProductsPage() {
         </header>
 
         {!result.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {result.formError}
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/products", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message={
+              result.formError ??
+              "Verifique sua conexao e tente carregar a lista novamente."
+            }
+            title="Nao foi possivel carregar os produtos"
+          />
         ) : result.products.length === 0 ? (
-          <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
-            Nenhum produto cadastrado ainda.
-          </section>
+          <EmptyState
+            actions={[{ href: "/products/new", label: "Cadastrar produto" }]}
+            eyebrow="Sem produtos"
+            message="Cadastre o primeiro produto para liberar estoque, PDV e vendas."
+            title="Nenhum produto cadastrado ainda."
+          />
         ) : (
           <ProductCatalog products={result.products.map(toProductListItem)} />
         )}
