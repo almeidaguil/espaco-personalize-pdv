@@ -28,3 +28,4 @@ Sistema privado, mobile first e PWA para vendas presenciais em eventos, estoque,
 - [Manual do usuario final](docs/manual-usuario-final.md)
 - [Checklist de go-live](docs/checklist-go-live.md)
 - [Observabilidade](docs/observabilidade.md)
+- [Runbook operacional](docs/runbook-operacional.md)
