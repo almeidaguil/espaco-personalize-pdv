@@ -42,6 +42,7 @@ import {
   type SupabaseStockMovementClient,
 } from "@/modules/stock/infra/supabase-stock-movement-repository";
 import { createSaleAction } from "@/modules/sales/presentation/create-sale-action";
+import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -129,19 +130,37 @@ export default async function PdvPage() {
         </header>
 
         {!eventsResult.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {eventsResult.formError}
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/pdv", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message={
+              eventsResult.formError ??
+              "Verifique sua conexao e tente carregar o evento ativo novamente."
+            }
+            title="Nao foi possivel carregar o evento ativo"
+          />
         ) : eventsResult.events.length === 0 ? (
-          <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
-            Nenhum evento ativo disponivel para venda.
-          </section>
+          <EmptyState
+            actions={[
+              { href: "/events/new", label: "Criar evento" },
+              { href: "/events", label: "Ver eventos", variant: "secondary" },
+            ]}
+            eyebrow="Sem evento ativo"
+            message="Ative ou crie um evento antes de iniciar vendas no PDV."
+            title="Nenhum evento ativo disponivel para venda."
+          />
         ) : (
           <>
             {!cashSessionsResult.success ? (
-              <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                {cashSessionsResult.formError}
-              </section>
+              <LoadErrorState
+                actions={[{ href: "/pdv", label: "Tentar novamente" }]}
+                eyebrow="Erro"
+                message={
+                  cashSessionsResult.formError ??
+                  "Verifique sua conexao e tente carregar os caixas abertos novamente."
+                }
+                title="Nao foi possivel carregar os caixas abertos"
+              />
             ) : (
               <PdvCashStatus
                 sessions={cashSessionsResult.sessions.map((session) =>
@@ -153,9 +172,15 @@ export default async function PdvPage() {
               events={eventsResult.events.map(toPdvEventItem)}
             />
             {!productsResult.success ? (
-              <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                {productsResult.formError}
-              </section>
+              <LoadErrorState
+                actions={[{ href: "/pdv", label: "Tentar novamente" }]}
+                eyebrow="Erro"
+                message={
+                  productsResult.formError ??
+                  "Verifique sua conexao e tente carregar os produtos novamente."
+                }
+                title="Nao foi possivel carregar os produtos"
+              />
             ) : (
               <PdvCart
                 action={createSaleAction}

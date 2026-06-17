@@ -12,6 +12,7 @@ import {
   type EventListItem,
 } from "@/modules/events/presentation/event-list";
 import { closeEventAction } from "@/modules/events/presentation/close-event-action";
+import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -62,13 +63,22 @@ export default async function EventsPage() {
         </header>
 
         {!result.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {result.formError}
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/events", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message={
+              result.formError ??
+              "Verifique sua conexao e tente carregar os eventos novamente."
+            }
+            title="Nao foi possivel carregar os eventos"
+          />
         ) : result.events.length === 0 ? (
-          <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
-            Nenhum evento cadastrado ainda.
-          </section>
+          <EmptyState
+            actions={[{ href: "/events/new", label: "Criar evento" }]}
+            eyebrow="Sem eventos"
+            message="Crie um evento ativo para abrir caixa e registrar vendas."
+            title="Nenhum evento cadastrado ainda."
+          />
         ) : (
           <EventList
             action={closeEventAction}

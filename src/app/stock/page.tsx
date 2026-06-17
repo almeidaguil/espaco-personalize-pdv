@@ -1,6 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-
 import { listProductsUseCase } from "@/modules/products/application/list-products-use-case";
 import type { Product } from "@/modules/products/domain/product";
 import {
@@ -19,6 +17,7 @@ import {
 } from "@/modules/stock/presentation/stock-adjustment-form";
 import { StockMovementsOverview } from "@/modules/stock/presentation/stock-movements-overview";
 import { AppHeader } from "@/shared/components/app-header";
+import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -62,23 +61,31 @@ export default async function StockPage() {
         </section>
 
         {!result.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {result.formError}
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/stock", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message={
+              result.formError ??
+              "Verifique sua conexao e tente carregar os produtos ativos novamente."
+            }
+            title="Nao foi possivel carregar os produtos"
+          />
+        ) : toActiveProductOptions(result.products).length === 0 ? (
+          <EmptyState
+            actions={[
+              { href: "/products/new", label: "Cadastrar produto" },
+              {
+                href: "/products",
+                label: "Ver produtos",
+                variant: "secondary",
+              },
+            ]}
+            eyebrow="Sem produto ativo"
+            message="Cadastre ou ative um produto antes de ajustar o estoque."
+            title="Estoque sem produto disponivel."
+          />
         ) : (
           <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-            {toActiveProductOptions(result.products).length === 0 ? (
-              <div className="mb-4 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-                Cadastre ou ative um produto antes de ajustar o estoque.
-                <Link
-                  className="ml-1 font-semibold text-[#1e3275] underline-offset-2 hover:underline"
-                  href="/products/new"
-                >
-                  Novo produto
-                </Link>
-              </div>
-            ) : null}
-
             <StockAdjustmentForm
               action={adjustStockAction}
               products={toActiveProductOptions(result.products)}
@@ -87,9 +94,15 @@ export default async function StockPage() {
         )}
 
         {!summaryResult.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {summaryResult.formError}
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/stock", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message={
+              summaryResult.formError ??
+              "Verifique sua conexao e tente carregar saldos e movimentacoes novamente."
+            }
+            title="Nao foi possivel carregar o estoque"
+          />
         ) : (
           <StockMovementsOverview
             balances={summaryResult.balances}

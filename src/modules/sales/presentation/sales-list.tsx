@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { EmptyState } from "@/shared/components/status-state";
+
 import type { SaleSummary } from "../application/sale-summary-repository";
 
 type SalesListProps = {
@@ -19,9 +21,12 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 export function SalesList({ sales }: SalesListProps) {
   if (sales.length === 0) {
     return (
-      <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
-        Nenhuma venda registrada ainda.
-      </section>
+      <EmptyState
+        actions={[{ href: "/pdv", label: "Ir ao PDV" }]}
+        eyebrow="Sem vendas"
+        message="As vendas concluidas aparecerao aqui com status, total e acesso aos detalhes."
+        title="Nenhuma venda registrada ainda."
+      />
     );
   }
 

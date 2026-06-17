@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 
+import { EmptyState } from "@/shared/components/status-state";
+
 import { ProductList, type ProductListItem } from "./product-list";
 
 type ProductCatalogProps = {
@@ -42,9 +44,11 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
       </section>
 
       {filteredProducts.length === 0 ? (
-        <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
-          Nenhum produto encontrado para a busca informada.
-        </section>
+        <EmptyState
+          eyebrow="Busca sem resultado"
+          message="Revise o nome ou SKU pesquisado. O produto pode estar inativo ou ainda nao cadastrado."
+          title="Nenhum produto encontrado para a busca informada."
+        />
       ) : (
         <ProductList products={filteredProducts} />
       )}

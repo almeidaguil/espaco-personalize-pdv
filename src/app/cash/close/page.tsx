@@ -27,6 +27,7 @@ import {
   SupabaseEventRepository,
   type SupabaseEventClient,
 } from "@/modules/events/infra/supabase-event-repository";
+import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -121,17 +122,32 @@ export default async function CloseCashPage() {
         </header>
 
         {!cashSessionsResult.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {cashSessionsResult.formError}
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/cash/close", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message={
+              cashSessionsResult.formError ??
+              "Verifique sua conexao e tente carregar os caixas abertos novamente."
+            }
+            title="Nao foi possivel carregar os caixas abertos"
+          />
         ) : !closingSummariesResult.success ? (
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            Nao foi possivel calcular a conferencia do caixa.
-          </section>
+          <LoadErrorState
+            actions={[{ href: "/cash/close", label: "Tentar novamente" }]}
+            eyebrow="Erro"
+            message="A lista de caixas carregou, mas a conferencia financeira nao pode ser calculada agora."
+            title="Nao foi possivel calcular a conferencia do caixa."
+          />
         ) : cashSessionsResult.sessions.length === 0 ? (
-          <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
-            Nenhum caixa aberto disponivel para fechamento.
-          </section>
+          <EmptyState
+            actions={[
+              { href: "/cash/open", label: "Abrir caixa" },
+              { href: "/pdv", label: "Ir ao PDV", variant: "secondary" },
+            ]}
+            eyebrow="Sem caixa aberto"
+            message="Abra um caixa antes das vendas. Quando houver caixa aberto, ele aparecera aqui para conferencia e fechamento."
+            title="Nenhum caixa aberto disponivel para fechamento."
+          />
         ) : (
           <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
             <CloseCashSessionForm
