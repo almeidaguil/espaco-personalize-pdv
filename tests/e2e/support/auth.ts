@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { expect, type Page } from "@playwright/test";
 import { createBrowserClient } from "@supabase/ssr";
+import { createClient } from "@supabase/supabase-js";
 
 const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://localhost:3000";
 
@@ -53,6 +54,29 @@ export async function authenticatePage(page: Page) {
       value,
     })),
   );
+}
+
+export async function createAuthenticatedSupabaseClient() {
+  const publicEnv = getPublicEnv();
+  const supabase = createClient(
+    publicEnv.NEXT_PUBLIC_SUPABASE_URL ?? "",
+    publicEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+      },
+    },
+  );
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email: process.env.E2E_USER_EMAIL ?? "",
+    password: process.env.E2E_USER_PASSWORD ?? "",
+  });
+
+  expect(error).toBeNull();
+
+  return supabase;
 }
 
 function getPublicEnv() {
