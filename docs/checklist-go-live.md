@@ -13,9 +13,11 @@ O fluxo oficial e:
 1. concluir as features em `feature/*`;
 2. mergear em `develop` com checks verdes;
 3. rodar o gate E2E final;
-4. revisar limpeza e configuracoes externas;
-5. abrir PR de `develop` para `main`;
-6. publicar a `main` somente quando tudo estiver validado.
+4. executar o [Runbook operacional](runbook-operacional.md) em modo smoke test;
+5. revisar limpeza e configuracoes externas;
+6. rotacionar segredos usados durante homologacao;
+7. abrir PR de `develop` para `main`;
+8. publicar a `main` somente quando tudo estiver validado.
 
 ## 1. Validacao Tecnica Obrigatoria
 
@@ -37,7 +39,13 @@ Tambem confirmar:
 
 ## 2. Gate E2E Obrigatorio
 
-Rodar o fluxo documentado em [Gate E2E de release](docs/e2e-release-gate.md).
+Rodar o fluxo documentado em [Gate E2E de release](e2e-release-gate.md).
+
+Comando local esperado, quando as variaveis E2E estiverem configuradas:
+
+```powershell
+npm.cmd run test:e2e:required
+```
 
 Liberar a release somente se:
 
@@ -47,8 +55,10 @@ Liberar a release somente se:
 - criacao de evento funcionar;
 - abertura de caixa funcionar;
 - fluxo de venda funcionar;
+- venda em dinheiro e venda sem dinheiro funcionarem;
 - cancelamento de venda funcionar;
 - fechamento de caixa funcionar.
+- regressao de RLS financeira continuar bloqueando escrita direta indevida.
 
 ## 3. Revisao De Banco E Migrations
 
@@ -109,7 +119,15 @@ Depois da rotacao:
 - atualizar `.env.local` e `.env.e2e.local` locais;
 - atualizar variaveis de ambiente na Vercel;
 - atualizar secrets do GitHub Actions, se houver mudanca;
+- atualizar `CREDENTIALS.local.md` localmente, sem versionar;
 - validar login e E2E novamente.
+
+Regra:
+
+- nenhum segredo compartilhado durante homologacao deve ser tratado como segredo
+  definitivo de producao;
+- a senha administrativa operacional definitiva deve ser conhecida apenas por
+  quem pode autorizar cancelamentos e fechamento de caixa com falta.
 
 ## 6. Limpeza Da Base Antes Da Entrega
 
@@ -133,6 +151,15 @@ Checklist funcional:
 - nenhum caixa aberto esquecido;
 - nenhum evento de QA ativo;
 - nenhuma venda fake misturada nos relatorios finais.
+- nenhum usuario temporario ativo sem necessidade operacional.
+
+Sequencia recomendada:
+
+1. exportar qualquer evidencia de QA que precise ser guardada;
+2. fechar caixas abertos;
+3. finalizar eventos de teste;
+4. remover ou desativar usuarios temporarios;
+5. manter apenas dados reais de partida.
 
 ## 7. Configuracao Da Vercel
 
@@ -165,12 +192,16 @@ Depois do deploy da `main`, executar um teste rapido manual:
 9. cancelar a venda, se for um teste controlado;
 10. fechar caixa;
 11. abrir `/reports` e validar os numeros.
+12. exportar CSV e abrir o arquivo;
+13. conferir se os logs de runtime estao acessiveis.
 
 Se qualquer passo falhar:
 
 - nao considerar a release pronta;
 - corrigir em `feature/*` a partir de `develop`;
 - repetir o fluxo.
+
+O smoke test detalhado fica em [Runbook operacional](runbook-operacional.md).
 
 ## 9. Checklist Operacional Do Primeiro Dia
 
@@ -204,6 +235,8 @@ No momento da release:
 Depois da publicacao:
 
 - monitorar login, vendas e fechamento de caixa no primeiro uso;
+- acompanhar `sale.create.failed`, `sale.cancel.failed` e `cash.close.failed`
+  conforme [Observabilidade](observabilidade.md);
 - registrar qualquer incidente encontrado;
 - priorizar hotfixes em branch propria a partir de `develop`;
 - manter `main` sincronizada apenas com releases realmente validadas.
@@ -217,6 +250,9 @@ Itens que nao dependem apenas de codigo:
 - rotacionar segredos expostos durante homologacao;
 - limpar a base de teste;
 - validar o usuario admin oficial final.
+- confirmar acesso aos logs da Vercel e Supabase;
+- decidir se Sentry/Logflare fica para V1 ou para a primeira iteracao
+  pos-go-live.
 
 ## 13. Criterio Para Dizer "Pronto Para Produzir"
 
@@ -230,4 +266,6 @@ Podemos considerar o sistema pronto para uso real quando:
 - segredos estiverem rotacionados;
 - admin e operadores reais estiverem configurados;
 - smoke test de producao passar;
-- o time operacional tiver em maos o [Manual do usuario final](docs/manual-usuario-final.md).
+- o time operacional tiver em maos o [Manual do usuario final](manual-usuario-final.md);
+- o responsavel pelo evento tiver em maos o [Runbook operacional](runbook-operacional.md);
+- os logs minimos de producao estiverem acessiveis.
