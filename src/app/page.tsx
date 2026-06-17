@@ -68,35 +68,55 @@ const modules = [
     title: "Caixa",
   },
   {
-    description: "Vendas por evento, cancelamentos e exportacao CSV.",
+    description: "Vendas registradas, detalhes e cancelamentos.",
+    href: "/sales",
+    status: "Disponivel",
+    title: "Vendas",
+  },
+  {
+    description: "Vendas por evento, rankings e exportacao CSV.",
     href: "/reports",
     status: "Disponivel",
     title: "Relatorios",
   },
 ] as const;
 
+const adminModules = [
+  {
+    description: "Usuarios, perfis de acesso e senhas temporarias.",
+    href: "/settings",
+    status: "Admin",
+    title: "Configuracoes",
+  },
+] as const;
+
 export default async function Home() {
   const supabaseClient = await createSupabaseServerClient();
-  const [eventsResult, cashSessionsResult, salesResult] = await Promise.all([
-    listActiveEventsUseCase({
-      eventRepository: new SupabaseEventRepository(
-        supabaseClient as unknown as SupabaseEventClient,
-      ),
-    }),
-    listOpenCashSessionsUseCase({
-      cashSessionRepository: new SupabaseCashSessionRepository(
-        supabaseClient as unknown as SupabaseCashSessionClient,
-      ),
-      currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
-        supabaseClient as unknown as SupabaseCurrentUserProfileClient,
-      ),
-    }),
-    listSalesUseCase({
-      saleSummaryRepository: new SupabaseSaleSummaryRepository(
-        supabaseClient as unknown as SupabaseSaleSummaryClient,
-      ),
-    }),
-  ]);
+  const currentUserProfileRepository = new SupabaseCurrentUserProfileRepository(
+    supabaseClient as unknown as SupabaseCurrentUserProfileClient,
+  );
+  const [currentUserResult, eventsResult, cashSessionsResult, salesResult] =
+    await Promise.all([
+      currentUserProfileRepository.getCurrent(),
+      listActiveEventsUseCase({
+        eventRepository: new SupabaseEventRepository(
+          supabaseClient as unknown as SupabaseEventClient,
+        ),
+      }),
+      listOpenCashSessionsUseCase({
+        cashSessionRepository: new SupabaseCashSessionRepository(
+          supabaseClient as unknown as SupabaseCashSessionClient,
+        ),
+        currentUserProfileRepository,
+      }),
+      listSalesUseCase({
+        saleSummaryRepository: new SupabaseSaleSummaryRepository(
+          supabaseClient as unknown as SupabaseSaleSummaryClient,
+        ),
+      }),
+    ]);
+  const isAdmin =
+    currentUserResult.success && currentUserResult.profile.role === "admin";
   const activeEvents = eventsResult.success ? eventsResult.events : [];
   const openCashSessions = cashSessionsResult.success
     ? cashSessionsResult.sessions
@@ -127,7 +147,7 @@ export default async function Home() {
   return (
     <main className="min-h-screen bg-[#f6f7fb] text-slate-950">
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-5 py-6 sm:px-8 lg:px-10">
-        <AppHeader title="PDV" />
+        <AppHeader showAdminNavigation={isAdmin} title="PDV" />
 
         <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -216,7 +236,7 @@ export default async function Home() {
         </section>
 
         <section className="grid flex-1 gap-3 sm:grid-cols-2">
-          {modules.map((module) => (
+          {[...modules, ...(isAdmin ? adminModules : [])].map((module) => (
             <Link
               className="rounded-md border border-slate-200 bg-white p-5 shadow-sm transition hover:border-[#1e3275] hover:shadow-md"
               href={module.href}

@@ -61,7 +61,11 @@ export default async function SettingsPage() {
     return (
       <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
         <section className="mx-auto grid w-full max-w-3xl gap-4">
-          <AppHeader eyebrow="Administracao" title="Configuracoes" />
+          <AppHeader
+            eyebrow="Administracao"
+            showAdminNavigation
+            title="Configuracoes"
+          />
           <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
             Nao foi possivel carregar o usuario atual.
           </section>
@@ -78,7 +82,11 @@ export default async function SettingsPage() {
   return (
     <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
       <section className="mx-auto grid w-full max-w-5xl gap-4">
-        <AppHeader eyebrow="Administracao" title="Configuracoes" />
+        <AppHeader
+          eyebrow="Administracao"
+          showAdminNavigation
+          title="Configuracoes"
+        />
 
         <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
           <article className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">

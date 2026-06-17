@@ -15,10 +15,16 @@ vi.mock("@/modules/cash/infra/supabase-cash-session-repository", () => ({
   SupabaseCashSessionRepository: vi.fn(),
 }));
 
+const getCurrentUserProfileMock = vi.hoisted(() => vi.fn());
+
 vi.mock(
   "@/modules/auth/infra/supabase-current-user-profile-repository",
   () => ({
-    SupabaseCurrentUserProfileRepository: vi.fn(),
+    SupabaseCurrentUserProfileRepository: class {
+      async getCurrent() {
+        return getCurrentUserProfileMock();
+      }
+    },
   }),
 );
 
@@ -43,8 +49,8 @@ vi.mock("@/modules/sales/application/list-sales-use-case", () => ({
 }));
 
 describe("Home", () => {
-  it("renders the operational dashboard when cash is open", async () => {
-    mockOperationalData();
+  it("renders the operational dashboard with admin navigation when cash is open", async () => {
+    mockOperationalData("admin");
 
     render(await Home());
 
@@ -85,10 +91,36 @@ describe("Home", () => {
         .getAllByRole("link", { name: /Fechar caixa/ })
         .some((link) => link.getAttribute("href") === "/cash/close"),
     ).toBe(true);
-    expect(screen.getAllByText("Disponivel")).toHaveLength(6);
+    expect(screen.getByRole("link", { name: "Vendas" })).toHaveAttribute(
+      "href",
+      "/sales",
+    );
+    expect(screen.getByRole("link", { name: "Configuracoes" })).toHaveAttribute(
+      "href",
+      "/settings",
+    );
+    expect(screen.getAllByText("Disponivel")).toHaveLength(7);
+    expect(screen.getByText("Admin")).toBeInTheDocument();
+  });
+
+  it("does not show settings navigation for operators", async () => {
+    mockOperationalData("operator");
+
+    render(await Home());
+
+    expect(
+      screen.queryByRole("link", { name: "Configuracoes" }),
+    ).not.toBeInTheDocument();
   });
 
   it("guides the operator to create an event when none is active", async () => {
+    getCurrentUserProfileMock.mockResolvedValueOnce({
+      profile: {
+        id: "operator-1",
+        role: "operator",
+      },
+      success: true,
+    });
     listActiveEventsUseCaseMock.mockResolvedValueOnce({
       events: [],
       success: true,
@@ -112,7 +144,14 @@ describe("Home", () => {
   });
 });
 
-function mockOperationalData() {
+function mockOperationalData(role: "admin" | "operator") {
+  getCurrentUserProfileMock.mockResolvedValueOnce({
+    profile: {
+      id: "operator-1",
+      role,
+    },
+    success: true,
+  });
   listActiveEventsUseCaseMock.mockResolvedValueOnce({
     events: [
       {
