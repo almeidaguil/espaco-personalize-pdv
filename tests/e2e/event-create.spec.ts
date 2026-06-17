@@ -37,7 +37,7 @@ test("admin creates an event and sees it in the events list", async ({
 
   await page.goto("/events");
 
-  const eventCard = page.getByRole("listitem").filter({ hasText: eventName });
+  const eventCard = await findEventCard(page, eventName);
 
   await expect(eventCard).toBeVisible();
   await expect(eventCard.getByText(eventLocation)).toBeVisible();
@@ -112,4 +112,24 @@ function readEnvFile(path: string): Record<string, string | undefined> {
   } catch {
     return {};
   }
+}
+
+async function findEventCard(page: Page, eventName: string) {
+  const eventCard = page.getByRole("listitem").filter({ hasText: eventName });
+
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    if ((await eventCard.count()) > 0) {
+      return eventCard;
+    }
+
+    const nextButton = page.getByRole("button", { name: "Proxima" });
+
+    if ((await nextButton.count()) === 0 || !(await nextButton.isEnabled())) {
+      return eventCard;
+    }
+
+    await nextButton.click();
+  }
+
+  return eventCard;
 }
