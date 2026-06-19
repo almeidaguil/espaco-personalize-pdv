@@ -4,10 +4,10 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "node scripts/clean-next-dev-cache.mjs && next build",
     "start": "next start",
     "lint": "eslint",
-    "type-check": "tsc --noEmit",
+    "type-check": "node scripts/clean-next-dev-cache.mjs && tsc --noEmit",
     "test": "vitest run",
     "test:e2e": "playwright test",
     "test:e2e:required": "node scripts/verify-e2e-env.mjs && playwright test",
