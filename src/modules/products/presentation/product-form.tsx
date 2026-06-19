@@ -1,0 +1,125 @@
+"use client";
+
+import { useActionState } from "react";
+
+import type {
+  ProductActionState,
+  ProductFormValues,
+} from "./product-action-state";
+import { createEmptyProductFormValues } from "./product-form-data";
+
+const initialState: ProductActionState = {};
+
+type ProductFormProps = {
+  action: (
+    previousState: ProductActionState,
+    formData: FormData,
+  ) => Promise<ProductActionState>;
+  initialValues?: ProductFormValues;
+  submitLabel?: string;
+};
+
+export function ProductForm({
+  action,
+  initialValues = createEmptyProductFormValues(),
+  submitLabel = "Salvar produto",
+}: ProductFormProps) {
+  const [state, formAction, isPending] = useActionState(action, initialState);
+  const values = state.values ?? initialValues;
+  const formKey = JSON.stringify(values);
+
+  return (
+    <form action={formAction} className="grid gap-4" key={formKey} noValidate>
+      <div className="grid gap-2">
+        <label className="text-sm font-medium text-slate-700" htmlFor="name">
+          Nome do produto
+        </label>
+        <input
+          autoComplete="off"
+          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          defaultValue={values.name}
+          id="name"
+          name="name"
+          placeholder="Caneca personalizada"
+          type="text"
+        />
+        {state.fieldErrors?.name ? (
+          <p className="text-sm text-red-700">{state.fieldErrors.name}</p>
+        ) : null}
+      </div>
+
+      <div className="grid gap-2">
+        <label
+          className="text-sm font-medium text-slate-700"
+          htmlFor="priceInReais"
+        >
+          Preço
+        </label>
+        <input
+          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          defaultValue={values.priceInReais}
+          id="priceInReais"
+          inputMode="decimal"
+          name="priceInReais"
+          placeholder="35,00"
+          type="text"
+        />
+        {state.fieldErrors?.priceInReais ? (
+          <p className="text-sm text-red-700">
+            {state.fieldErrors.priceInReais}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="grid gap-2">
+        <label className="text-sm font-medium text-slate-700" htmlFor="sku">
+          SKU
+        </label>
+        <input
+          autoComplete="off"
+          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          defaultValue={values.sku}
+          id="sku"
+          name="sku"
+          placeholder="CANECA-001"
+          type="text"
+        />
+        {state.fieldErrors?.sku ? (
+          <p className="text-sm text-red-700">{state.fieldErrors.sku}</p>
+        ) : null}
+      </div>
+
+      <input name="isActive" type="hidden" value="false" />
+      <label className="flex items-center gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-medium text-slate-700">
+        <input
+          className="h-4 w-4 rounded border-slate-300 text-[#1e3275] focus:ring-[#1e3275]"
+          defaultChecked={values.isActive}
+          name="isActive"
+          type="checkbox"
+          value="true"
+        />
+        Produto ativo
+      </label>
+
+      {state.formError ? (
+        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {state.formError}
+        </p>
+      ) : null}
+
+      {state.successMessage ? (
+        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+          {state.successMessage}
+        </p>
+      ) : null}
+
+      <button
+        className="h-11 rounded-md bg-[#1e3275] px-4 text-sm font-semibold text-white transition hover:bg-[#17275c] disabled:cursor-not-allowed disabled:opacity-70"
+        disabled={isPending}
+        type="submit"
+      >
+        {isPending ? "Salvando..." : submitLabel}
+      </button>
+    </form>
+  );
+}

@@ -1,17 +1,34 @@
 import { describe, expect, it } from "vitest";
 
-import { createProductUseCase } from "./create-product-use-case";
-import type {
-  ProductRepository,
-  SaveProductResult,
-} from "./product-repository";
 import { Money } from "../domain/money";
 import type { Product } from "../domain/product";
+import { createProductUseCase } from "./create-product-use-case";
+import type {
+  FindProductByIdResult,
+  ListProductsResult,
+  ProductRepository,
+  SaveProductResult,
+  UpdateProductResult,
+} from "./product-repository";
 
 class FakeProductRepository implements ProductRepository {
   public savedProduct?: Product;
 
   constructor(private readonly saveResult?: SaveProductResult) {}
+
+  async findById(): Promise<FindProductByIdResult> {
+    return {
+      error: "not_found",
+      success: false,
+    };
+  }
+
+  async list(): Promise<ListProductsResult> {
+    return {
+      products: [],
+      success: true,
+    };
+  }
 
   async save(product: Product): Promise<SaveProductResult> {
     this.savedProduct = product;
@@ -22,6 +39,13 @@ class FakeProductRepository implements ProductRepository {
         success: true,
       }
     );
+  }
+
+  async update(product: Product): Promise<UpdateProductResult> {
+    return {
+      product,
+      success: true,
+    };
   }
 }
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import { loginAction } from "@/modules/auth/presentation/login-action";
 import { LoginForm } from "@/modules/auth/presentation/login-form";
+import { BrandLogo } from "@/shared/components/brand-logo";
 
 export const metadata: Metadata = {
   title: "Login | Espaco Personalize PDV",
@@ -13,6 +14,7 @@ export default function LoginPage() {
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
         <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
           <div className="mb-6">
+            <BrandLogo className="mb-5 h-auto w-32" priority />
             <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
               Espaco Personalize
             </p>

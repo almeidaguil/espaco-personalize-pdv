@@ -29,6 +29,9 @@ test-results/
 # Vercel
 .vercel/
 
+# Supabase CLI
+supabase/.temp/
+
 # OS / editors
 .DS_Store
 Thumbs.db
