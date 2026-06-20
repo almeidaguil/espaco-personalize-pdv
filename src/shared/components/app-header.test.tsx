@@ -14,6 +14,11 @@ describe("AppHeader", () => {
     expect(
       screen.queryByRole("link", { name: "Configuracoes" }),
     ).not.toBeInTheDocument();
+    expect(screen.getByText("Mais opcoes")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Produtos" })).toHaveAttribute(
+      "href",
+      "/products",
+    );
   });
 
   it("renders settings navigation when admin navigation is enabled", () => {
