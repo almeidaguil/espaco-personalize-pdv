@@ -66,4 +66,28 @@ describe("ProductCatalog", () => {
       screen.getByText("Nenhum produto encontrado para a busca informada."),
     ).toBeInTheDocument();
   });
+
+  it("paginates product results", () => {
+    render(
+      <ProductCatalog
+        products={Array.from({ length: 9 }, (_, index) => ({
+          id: `product-${index + 1}`,
+          isActive: true,
+          name: `Produto ${index + 1}`,
+          priceLabel: `R$ ${index + 1},00`,
+          sku: `SKU-${index + 1}`,
+        }))}
+      />,
+    );
+
+    expect(screen.getByText("Mostrando 1-8 de 9 produtos")).toBeInTheDocument();
+    expect(screen.getByText("Produto 1")).toBeInTheDocument();
+    expect(screen.queryByText("Produto 9")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Proxima" }));
+
+    expect(screen.getByText("Mostrando 9-9 de 9 produtos")).toBeInTheDocument();
+    expect(screen.getByText("Produto 9")).toBeInTheDocument();
+    expect(screen.queryByText("Produto 1")).not.toBeInTheDocument();
+  });
 });
