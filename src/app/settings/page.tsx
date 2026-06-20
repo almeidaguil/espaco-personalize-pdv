@@ -20,6 +20,7 @@ import {
   updateManagedUserRoleAction,
 } from "@/modules/users/presentation/user-actions";
 import { AppHeader } from "@/shared/components/app-header";
+import { PageShell } from "@/shared/components/page-shell";
 import { createSupabaseAdminClient } from "@/shared/lib/supabase/admin-client";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -38,20 +39,18 @@ export default async function SettingsPage() {
 
   if (!adminResult.success) {
     return (
-      <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-        <section className="mx-auto grid w-full max-w-3xl gap-4">
-          <AppHeader eyebrow="Administracao" title="Configuracoes" />
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            {adminResult.formError}
-          </section>
-          <Link
-            className="text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
-            href="/"
-          >
-            Voltar ao painel
-          </Link>
+      <PageShell>
+        <AppHeader eyebrow="Administracao" title="Configuracoes" />
+        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          {adminResult.formError}
         </section>
-      </main>
+        <Link
+          className="text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
+          href="/"
+        >
+          Voltar ao painel
+        </Link>
+      </PageShell>
     );
   }
 
@@ -59,18 +58,16 @@ export default async function SettingsPage() {
 
   if (!currentUserResult.success) {
     return (
-      <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-        <section className="mx-auto grid w-full max-w-3xl gap-4">
-          <AppHeader
-            eyebrow="Administracao"
-            showAdminNavigation
-            title="Configuracoes"
-          />
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            Nao foi possivel carregar o usuario atual.
-          </section>
+      <PageShell>
+        <AppHeader
+          eyebrow="Administracao"
+          showAdminNavigation
+          title="Configuracoes"
+        />
+        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+          Nao foi possivel carregar o usuario atual.
         </section>
-      </main>
+      </PageShell>
     );
   }
 
@@ -80,59 +77,55 @@ export default async function SettingsPage() {
   const usersResult = await listManagedUsersUseCase(userManagementRepository);
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-5xl gap-4">
-        <AppHeader
-          eyebrow="Administracao"
-          showAdminNavigation
-          title="Configuracoes"
-        />
+    <PageShell maxWidth="xl">
+      <AppHeader
+        eyebrow="Administracao"
+        showAdminNavigation
+        title="Configuracoes"
+      />
 
-        <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
-          <article className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
+        <article className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+            Usuarios
+          </p>
+          <h1 className="mt-1 text-xl font-semibold">Criar operador</h1>
+          <p className="mt-2 text-sm leading-6 text-slate-600">
+            O novo usuario nasce como operador. Promova para admin somente
+            quando precisar liberar configuracoes, estoque, eventos e gestao.
+          </p>
+          <div className="mt-5">
+            <CreateUserForm action={createManagedUserAction} />
+          </div>
+        </article>
+
+        <section className="grid gap-3">
+          <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-              Usuarios
+              Acessos
             </p>
-            <h1 className="mt-1 text-xl font-semibold">Criar operador</h1>
+            <h2 className="mt-1 text-xl font-semibold">Usuarios do sistema</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">
-              O novo usuario nasce como operador. Promova para admin somente
-              quando precisar liberar configuracoes, estoque, eventos e gestao.
+              Altere perfil, promova operadores para admin, rebaixe admins e
+              desative acessos sem apagar historico.
             </p>
-            <div className="mt-5">
-              <CreateUserForm action={createManagedUserAction} />
-            </div>
-          </article>
+          </div>
 
-          <section className="grid gap-3">
-            <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-                Acessos
-              </p>
-              <h2 className="mt-1 text-xl font-semibold">
-                Usuarios do sistema
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Altere perfil, promova operadores para admin, rebaixe admins e
-                desative acessos sem apagar historico.
-              </p>
-            </div>
-
-            {!usersResult.success ? (
-              <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-                Nao foi possivel carregar usuarios.
-              </p>
-            ) : (
-              <ManagedUsersList
-                accessAction={setManagedUserAccessAction}
-                currentAdminId={currentUserResult.profile.id}
-                passwordAction={resetManagedUserPasswordAction}
-                roleAction={updateManagedUserRoleAction}
-                users={usersResult.users}
-              />
-            )}
-          </section>
+          {!usersResult.success ? (
+            <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+              Nao foi possivel carregar usuarios.
+            </p>
+          ) : (
+            <ManagedUsersList
+              accessAction={setManagedUserAccessAction}
+              currentAdminId={currentUserResult.profile.id}
+              passwordAction={resetManagedUserPasswordAction}
+              roleAction={updateManagedUserRoleAction}
+              users={usersResult.users}
+            />
+          )}
         </section>
       </section>
-    </main>
+    </PageShell>
   );
 }
