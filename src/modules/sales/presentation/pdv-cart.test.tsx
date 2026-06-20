@@ -255,13 +255,14 @@ describe("PdvCart", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
-    await user.selectOptions(
-      screen.getByLabelText("Forma de pagamento"),
-      "pix",
-    );
+    await user.click(screen.getByRole("button", { name: "Pix" }));
 
     expect(screen.getByDisplayValue("15,00")).toBeInTheDocument();
     expect(screen.getByText("Pix no valor de R$ 15,00")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pix" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(
       screen.getByRole("button", { name: "Finalizar venda" }),
     ).toBeEnabled();

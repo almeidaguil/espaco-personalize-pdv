@@ -291,30 +291,34 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         </div>
 
         <div className="grid gap-2">
-          <label
-            className="text-sm font-medium text-slate-700"
-            htmlFor="paymentMethod"
-          >
+          <p className="text-sm font-medium text-slate-700" id="paymentMethod">
             Forma de pagamento
-          </label>
-          <select
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-            id="paymentMethod"
-            onChange={(event) =>
-              setPaymentMethod(event.target.value as PaymentMethod)
-            }
-            value={paymentMethod}
+          </p>
+          <div
+            aria-labelledby="paymentMethod"
+            className="grid grid-cols-2 gap-2"
+            role="group"
           >
             {(
               Object.entries(paymentMethodLabels) as Array<
                 [PaymentMethod, string]
               >
             ).map(([value, label]) => (
-              <option key={value} value={value}>
+              <button
+                aria-pressed={paymentMethod === value}
+                className={
+                  paymentMethod === value
+                    ? "min-h-11 rounded-md border border-[#1e3275] bg-[#1e3275] px-3 text-sm font-semibold text-white transition"
+                    : "min-h-11 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                }
+                key={value}
+                onClick={() => setPaymentMethod(value)}
+                type="button"
+              >
                 {label}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
         <div className="grid gap-2">
