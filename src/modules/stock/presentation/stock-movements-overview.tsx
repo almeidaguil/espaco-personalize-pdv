@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { PaginationControls } from "@/shared/components/pagination-controls";
+import { Panel } from "@/shared/components/panel";
 import { normalizeSearchTerm } from "@/shared/utils/search";
 
 import type {
@@ -57,7 +58,7 @@ export function StockMovementsOverview({
 
   return (
     <section className="grid gap-4">
-      <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <Panel>
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
@@ -126,9 +127,9 @@ export function StockMovementsOverview({
           pageSize={balancesPageSize}
           totalItems={filteredBalances.length}
         />
-      </section>
+      </Panel>
 
-      <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <Panel>
         <div className="flex items-start justify-between gap-3">
           <div>
             <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
@@ -222,7 +223,7 @@ export function StockMovementsOverview({
           pageSize={movementsPageSize}
           totalItems={filteredMovements.length}
         />
-      </section>
+      </Panel>
     </section>
   );
 }
