@@ -2,6 +2,8 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import { normalizeSearchTerm } from "@/shared/utils/search";
+
 import type { PaymentMethod } from "../domain/sale";
 import type { SaleActionState } from "./sale-action-state";
 
@@ -506,14 +508,6 @@ function filterProducts(
       productSku.includes(normalizedSearchTerm)
     );
   });
-}
-
-function normalizeSearchTerm(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
 }
 
 function parseBrlAmount(value: string): number {

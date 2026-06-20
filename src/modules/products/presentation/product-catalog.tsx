@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { EmptyState } from "@/shared/components/status-state";
+import { normalizeSearchTerm } from "@/shared/utils/search";
 
 import { ProductList, type ProductListItem } from "./product-list";
 
@@ -75,12 +76,4 @@ function filterProducts(
       normalizedSku.includes(normalizedSearchTerm)
     );
   });
-}
-
-function normalizeSearchTerm(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim()
-    .toLowerCase();
 }
