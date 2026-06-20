@@ -12,6 +12,7 @@ import {
   type OpenCashSessionEventOption,
 } from "@/modules/cash/presentation/open-cash-session-form";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -65,12 +66,12 @@ export default async function OpenCashPage() {
           title="Nenhum evento ativo disponivel para abertura de caixa."
         />
       ) : (
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+        <Panel>
           <OpenCashSessionForm
             action={openCashSessionAction}
             events={result.events.map(toEventOption)}
           />
-        </section>
+        </Panel>
       )}
     </PageShell>
   );
