@@ -1,6 +1,6 @@
 import type { ComponentPropsWithoutRef, ElementType, ReactNode } from "react";
 
-type PanelElement = "article" | "div" | "section";
+type PanelElement = "article" | "div" | "li" | "section";
 
 type PanelProps<TElement extends PanelElement = "section"> = {
   as?: TElement;

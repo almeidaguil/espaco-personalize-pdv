@@ -14,12 +14,12 @@ describe("Panel", () => {
 
   it("supports alternate elements and custom classes", () => {
     render(
-      <Panel as="article" className="grid gap-2" padding="sm">
+      <Panel as="li" className="grid gap-2" padding="sm">
         Painel compacto
       </Panel>,
     );
 
-    expect(screen.getByText("Painel compacto").closest("article")).toHaveClass(
+    expect(screen.getByText("Painel compacto").closest("li")).toHaveClass(
       "grid",
       "gap-2",
       "p-4",
