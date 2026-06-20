@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 
+import { PaginationControls } from "@/shared/components/pagination-controls";
 import { EmptyState } from "@/shared/components/status-state";
 import { normalizeSearchTerm } from "@/shared/utils/search";
 
@@ -11,12 +12,19 @@ type ProductCatalogProps = {
   products: ProductListItem[];
 };
 
+const pageSize = 8;
+
 export function ProductCatalog({ products }: ProductCatalogProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredProducts = useMemo(
     () => filterProducts(products, searchTerm),
     [products, searchTerm],
+  );
+  const visibleProducts = filteredProducts.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
   );
 
   return (
@@ -33,7 +41,10 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
             autoComplete="off"
             className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
             id="product-search"
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Busque por nome ou SKU"
             type="search"
             value={searchTerm}
@@ -51,7 +62,16 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
           title="Nenhum produto encontrado para a busca informada."
         />
       ) : (
-        <ProductList products={filteredProducts} />
+        <section>
+          <ProductList products={visibleProducts} />
+          <PaginationControls
+            currentPage={currentPage}
+            itemLabel="produtos"
+            onPageChange={setCurrentPage}
+            pageSize={pageSize}
+            totalItems={filteredProducts.length}
+          />
+        </section>
       )}
     </div>
   );
