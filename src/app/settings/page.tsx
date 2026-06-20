@@ -21,6 +21,7 @@ import {
 } from "@/modules/users/presentation/user-actions";
 import { AppHeader } from "@/shared/components/app-header";
 import { PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 import { createSupabaseAdminClient } from "@/shared/lib/supabase/admin-client";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -85,7 +86,7 @@ export default async function SettingsPage() {
       />
 
       <section className="grid gap-4 lg:grid-cols-[minmax(0,360px)_1fr]">
-        <article className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+        <Panel as="article">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
             Usuarios
           </p>
@@ -97,10 +98,10 @@ export default async function SettingsPage() {
           <div className="mt-5">
             <CreateUserForm action={createManagedUserAction} />
           </div>
-        </article>
+        </Panel>
 
         <section className="grid gap-3">
-          <div className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+          <Panel as="div">
             <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
               Acessos
             </p>
@@ -109,7 +110,7 @@ export default async function SettingsPage() {
               Altere perfil, promova operadores para admin, rebaixe admins e
               desative acessos sem apagar historico.
             </p>
-          </div>
+          </Panel>
 
           {!usersResult.success ? (
             <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
