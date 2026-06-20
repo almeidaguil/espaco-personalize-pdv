@@ -345,6 +345,31 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
               registra o valor exato da venda.
             </p>
           ) : null}
+          {paymentMethod === "cash" && hasCartItems ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="min-h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                onClick={() =>
+                  setReceivedAmountInput(formatBrlAmount(totalInReais))
+                }
+                type="button"
+              >
+                Valor exato
+              </button>
+              {[50, 100].map((amountInReais) => (
+                <button
+                  className="min-h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                  key={amountInReais}
+                  onClick={() =>
+                    setReceivedAmountInput(formatBrlAmount(amountInReais))
+                  }
+                  type="button"
+                >
+                  {moneyFormatter.format(amountInReais)}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="rounded-md border border-slate-200 bg-white px-3 py-3">

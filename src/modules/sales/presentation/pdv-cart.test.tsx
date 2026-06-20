@@ -92,6 +92,35 @@ describe("PdvCart", () => {
     ).toBeEnabled();
   });
 
+  it("fills received amount from cash shortcuts", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInReais: 15,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.click(screen.getByRole("button", { name: "Valor exato" }));
+
+    expect(screen.getByDisplayValue("15,00")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /R\$\s*50,00/ }));
+
+    expect(screen.getByDisplayValue("50,00")).toBeInTheDocument();
+    expect(screen.getByText("Troco R$ 35,00")).toBeInTheDocument();
+  });
+
   it("shows the missing amount when cash payment is insufficient", async () => {
     const user = userEvent.setup();
 
