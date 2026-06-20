@@ -17,6 +17,7 @@ import {
 } from "@/modules/stock/presentation/stock-adjustment-form";
 import { StockMovementsOverview } from "@/modules/stock/presentation/stock-movements-overview";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -50,7 +51,7 @@ export default async function StockPage() {
         title="Estoque"
       />
 
-      <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+      <Panel padding="sm">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
           Ajuste de estoque
         </p>
@@ -59,7 +60,7 @@ export default async function StockPage() {
           Escolha um produto ativo e registre a entrada inicial ou um ajuste
           manual. A validacao final acontece no servidor.
         </p>
-      </section>
+      </Panel>
 
       {!result.success ? (
         <LoadErrorState
@@ -86,12 +87,12 @@ export default async function StockPage() {
           title="Estoque sem produto disponivel."
         />
       ) : (
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+        <Panel>
           <StockAdjustmentForm
             action={adjustStockAction}
             products={toActiveProductOptions(result.products)}
           />
-        </section>
+        </Panel>
       )}
 
       {!summaryResult.success ? (
