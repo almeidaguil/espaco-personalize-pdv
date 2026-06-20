@@ -1,6 +1,10 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 import type { Event } from "@/modules/events/domain/event";
+import { PaginationControls } from "@/shared/components/pagination-controls";
 
 import type { SalesByEventReport } from "../application/sales-by-event-report-repository";
 
@@ -18,12 +22,15 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
 });
+const itemsPageSize = 8;
 
 export function SalesByEventReport({
   events,
   report,
   selectedEventId,
 }: SalesByEventReportProps) {
+  const [itemsPage, setItemsPage] = useState(1);
+
   if (events.length === 0) {
     return (
       <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
@@ -31,6 +38,13 @@ export function SalesByEventReport({
       </section>
     );
   }
+
+  const visibleItems = report
+    ? report.items.slice(
+        (itemsPage - 1) * itemsPageSize,
+        itemsPage * itemsPageSize,
+      )
+    : [];
 
   return (
     <section className="grid gap-4">
@@ -116,26 +130,37 @@ export function SalesByEventReport({
                 Nenhum item vendido neste evento.
               </p>
             ) : (
-              <ul className="divide-y divide-slate-200">
-                {report.items.map((item) => (
-                  <li
-                    className="grid gap-2 px-4 py-4 sm:grid-cols-[1fr_auto]"
-                    key={item.productId}
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-slate-950">
-                        {item.productName}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {item.quantity} unidade(s)
-                      </p>
-                    </div>
-                    <strong className="text-base text-slate-950">
-                      {moneyFormatter.format(item.grossTotalInReais)}
-                    </strong>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="divide-y divide-slate-200">
+                  {visibleItems.map((item) => (
+                    <li
+                      className="grid gap-2 px-4 py-4 sm:grid-cols-[1fr_auto]"
+                      key={item.productId}
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">
+                          {item.productName}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {item.quantity} unidade(s)
+                        </p>
+                      </div>
+                      <strong className="text-base text-slate-950">
+                        {moneyFormatter.format(item.grossTotalInReais)}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+                <div className="px-4 pb-4">
+                  <PaginationControls
+                    currentPage={itemsPage}
+                    itemLabel="itens"
+                    onPageChange={setItemsPage}
+                    pageSize={itemsPageSize}
+                    totalItems={report.items.length}
+                  />
+                </div>
+              </>
             )}
           </section>
         </>
