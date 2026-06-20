@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { listSalesUseCase } from "@/modules/sales/application/list-sales-use-case";
 import {
@@ -7,6 +6,7 @@ import {
   type SupabaseSaleSummaryClient,
 } from "@/modules/sales/infra/supabase-sale-summary-repository";
 import { SalesList } from "@/modules/sales/presentation/sales-list";
+import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -25,35 +25,23 @@ export default async function SalesPage() {
   });
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-3xl gap-4">
-        <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <Link
-            className="mb-3 inline-flex text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
-            href="/"
-          >
-            Voltar ao painel
-          </Link>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-            Vendas
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold">Vendas</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Consulte as vendas registradas e acompanhe o total por operacao.
-          </p>
-        </header>
+    <PageShell>
+      <PageHeader
+        description="Consulte as vendas registradas e acompanhe o total por operacao."
+        eyebrow="Vendas"
+        title="Vendas"
+      />
 
-        {!result.success ? (
-          <LoadErrorState
-            actions={[{ href: "/sales", label: "Tentar novamente" }]}
-            eyebrow="Erro"
-            message="Verifique sua conexao e tente carregar o historico novamente."
-            title="Nao foi possivel carregar as vendas."
-          />
-        ) : (
-          <SalesList sales={result.sales} />
-        )}
-      </section>
-    </main>
+      {!result.success ? (
+        <LoadErrorState
+          actions={[{ href: "/sales", label: "Tentar novamente" }]}
+          eyebrow="Erro"
+          message="Verifique sua conexao e tente carregar o historico novamente."
+          title="Nao foi possivel carregar as vendas."
+        />
+      ) : (
+        <SalesList sales={result.sales} />
+      )}
+    </PageShell>
   );
 }
