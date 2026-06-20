@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { createProductAction } from "@/modules/products/presentation/create-product-action";
 import { ProductForm } from "@/modules/products/presentation/product-form";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 
 export const metadata: Metadata = {
   title: "Novo produto | Espaco Personalize PDV",
@@ -21,9 +22,9 @@ export default function NewProductPage() {
         title="Novo produto"
       />
 
-      <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <Panel>
         <ProductForm action={createProductAction} />
-      </section>
+      </Panel>
     </PageShell>
   );
 }

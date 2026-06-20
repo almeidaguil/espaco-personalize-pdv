@@ -10,6 +10,7 @@ import { ProductForm } from "@/modules/products/presentation/product-form";
 import { createProductFormValuesFromProduct } from "@/modules/products/presentation/product-form-data";
 import { updateProductAction } from "@/modules/products/presentation/update-product-action";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -72,7 +73,7 @@ export default async function EditProductPage({
         title="Editar produto"
       />
 
-      <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+      <Panel>
         <ProductForm
           action={action}
           initialValues={createProductFormValuesFromProduct({
@@ -83,7 +84,7 @@ export default async function EditProductPage({
           })}
           submitLabel="Salvar alteracoes"
         />
-      </section>
+      </Panel>
     </PageShell>
   );
 }

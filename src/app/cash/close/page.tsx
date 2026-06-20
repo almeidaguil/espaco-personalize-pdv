@@ -27,6 +27,7 @@ import {
   type SupabaseEventClient,
 } from "@/modules/events/infra/supabase-event-repository";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -133,14 +134,14 @@ export default async function CloseCashPage() {
           title="Nenhum caixa aberto disponivel para fechamento."
         />
       ) : (
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+        <Panel>
           <CloseCashSessionForm
             action={closeCashSessionAction}
             sessions={cashSessionsResult.sessions.map((session) =>
               toCashSessionOption(session, eventNames, closingSummaries),
             )}
           />
-        </section>
+        </Panel>
       )}
     </PageShell>
   );
