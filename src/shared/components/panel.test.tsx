@@ -46,4 +46,13 @@ describe("Panel", () => {
       "/reports",
     );
   });
+
+  it("supports semantic header panels", () => {
+    render(<Panel as="header">Cabecalho</Panel>);
+
+    expect(screen.getByText("Cabecalho").closest("header")).toHaveClass(
+      "rounded-md",
+      "bg-white",
+    );
+  });
 });
