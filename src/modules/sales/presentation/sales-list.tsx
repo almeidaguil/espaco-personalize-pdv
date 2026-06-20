@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 
 import { PaginationControls } from "@/shared/components/pagination-controls";
+import { Panel } from "@/shared/components/panel";
 import { StatusBadge } from "@/shared/components/status-badge";
 import { EmptyState } from "@/shared/components/status-state";
 
@@ -51,7 +52,7 @@ export function SalesList({ sales }: SalesListProps) {
 
   return (
     <section className="grid gap-4">
-      <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+      <Panel padding="sm">
         <div className="grid gap-2">
           <label
             className="text-sm font-medium text-slate-700"
@@ -76,7 +77,7 @@ export function SalesList({ sales }: SalesListProps) {
             {filteredSales.length} venda(s) encontrada(s)
           </p>
         </div>
-      </section>
+      </Panel>
 
       {visibleSales.length === 0 ? (
         <EmptyState
@@ -85,7 +86,7 @@ export function SalesList({ sales }: SalesListProps) {
           title="Nenhuma venda encontrada para este filtro."
         />
       ) : (
-        <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+        <Panel className="overflow-hidden" padding="none">
           <div className="border-b border-slate-200 px-4 py-3">
             <h2 className="text-base font-semibold text-slate-950">
               Vendas registradas
@@ -132,7 +133,7 @@ export function SalesList({ sales }: SalesListProps) {
               totalItems={filteredSales.length}
             />
           </div>
-        </section>
+        </Panel>
       )}
     </section>
   );

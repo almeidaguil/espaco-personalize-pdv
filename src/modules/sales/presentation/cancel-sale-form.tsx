@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 
+import { Panel } from "@/shared/components/panel";
+
 import type { CancelSaleActionState } from "./cancel-sale-action-state";
 
 const initialState: CancelSaleActionState = {};
@@ -25,7 +27,7 @@ export function CancelSaleForm({
   const isSubmitDisabled = isPending || isCanceled || !isConfirmed;
 
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+    <Panel padding="sm">
       <div className="grid gap-2">
         <h2 className="text-base font-semibold text-slate-950">Cancelamento</h2>
         <p className="text-sm leading-6 text-slate-600">
@@ -91,6 +93,6 @@ export function CancelSaleForm({
               : "Cancelar venda"}
         </button>
       </form>
-    </section>
+    </Panel>
   );
 }

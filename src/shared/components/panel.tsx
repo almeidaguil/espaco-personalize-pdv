@@ -6,11 +6,12 @@ type PanelProps<TElement extends PanelElement = "section"> = {
   as?: TElement;
   children: ReactNode;
   className?: string;
-  padding?: "md" | "sm";
+  padding?: "md" | "none" | "sm";
 } & Omit<ComponentPropsWithoutRef<TElement>, "as" | "children" | "className">;
 
 const paddingClasses = {
   md: "p-5",
+  none: "",
   sm: "p-4",
 } as const;
 
