@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 
+import { Panel } from "@/shared/components/panel";
+
 import type { ManagedUser } from "../domain/managed-user";
 import type { UserActionState } from "./user-action-state";
 
@@ -85,7 +87,7 @@ function ManagedUserCard({
   const isCurrentUser = currentAdminId === user.id;
 
   return (
-    <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+    <Panel as="article" padding="sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -218,7 +220,7 @@ function ManagedUserCard({
           ) : null}
         </form>
       </div>
-    </article>
+    </Panel>
   );
 }
 
