@@ -5,6 +5,7 @@ import { useState } from "react";
 
 import type { Event } from "@/modules/events/domain/event";
 import { PaginationControls } from "@/shared/components/pagination-controls";
+import { Panel } from "@/shared/components/panel";
 
 import type { SalesByEventReport } from "../application/sales-by-event-report-repository";
 
@@ -33,9 +34,9 @@ export function SalesByEventReport({
 
   if (events.length === 0) {
     return (
-      <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
+      <Panel className="text-sm leading-6 text-slate-600">
         Cadastre um evento para gerar relatorios de vendas.
-      </section>
+      </Panel>
     );
   }
 
@@ -48,10 +49,7 @@ export function SalesByEventReport({
 
   return (
     <section className="grid gap-4">
-      <form
-        action="/reports"
-        className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
-      >
+      <Panel as="form" action="/reports" padding="sm">
         <label
           className="text-sm font-semibold text-slate-800"
           htmlFor="eventId"
@@ -75,7 +73,7 @@ export function SalesByEventReport({
             Gerar relatorio
           </button>
         </div>
-      </form>
+      </Panel>
 
       {!report ? (
         <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
@@ -83,7 +81,7 @@ export function SalesByEventReport({
         </section>
       ) : (
         <>
-          <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+          <Panel padding="sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
@@ -117,9 +115,9 @@ export function SalesByEventReport({
                 )})`}
               />
             </dl>
-          </section>
+          </Panel>
 
-          <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+          <Panel className="overflow-hidden" padding="none">
             <div className="border-b border-slate-200 px-4 py-3">
               <h2 className="text-base font-semibold text-slate-950">
                 Itens vendidos
@@ -162,7 +160,7 @@ export function SalesByEventReport({
                 </div>
               </>
             )}
-          </section>
+          </Panel>
         </>
       )}
     </section>
