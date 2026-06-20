@@ -33,4 +33,17 @@ describe("Panel", () => {
       screen.getByText("Painel sem padding").closest("section"),
     ).not.toHaveClass("p-4", "p-5");
   });
+
+  it("supports form attributes", () => {
+    render(
+      <Panel action="/reports" as="form">
+        Formulario
+      </Panel>,
+    );
+
+    expect(screen.getByText("Formulario").closest("form")).toHaveAttribute(
+      "action",
+      "/reports",
+    );
+  });
 });
