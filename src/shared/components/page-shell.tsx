@@ -3,12 +3,13 @@ import type { ReactNode } from "react";
 
 type PageShellProps = {
   children: ReactNode;
-  maxWidth?: "md" | "lg";
+  maxWidth?: "sm" | "md" | "lg";
 };
 
 const maxWidthClasses = {
   lg: "max-w-4xl",
   md: "max-w-3xl",
+  sm: "max-w-md",
 } as const;
 
 export function PageShell({ children, maxWidth = "md" }: PageShellProps) {
