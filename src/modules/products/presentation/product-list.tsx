@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { Panel } from "@/shared/components/panel";
 import { StatusBadge } from "@/shared/components/status-badge";
 
 export type ProductListItem = {
@@ -18,10 +19,7 @@ export function ProductList({ products }: ProductListProps) {
   return (
     <ul className="grid gap-3">
       {products.map((product) => (
-        <li
-          className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
-          key={product.id}
-        >
+        <Panel as="li" key={product.id} padding="sm">
           <div className="flex items-start justify-between gap-3">
             <div>
               <h2 className="text-base font-semibold text-slate-950">
@@ -48,7 +46,7 @@ export function ProductList({ products }: ProductListProps) {
               Editar
             </Link>
           </div>
-        </li>
+        </Panel>
       ))}
     </ul>
   );

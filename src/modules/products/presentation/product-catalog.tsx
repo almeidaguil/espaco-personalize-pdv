@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 
 import { PaginationControls } from "@/shared/components/pagination-controls";
+import { Panel } from "@/shared/components/panel";
 import { EmptyState } from "@/shared/components/status-state";
 import { normalizeSearchTerm } from "@/shared/utils/search";
 
@@ -29,7 +30,7 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
 
   return (
     <div className="grid gap-4">
-      <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+      <Panel padding="sm">
         <div className="grid gap-2">
           <label
             className="text-sm font-medium text-slate-700"
@@ -53,7 +54,7 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
             {filteredProducts.length} produto(s) encontrado(s)
           </p>
         </div>
-      </section>
+      </Panel>
 
       {filteredProducts.length === 0 ? (
         <EmptyState
