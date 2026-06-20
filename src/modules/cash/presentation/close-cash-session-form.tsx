@@ -41,8 +41,12 @@ export function CloseCashSessionForm({
         const countedAmountInReais = parseBrlCurrencyInput(
           countedAmountInputs[session.id] ?? "",
         );
+        const hasCountedAmount = Number.isFinite(countedAmountInReais);
+        const differenceAmountInReais = hasCountedAmount
+          ? countedAmountInReais - session.expectedAmountInReais
+          : 0;
         const shortageAmountInReais =
-          Number.isFinite(countedAmountInReais) &&
+          hasCountedAmount &&
           countedAmountInReais < session.expectedAmountInReais
             ? session.expectedAmountInReais - countedAmountInReais
             : 0;
@@ -121,6 +125,19 @@ export function CloseCashSessionForm({
                   {state.fieldErrors.cashSessionId}
                 </p>
               ) : null}
+              {hasCountedAmount ? (
+                <p
+                  className={
+                    differenceAmountInReais < 0
+                      ? "rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm font-semibold text-amber-900"
+                      : differenceAmountInReais > 0
+                        ? "rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700"
+                        : "rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700"
+                  }
+                >
+                  {formatCashDifference(differenceAmountInReais)}
+                </p>
+              ) : null}
             </div>
 
             {hasShortage ? (
@@ -186,6 +203,22 @@ function SummaryItem({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 font-semibold text-slate-950">{value}</dd>
     </div>
   );
+}
+
+function formatCashDifference(differenceAmountInReais: number): string {
+  if (differenceAmountInReais < 0) {
+    return `Diferenca: faltam ${moneyFormatter.format(
+      Math.abs(differenceAmountInReais),
+    )}`;
+  }
+
+  if (differenceAmountInReais > 0) {
+    return `Diferenca: sobram ${moneyFormatter.format(
+      differenceAmountInReais,
+    )}`;
+  }
+
+  return "Diferenca: sem divergencia";
 }
 
 const moneyFormatter = new Intl.NumberFormat("pt-BR", {
