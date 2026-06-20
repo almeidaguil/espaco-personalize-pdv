@@ -1,3 +1,5 @@
+import { Panel } from "@/shared/components/panel";
+
 export type PdvEventSelectorItem = {
   id: string;
   location: string | null;
@@ -17,7 +19,7 @@ export function PdvEventSelector({ events }: PdvEventSelectorProps) {
   }
 
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+    <Panel>
       <div className="mb-4">
         <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
           Evento
@@ -38,6 +40,6 @@ export function PdvEventSelector({ events }: PdvEventSelectorProps) {
           {activeEvent.location ?? "Sem local"} - {activeEvent.startsAtLabel}
         </p>
       </article>
-    </section>
+    </Panel>
   );
 }

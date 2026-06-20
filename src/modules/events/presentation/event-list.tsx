@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 
 import { PaginationControls } from "@/shared/components/pagination-controls";
+import { Panel } from "@/shared/components/panel";
 import { StatusBadge } from "@/shared/components/status-badge";
 
 import type { EventActionState } from "./event-action-state";
@@ -52,10 +53,7 @@ export function EventList({ action, events }: EventListProps) {
       ) : null}
       <ul className="grid gap-3">
         {visibleEvents.map((event) => (
-          <li
-            className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
-            key={event.id}
-          >
+          <Panel as="li" key={event.id} padding="sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-slate-950">
@@ -86,7 +84,7 @@ export function EventList({ action, events }: EventListProps) {
                 </button>
               </form>
             ) : null}
-          </li>
+          </Panel>
         ))}
       </ul>
       <PaginationControls
