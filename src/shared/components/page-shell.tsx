@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 
+import { Panel } from "./panel";
+
 type PageShellProps = {
   children: ReactNode;
   maxWidth?: "sm" | "md" | "lg" | "xl";
@@ -52,7 +54,7 @@ export function PageHeader({
   title,
 }: PageHeaderProps) {
   return (
-    <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+    <Panel as="header" padding="sm">
       {backLinks.length > 0 ? (
         <div className="mb-3 flex flex-wrap gap-3 text-sm font-semibold">
           {backLinks.map((link) => (
@@ -94,6 +96,6 @@ export function PageHeader({
           </div>
         ) : null}
       </div>
-    </header>
+    </Panel>
   );
 }
