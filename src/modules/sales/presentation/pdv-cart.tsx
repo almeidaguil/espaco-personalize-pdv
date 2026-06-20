@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import { Panel } from "@/shared/components/panel";
 import { normalizeSearchTerm } from "@/shared/utils/search";
 
 import type { PaymentMethod } from "../domain/sale";
@@ -102,10 +103,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
     !isPending;
 
   return (
-    <form
-      action={formAction}
-      className="grid gap-3 rounded-md border border-slate-200 bg-white p-5 shadow-sm"
-    >
+    <Panel action={formAction} as="form" className="grid gap-3">
       <input
         name="eventId"
         type="hidden"
@@ -420,7 +418,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
           {isPending ? "Finalizando..." : "Finalizar venda"}
         </button>
       </div>
-    </form>
+    </Panel>
   );
 
   function addProduct(product: PdvCartProduct) {
