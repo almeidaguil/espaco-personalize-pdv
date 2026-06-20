@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 
 import { PaginationControls } from "@/shared/components/pagination-controls";
+import { StatusBadge } from "@/shared/components/status-badge";
 
 import type { EventActionState } from "./event-action-state";
 
@@ -64,15 +65,9 @@ export function EventList({ action, events }: EventListProps) {
                   {event.location ?? "Sem local"}
                 </p>
               </div>
-              <span
-                className={
-                  event.isActive
-                    ? "rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700"
-                    : "rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600"
-                }
-              >
+              <StatusBadge tone={event.isActive ? "success" : "neutral"}>
                 {event.isActive ? "Ativo" : "Inativo"}
-              </span>
+              </StatusBadge>
             </div>
 
             <strong className="mt-4 block text-sm text-[#1e3275]">
