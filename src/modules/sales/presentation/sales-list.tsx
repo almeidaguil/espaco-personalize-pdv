@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { StatusBadge } from "@/shared/components/status-badge";
 import { EmptyState } from "@/shared/components/status-state";
 
 import type { SaleSummary } from "../application/sale-summary-repository";
@@ -49,9 +50,11 @@ export function SalesList({ sales }: SalesListProps) {
                   {dateFormatter.format(sale.completedAt)}
                 </p>
               </div>
-              <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
+              <StatusBadge
+                tone={sale.status === "completed" ? "success" : "neutral"}
+              >
                 {sale.status === "completed" ? "Concluida" : "Cancelada"}
-              </span>
+              </StatusBadge>
             </div>
             <div className="flex items-center justify-between gap-3">
               <strong className="text-lg text-slate-950">
