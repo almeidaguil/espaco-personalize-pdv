@@ -25,4 +25,12 @@ describe("Panel", () => {
       "p-4",
     );
   });
+
+  it("can render without padding", () => {
+    render(<Panel padding="none">Painel sem padding</Panel>);
+
+    expect(
+      screen.getByText("Painel sem padding").closest("section"),
+    ).not.toHaveClass("p-4", "p-5");
+  });
 });
