@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PaginationControls } from "@/shared/components/pagination-controls";
 import { Panel } from "@/shared/components/panel";
 import { StatusBadge } from "@/shared/components/status-badge";
@@ -42,14 +43,10 @@ export function EventList({ action, events }: EventListProps) {
   return (
     <div className="grid gap-3">
       {state.formError ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {state.formError}
-        </p>
+        <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
       {state.successMessage ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {state.successMessage}
-        </p>
+        <InlineFeedback tone="success">{state.successMessage}</InlineFeedback>
       ) : null}
       <ul className="grid gap-3">
         {visibleEvents.map((event) => (
