@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
 
 import type { ManagedUser } from "../domain/managed-user";
@@ -147,12 +148,12 @@ function ManagedUserCard({
             </button>
           </div>
           {roleState.formError ? (
-            <p className="text-sm text-red-700">{roleState.formError}</p>
+            <InlineFeedback tone="error">{roleState.formError}</InlineFeedback>
           ) : null}
           {roleState.successMessage ? (
-            <p className="text-sm text-emerald-700">
+            <InlineFeedback tone="success">
               {roleState.successMessage}
-            </p>
+            </InlineFeedback>
           ) : null}
         </form>
 
@@ -187,12 +188,14 @@ function ManagedUserCard({
             </p>
           ) : null}
           {passwordState.formError ? (
-            <p className="text-sm text-red-700">{passwordState.formError}</p>
+            <InlineFeedback tone="error">
+              {passwordState.formError}
+            </InlineFeedback>
           ) : null}
           {passwordState.successMessage ? (
-            <p className="text-sm text-emerald-700">
+            <InlineFeedback tone="success">
               {passwordState.successMessage}
-            </p>
+            </InlineFeedback>
           ) : null}
         </form>
 
@@ -211,12 +214,14 @@ function ManagedUserCard({
             {user.isActive ? "Desativar" : "Ativar"}
           </button>
           {accessState.formError ? (
-            <p className="mt-2 text-sm text-red-700">{accessState.formError}</p>
+            <InlineFeedback className="mt-2" tone="error">
+              {accessState.formError}
+            </InlineFeedback>
           ) : null}
           {accessState.successMessage ? (
-            <p className="mt-2 text-sm text-emerald-700">
+            <InlineFeedback className="mt-2" tone="success">
               {accessState.successMessage}
-            </p>
+            </InlineFeedback>
           ) : null}
         </form>
       </div>
