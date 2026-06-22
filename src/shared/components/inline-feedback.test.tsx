@@ -21,4 +21,14 @@ describe("InlineFeedback", () => {
     expect(screen.getByRole("status")).toHaveAttribute("aria-live", "polite");
     expect(screen.getByRole("status")).toHaveClass("bg-emerald-50", "mt-2");
   });
+
+  it("supports spacious page-level feedback", () => {
+    render(
+      <InlineFeedback padding="md" tone="error">
+        Falha ao carregar.
+      </InlineFeedback>,
+    );
+
+    expect(screen.getByRole("alert")).toHaveClass("p-4");
+  });
 });

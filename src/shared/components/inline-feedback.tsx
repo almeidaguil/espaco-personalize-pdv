@@ -3,8 +3,14 @@ import type { ReactNode } from "react";
 type InlineFeedbackProps = {
   children: ReactNode;
   className?: string;
+  padding?: "md" | "sm";
   tone: "error" | "success";
 };
+
+const paddingClasses = {
+  md: "p-4",
+  sm: "px-3 py-2",
+} as const;
 
 const toneClasses = {
   error: "border-red-200 bg-red-50 text-red-800",
@@ -14,10 +20,12 @@ const toneClasses = {
 export function InlineFeedback({
   children,
   className,
+  padding = "sm",
   tone,
 }: InlineFeedbackProps) {
   const classes = [
-    "rounded-md border px-3 py-2 text-sm",
+    "rounded-md border text-sm",
+    paddingClasses[padding],
     toneClasses[tone],
     className,
   ]

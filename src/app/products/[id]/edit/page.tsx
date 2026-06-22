@@ -9,6 +9,7 @@ import {
 import { ProductForm } from "@/modules/products/presentation/product-form";
 import { createProductFormValuesFromProduct } from "@/modules/products/presentation/product-form-data";
 import { updateProductAction } from "@/modules/products/presentation/update-product-action";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { Panel } from "@/shared/components/panel";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
@@ -52,9 +53,9 @@ export default async function EditProductPage({
           title="Editar produto"
         />
 
-        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <InlineFeedback padding="md" tone="error">
           Nao foi possivel carregar o produto.
-        </section>
+        </InlineFeedback>
       </PageShell>
     );
   }
