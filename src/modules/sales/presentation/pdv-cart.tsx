@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useCallback, useMemo, useState } from "react";
 
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
@@ -50,13 +50,30 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
 };
 
 export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
-  const [state, formAction, isPending] = useActionState(action, {});
   const [items, setItems] = useState<CartItem[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [productPage, setProductPage] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [receivedAmountInput, setReceivedAmountInput] = useState("");
   const [cashSessionId, setCashSessionId] = useState(cashSessions[0]?.id ?? "");
+  const submitSale = useCallback(
+    async (previousState: SaleActionState, formData: FormData) => {
+      const nextState = await action(previousState, formData);
+
+      if (nextState.successMessage) {
+        setItems([]);
+        setProductSearchTerm("");
+        setProductPage(1);
+        setPaymentMethod("cash");
+        setReceivedAmountInput("");
+      }
+
+      return nextState;
+    },
+    [action],
+  );
+  const [state, formAction, isPending] = useActionState(submitSale, {});
+
   const selectedCashSession = cashSessions.find(
     (session) => session.id === cashSessionId,
   );
