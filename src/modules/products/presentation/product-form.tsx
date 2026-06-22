@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FieldError } from "@/shared/components/field-error";
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 
 import type {
@@ -29,6 +30,9 @@ export function ProductForm({
   const [state, formAction, isPending] = useActionState(action, initialState);
   const values = state.values ?? initialValues;
   const formKey = JSON.stringify(values);
+  const nameError = state.fieldErrors?.name;
+  const priceError = state.fieldErrors?.priceInReais;
+  const skuError = state.fieldErrors?.sku;
 
   return (
     <form action={formAction} className="grid gap-4" key={formKey} noValidate>
@@ -37,6 +41,8 @@ export function ProductForm({
           Nome do produto
         </label>
         <input
+          aria-describedby={nameError ? "name-error" : undefined}
+          aria-invalid={nameError ? true : undefined}
           autoComplete="off"
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           defaultValue={values.name}
@@ -45,8 +51,8 @@ export function ProductForm({
           placeholder="Caneca personalizada"
           type="text"
         />
-        {state.fieldErrors?.name ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.name}</p>
+        {nameError ? (
+          <FieldError id="name-error">{nameError}</FieldError>
         ) : null}
       </div>
 
@@ -58,6 +64,8 @@ export function ProductForm({
           Preço
         </label>
         <input
+          aria-describedby={priceError ? "priceInReais-error" : undefined}
+          aria-invalid={priceError ? true : undefined}
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           defaultValue={values.priceInReais}
           id="priceInReais"
@@ -66,10 +74,8 @@ export function ProductForm({
           placeholder="35,00"
           type="text"
         />
-        {state.fieldErrors?.priceInReais ? (
-          <p className="text-sm text-red-700">
-            {state.fieldErrors.priceInReais}
-          </p>
+        {priceError ? (
+          <FieldError id="priceInReais-error">{priceError}</FieldError>
         ) : null}
       </div>
 
@@ -78,6 +84,8 @@ export function ProductForm({
           SKU
         </label>
         <input
+          aria-describedby={skuError ? "sku-error" : undefined}
+          aria-invalid={skuError ? true : undefined}
           autoComplete="off"
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           defaultValue={values.sku}
@@ -86,9 +94,7 @@ export function ProductForm({
           placeholder="CANECA-001"
           type="text"
         />
-        {state.fieldErrors?.sku ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.sku}</p>
-        ) : null}
+        {skuError ? <FieldError id="sku-error">{skuError}</FieldError> : null}
       </div>
 
       <input name="isActive" type="hidden" value="false" />
