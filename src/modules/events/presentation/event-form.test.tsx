@@ -1,18 +1,24 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { EventForm } from "./event-form";
+
+const actionState = vi.hoisted(() => ({ current: {} }));
 
 vi.mock("react", async () => {
   const actual = await vi.importActual<typeof import("react")>("react");
 
   return {
     ...actual,
-    useActionState: () => [{}, vi.fn(), false],
+    useActionState: () => [actionState.current, vi.fn(), false],
   };
 });
 
 describe("EventForm", () => {
+  beforeEach(() => {
+    actionState.current = {};
+  });
+
   it("renders event creation fields and submit button", () => {
     render(<EventForm action={vi.fn()} />);
 
@@ -24,5 +30,39 @@ describe("EventForm", () => {
     expect(
       screen.getByRole("button", { name: "Salvar evento" }),
     ).toBeInTheDocument();
+  });
+
+  it("associates validation errors with their fields", () => {
+    actionState.current = {
+      fieldErrors: {
+        endsAt: "Informe o termino.",
+        location: "Informe o local.",
+        name: "Informe o nome.",
+        startsAt: "Informe o inicio.",
+      },
+    };
+
+    render(<EventForm action={vi.fn()} />);
+
+    for (const [label, errorId] of [
+      ["Nome do evento", "name-error"],
+      ["Local", "location-error"],
+      ["Inicio", "startsAt-error"],
+      ["Termino", "endsAt-error"],
+    ]) {
+      expect(screen.getByLabelText(label)).toHaveAttribute(
+        "aria-describedby",
+        errorId,
+      );
+      expect(screen.getByLabelText(label)).toHaveAttribute(
+        "aria-invalid",
+        "true",
+      );
+    }
+
+    expect(screen.getByText("Informe o nome.")).toHaveAttribute(
+      "id",
+      "name-error",
+    );
   });
 });
