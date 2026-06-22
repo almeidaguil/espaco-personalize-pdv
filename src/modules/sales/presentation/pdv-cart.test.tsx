@@ -265,6 +265,47 @@ describe("PdvCart", () => {
     );
   });
 
+  it("clears the cart and payment after a successful sale", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInReais: 15,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.click(screen.getByRole("button", { name: "Pix" }));
+    await user.click(screen.getByRole("button", { name: "Finalizar venda" }));
+
+    expect(
+      await screen.findByText("Venda finalizada com sucesso."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nenhum item adicionado.")).toBeInTheDocument();
+    expect(screen.queryByText("1 x R$ 15,00")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Valor recebido")).toHaveAttribute(
+      "name",
+      "amountReceivedInReais",
+    );
+    expect(screen.getByLabelText("Valor recebido")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Dinheiro" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: "Finalizar venda" }),
+    ).toBeDisabled();
+  });
+
   it("supports non-cash payment methods", async () => {
     const user = userEvent.setup();
 
