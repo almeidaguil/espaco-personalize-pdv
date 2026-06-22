@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import { FieldError } from "@/shared/components/field-error";
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
 
@@ -86,6 +87,8 @@ function ManagedUserCard({
     initialState,
   );
   const isCurrentUser = currentAdminId === user.id;
+  const passwordError = passwordState.fieldErrors?.temporaryPassword;
+  const passwordErrorId = `temporary-password-error-${user.id}`;
 
   return (
     <Panel as="article" padding="sm">
@@ -167,6 +170,8 @@ function ManagedUserCard({
           </label>
           <div className="flex gap-2">
             <input
+              aria-describedby={passwordError ? passwordErrorId : undefined}
+              aria-invalid={passwordError ? true : undefined}
               autoComplete="new-password"
               className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
               id={`temporary-password-${user.id}`}
@@ -182,10 +187,8 @@ function ManagedUserCard({
               Redefinir
             </button>
           </div>
-          {passwordState.fieldErrors?.temporaryPassword ? (
-            <p className="text-sm text-red-700">
-              {passwordState.fieldErrors.temporaryPassword}
-            </p>
+          {passwordError ? (
+            <FieldError id={passwordErrorId}>{passwordError}</FieldError>
           ) : null}
           {passwordState.formError ? (
             <InlineFeedback tone="error">
