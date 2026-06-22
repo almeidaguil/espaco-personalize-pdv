@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { FieldError } from "@/shared/components/field-error";
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 
 import type { CashSessionActionState } from "./cash-session-action-state";
@@ -40,6 +41,10 @@ export function CloseCashSessionForm({
   return (
     <div className="grid gap-4">
       {sessions.map((session) => {
+        const cashSessionError = state.fieldErrors?.cashSessionId;
+        const countedAmountError = state.fieldErrors?.countedAmountInReais;
+        const cashSessionErrorId = `cashSessionId-error-${session.id}`;
+        const countedAmountErrorId = `countedAmountInReais-error-${session.id}`;
         const countedAmountInReais = parseBrlCurrencyInput(
           countedAmountInputs[session.id] ?? "",
         );
@@ -57,6 +62,7 @@ export function CloseCashSessionForm({
         return (
           <form
             action={formAction}
+            aria-describedby={cashSessionError ? cashSessionErrorId : undefined}
             className="grid gap-4 rounded-md border border-slate-200 bg-white p-4"
             key={session.id}
             noValidate
@@ -103,6 +109,10 @@ export function CloseCashSessionForm({
                 Valor contado no caixa
               </label>
               <input
+                aria-describedby={
+                  countedAmountError ? countedAmountErrorId : undefined
+                }
+                aria-invalid={countedAmountError ? true : undefined}
                 className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
                 id={`countedAmountInReais-${session.id}`}
                 inputMode="decimal"
@@ -117,15 +127,15 @@ export function CloseCashSessionForm({
                 type="text"
                 value={countedAmountInputs[session.id] ?? ""}
               />
-              {state.fieldErrors?.countedAmountInReais ? (
-                <p className="text-sm text-red-700">
-                  {state.fieldErrors.countedAmountInReais}
-                </p>
+              {countedAmountError ? (
+                <FieldError id={countedAmountErrorId}>
+                  {countedAmountError}
+                </FieldError>
               ) : null}
-              {state.fieldErrors?.cashSessionId ? (
-                <p className="text-sm text-red-700">
-                  {state.fieldErrors.cashSessionId}
-                </p>
+              {cashSessionError ? (
+                <FieldError id={cashSessionErrorId}>
+                  {cashSessionError}
+                </FieldError>
               ) : null}
               {hasCountedAmount ? (
                 <p
