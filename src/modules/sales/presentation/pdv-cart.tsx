@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
 import { normalizeSearchTerm } from "@/shared/utils/search";
 
@@ -400,14 +401,14 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         </div>
 
         {state.successMessage ? (
-          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-700">
+          <InlineFeedback className="py-3 font-semibold" tone="success">
             {state.successMessage}
-          </p>
+          </InlineFeedback>
         ) : null}
         {state.formError ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-700">
+          <InlineFeedback className="py-3 font-semibold" tone="error">
             {state.formError}
-          </p>
+          </InlineFeedback>
         ) : null}
 
         <button
