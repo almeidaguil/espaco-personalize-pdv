@@ -4,17 +4,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { LoginForm } from "./login-form";
 
+const actionState = vi.hoisted(() => ({ current: {} }));
+
 vi.mock("react", async () => {
   const actual = await vi.importActual<typeof import("react")>("react");
 
   return {
     ...actual,
-    useActionState: () => [{}, vi.fn(), false],
+    useActionState: () => [actionState.current, vi.fn(), false],
   };
 });
 
 describe("LoginForm", () => {
   beforeEach(() => {
+    actionState.current = {};
     window.localStorage.clear();
   });
 
@@ -68,5 +71,32 @@ describe("LoginForm", () => {
 
     expect(screen.getByLabelText("E-mail")).toHaveValue("operador@example.com");
     expect(screen.getByLabelText(/Lembrar e-mail/)).toBeChecked();
+  });
+
+  it("associates validation errors with login fields", () => {
+    actionState.current = {
+      fieldErrors: {
+        email: "Informe um e-mail valido.",
+        password: "Informe a senha.",
+      },
+    };
+
+    render(<LoginForm action={vi.fn()} />);
+
+    expect(screen.getByLabelText("E-mail")).toHaveAttribute(
+      "aria-describedby",
+      "email-error",
+    );
+    expect(screen.getByLabelText("Senha")).toHaveAttribute(
+      "aria-describedby",
+      "password-error",
+    );
+
+    for (const field of [
+      screen.getByLabelText("E-mail"),
+      screen.getByLabelText("Senha"),
+    ]) {
+      expect(field).toHaveAttribute("aria-invalid", "true");
+    }
   });
 });
