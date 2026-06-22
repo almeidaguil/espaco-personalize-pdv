@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import type { Event } from "@/modules/events/domain/event";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PaginationControls } from "@/shared/components/pagination-controls";
 import { Panel } from "@/shared/components/panel";
 
@@ -76,9 +77,9 @@ export function SalesByEventReport({
       </Panel>
 
       {!report ? (
-        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <InlineFeedback padding="md" tone="error">
           Nao foi possivel carregar o relatorio deste evento.
-        </section>
+        </InlineFeedback>
       ) : (
         <>
           <Panel padding="sm">

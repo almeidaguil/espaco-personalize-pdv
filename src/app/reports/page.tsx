@@ -11,6 +11,7 @@ import {
   type SupabaseSalesByEventReportClient,
 } from "@/modules/reports/infra/supabase-sales-by-event-report-repository";
 import { SalesByEventReport } from "@/modules/reports/presentation/sales-by-event-report";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -58,9 +59,9 @@ export default async function ReportsPage({
       />
 
       {!eventsResult.success ? (
-        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <InlineFeedback padding="md" tone="error">
           {eventsResult.formError}
-        </section>
+        </InlineFeedback>
       ) : (
         <SalesByEventReport
           events={events}

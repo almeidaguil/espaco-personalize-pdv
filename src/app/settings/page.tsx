@@ -20,6 +20,7 @@ import {
   updateManagedUserRoleAction,
 } from "@/modules/users/presentation/user-actions";
 import { AppHeader } from "@/shared/components/app-header";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PageShell } from "@/shared/components/page-shell";
 import { Panel } from "@/shared/components/panel";
 import { createSupabaseAdminClient } from "@/shared/lib/supabase/admin-client";
@@ -42,9 +43,9 @@ export default async function SettingsPage() {
     return (
       <PageShell>
         <AppHeader eyebrow="Administracao" title="Configuracoes" />
-        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <InlineFeedback padding="md" tone="error">
           {adminResult.formError}
-        </section>
+        </InlineFeedback>
         <Link
           className="text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
           href="/"
@@ -65,9 +66,9 @@ export default async function SettingsPage() {
           showAdminNavigation
           title="Configuracoes"
         />
-        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <InlineFeedback padding="md" tone="error">
           Nao foi possivel carregar o usuario atual.
-        </section>
+        </InlineFeedback>
       </PageShell>
     );
   }
@@ -113,9 +114,9 @@ export default async function SettingsPage() {
           </Panel>
 
           {!usersResult.success ? (
-            <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+            <InlineFeedback padding="md" tone="error">
               Nao foi possivel carregar usuarios.
-            </p>
+            </InlineFeedback>
           ) : (
             <ManagedUsersList
               accessAction={setManagedUserAccessAction}

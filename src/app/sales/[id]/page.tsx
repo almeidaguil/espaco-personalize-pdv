@@ -9,6 +9,7 @@ import {
 import { cancelSaleAction } from "@/modules/sales/presentation/cancel-sale-action";
 import { CancelSaleForm } from "@/modules/sales/presentation/cancel-sale-form";
 import { SaleDetailCard } from "@/modules/sales/presentation/sale-detail-card";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -48,9 +49,9 @@ export default async function SaleDetailsPage({
           eyebrow="Venda"
           title="Detalhe da venda"
         />
-        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <InlineFeedback padding="md" tone="error">
           Nao foi possivel carregar a venda.
-        </section>
+        </InlineFeedback>
       </PageShell>
     );
   }
