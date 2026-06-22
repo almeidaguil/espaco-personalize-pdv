@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
 
 import type { CancelSaleActionState } from "./cancel-sale-action-state";
@@ -38,15 +39,15 @@ export function CancelSaleForm({
       </div>
 
       {state.formError ? (
-        <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <InlineFeedback className="mt-4" tone="error">
           {state.formError}
-        </p>
+        </InlineFeedback>
       ) : null}
 
       {state.successMessage ? (
-        <p className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <InlineFeedback className="mt-4" tone="success">
           {state.successMessage}
-        </p>
+        </InlineFeedback>
       ) : null}
 
       <form action={formAction} className="mt-4" noValidate>
