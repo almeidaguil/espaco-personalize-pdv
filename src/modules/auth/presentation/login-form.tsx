@@ -2,6 +2,8 @@
 
 import { useActionState, useState } from "react";
 
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+
 import type { LoginActionState } from "./login-action-state";
 
 const initialState: LoginActionState = {};
@@ -107,9 +109,7 @@ export function LoginForm({ action }: LoginFormProps) {
       </label>
 
       {state.formError ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {state.formError}
-        </p>
+        <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
 
       <button
