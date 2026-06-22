@@ -143,6 +143,17 @@ describe("CloseCashSessionForm", () => {
     expect(
       screen.getByText("Informe o valor contado em Reais."),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Valor contado no caixa")).toHaveAttribute(
+      "aria-describedby",
+      "countedAmountInReais-error-cash-session-1",
+    );
+    expect(screen.getByLabelText("Valor contado no caixa")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      screen.getByText("Informe o caixa aberto.").closest("form"),
+    ).toHaveAttribute("aria-describedby", "cashSessionId-error-cash-session-1");
     expect(screen.getByText("Caixa fechado com sucesso.")).toBeInTheDocument();
   });
 });
