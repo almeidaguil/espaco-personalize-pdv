@@ -2,6 +2,8 @@
 
 import { useActionState } from "react";
 
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+
 import type { UserActionState } from "./user-action-state";
 
 const initialState: UserActionState = {};
@@ -72,15 +74,11 @@ export function CreateUserForm({ action }: CreateUserFormProps) {
       </div>
 
       {state.formError ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {state.formError}
-        </p>
+        <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
 
       {state.successMessage ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {state.successMessage}
-        </p>
+        <InlineFeedback tone="success">{state.successMessage}</InlineFeedback>
       ) : null}
 
       <button
