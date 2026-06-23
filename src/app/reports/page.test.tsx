@@ -54,6 +54,13 @@ describe("ReportsPage", () => {
         eventName: "Evento Julho",
         grossTotalInReais: 45,
         items: [],
+        paymentSummary: [
+          {
+            method: "cash",
+            netTotalInReais: 45,
+            salesCount: 2,
+          },
+        ],
       },
       success: true,
     });

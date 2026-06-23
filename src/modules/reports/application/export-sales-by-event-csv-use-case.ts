@@ -27,6 +27,12 @@ export function exportSalesByEventCsvUseCase({
       String(report.canceledSalesCount),
       formatCsvMoney(report.canceledTotalInReais),
     ],
+    ...report.paymentSummary.map((payment) => [
+      "Pagamento",
+      formatPaymentMethod(payment.method),
+      String(payment.salesCount),
+      formatCsvMoney(payment.netTotalInReais),
+    ]),
     ...report.items.map((item) => [
       "Produto",
       item.productName,
@@ -58,6 +64,19 @@ function escapeCsvValue(value: string): string {
 
 function formatCsvMoney(amountInReais: number): string {
   return amountInReais.toFixed(2).replace(".", ",");
+}
+
+function formatPaymentMethod(
+  method: SalesByEventReport["paymentSummary"][number]["method"],
+): string {
+  const labels = {
+    cash: "Dinheiro",
+    credit_card: "Cartao de credito",
+    debit_card: "Cartao de debito",
+    pix: "Pix",
+  } as const;
+
+  return labels[method];
 }
 
 function slugify(value: string): string {

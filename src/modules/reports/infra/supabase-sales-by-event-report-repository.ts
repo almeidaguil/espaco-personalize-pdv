@@ -1,7 +1,12 @@
-import type { SaleStatus } from "@/modules/sales/domain/sale";
+import {
+  paymentMethods,
+  type PaymentMethod,
+  type SaleStatus,
+} from "@/modules/sales/domain/sale";
 
 import type {
   GetSalesByEventReportResult,
+  SalesByEventPaymentSummaryItem,
   SalesByEventProductReportItem,
   SalesByEventReportRepository,
 } from "../application/sales-by-event-report-repository";
@@ -18,8 +23,15 @@ type SupabaseSaleItemRow = {
   total_in_cents: number;
 };
 
+type SupabasePaymentRow = {
+  amount_in_cents: number;
+  change_in_cents: number;
+  method: PaymentMethod;
+};
+
 type SupabaseSaleRow = {
   id: string;
+  payments: SupabasePaymentRow[];
   sale_items: SupabaseSaleItemRow[];
   status: SaleStatus;
   total_in_cents: number;
@@ -60,7 +72,7 @@ export type SupabaseSalesByEventReportClient = {
 
 const eventColumns = "id,name" as const;
 const saleColumns =
-  "id,status,total_in_cents,sale_items(product_id,product_name,quantity,total_in_cents)" as const;
+  "id,status,total_in_cents,sale_items(product_id,product_name,quantity,total_in_cents),payments(amount_in_cents,change_in_cents,method)" as const;
 
 export class SupabaseSalesByEventReportRepository implements SalesByEventReportRepository {
   constructor(
@@ -117,10 +129,49 @@ export class SupabaseSalesByEventReportRepository implements SalesByEventReportR
           ),
         ),
         items: summarizeCompletedSaleItems(completedSales),
+        paymentSummary: summarizeCompletedPayments(completedSales),
       },
       success: true,
     };
   }
+}
+
+function summarizeCompletedPayments(
+  completedSales: SupabaseSaleRow[],
+): SalesByEventPaymentSummaryItem[] {
+  const summaryByMethod = new Map(
+    paymentMethods.map((method) => [
+      method,
+      {
+        netTotalInCents: 0,
+        salesCount: 0,
+      },
+    ]),
+  );
+
+  for (const sale of completedSales) {
+    for (const payment of sale.payments) {
+      const summary = summaryByMethod.get(payment.method);
+
+      if (!summary) {
+        continue;
+      }
+
+      summary.netTotalInCents +=
+        payment.amount_in_cents - payment.change_in_cents;
+      summary.salesCount += 1;
+    }
+  }
+
+  return paymentMethods.map((method) => {
+    const summary = summaryByMethod.get(method);
+
+    return {
+      method,
+      netTotalInReais: centsToReais(summary?.netTotalInCents ?? 0),
+      salesCount: summary?.salesCount ?? 0,
+    };
+  });
 }
 
 function summarizeCompletedSaleItems(
