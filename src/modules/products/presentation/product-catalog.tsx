@@ -5,6 +5,8 @@ import { useMemo, useState } from "react";
 import { PaginationControls } from "@/shared/components/pagination-controls";
 import { Panel } from "@/shared/components/panel";
 import { EmptyState } from "@/shared/components/status-state";
+import { DEFAULT_PAGE_SIZE } from "@/shared/types/pagination";
+import { paginateItems } from "@/shared/utils/pagination";
 import { normalizeSearchTerm } from "@/shared/utils/search";
 
 import { ProductList, type ProductListItem } from "./product-list";
@@ -12,8 +14,6 @@ import { ProductList, type ProductListItem } from "./product-list";
 type ProductCatalogProps = {
   products: ProductListItem[];
 };
-
-const pageSize = 8;
 
 export function ProductCatalog({ products }: ProductCatalogProps) {
   const [searchTerm, setSearchTerm] = useState("");
@@ -23,10 +23,11 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
     () => filterProducts(products, searchTerm),
     [products, searchTerm],
   );
-  const visibleProducts = filteredProducts.slice(
-    (currentPage - 1) * pageSize,
-    currentPage * pageSize,
-  );
+  const paginatedProducts = paginateItems(filteredProducts, {
+    currentPage,
+    pageSize: DEFAULT_PAGE_SIZE,
+  });
+  const visibleProducts = paginatedProducts.items;
 
   return (
     <div className="grid gap-4">
@@ -66,11 +67,11 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
         <section>
           <ProductList products={visibleProducts} />
           <PaginationControls
-            currentPage={currentPage}
+            currentPage={paginatedProducts.currentPage}
             itemLabel="produtos"
             onPageChange={setCurrentPage}
-            pageSize={pageSize}
-            totalItems={filteredProducts.length}
+            pageSize={paginatedProducts.pageSize}
+            totalItems={paginatedProducts.totalItems}
           />
         </section>
       )}
