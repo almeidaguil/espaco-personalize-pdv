@@ -118,6 +118,21 @@ export function SalesByEventReport({
             </dl>
           </Panel>
 
+          <Panel padding="sm">
+            <h2 className="text-base font-semibold text-slate-950">
+              Resumo por pagamento
+            </h2>
+            <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {report.paymentSummary.map((payment) => (
+                <SummaryCard
+                  key={payment.method}
+                  label={formatPaymentMethod(payment.method)}
+                  value={`${moneyFormatter.format(payment.netTotalInReais)} (${payment.salesCount})`}
+                />
+              ))}
+            </dl>
+          </Panel>
+
           <Panel className="overflow-hidden" padding="none">
             <div className="border-b border-slate-200 px-4 py-3">
               <h2 className="text-base font-semibold text-slate-950">
@@ -177,4 +192,17 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 text-lg font-semibold text-slate-950">{value}</dd>
     </div>
   );
+}
+
+function formatPaymentMethod(
+  method: SalesByEventReport["paymentSummary"][number]["method"],
+): string {
+  const labels = {
+    cash: "Dinheiro",
+    credit_card: "Cartao de credito",
+    debit_card: "Cartao de debito",
+    pix: "Pix",
+  } as const;
+
+  return labels[method];
 }

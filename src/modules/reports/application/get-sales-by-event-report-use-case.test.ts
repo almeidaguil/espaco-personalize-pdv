@@ -15,6 +15,7 @@ describe("getSalesByEventReportUseCase", () => {
           eventName: "Evento Julho",
           grossTotalInReais: 45,
           items: [],
+          paymentSummary: [],
         },
         success: true as const,
       })),

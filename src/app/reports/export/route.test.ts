@@ -41,6 +41,13 @@ describe("GET /reports/export", () => {
             quantity: 2,
           },
         ],
+        paymentSummary: [
+          {
+            method: "cash",
+            netTotalInReais: 30,
+            salesCount: 1,
+          },
+        ],
       },
       success: true,
     });

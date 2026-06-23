@@ -31,6 +31,28 @@ describe("SalesByEventReport", () => {
               quantity: 3,
             },
           ],
+          paymentSummary: [
+            {
+              method: "cash",
+              netTotalInReais: 30,
+              salesCount: 1,
+            },
+            {
+              method: "pix",
+              netTotalInReais: 15,
+              salesCount: 1,
+            },
+            {
+              method: "credit_card",
+              netTotalInReais: 0,
+              salesCount: 0,
+            },
+            {
+              method: "debit_card",
+              netTotalInReais: 0,
+              salesCount: 0,
+            },
+          ],
         }}
         selectedEventId="11111111-1111-4111-8111-111111111111"
       />,
@@ -38,6 +60,11 @@ describe("SalesByEventReport", () => {
 
     expect(screen.getByLabelText("Evento")).toBeInTheDocument();
     expect(screen.getAllByText("R$ 45,00")).toHaveLength(2);
+    expect(screen.getByText("Resumo por pagamento")).toBeInTheDocument();
+    expect(screen.getByText("Dinheiro")).toBeInTheDocument();
+    expect(screen.getByText("R$ 30,00 (1)")).toBeInTheDocument();
+    expect(screen.getByText("Pix")).toBeInTheDocument();
+    expect(screen.getByText("R$ 15,00 (1)")).toBeInTheDocument();
     expect(screen.getByText("Chaveiro Polvo")).toBeInTheDocument();
     expect(screen.getByText("3 unidade(s)")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Exportar CSV" })).toHaveAttribute(
@@ -80,6 +107,28 @@ describe("SalesByEventReport", () => {
             productName: `Produto ${index + 1}`,
             quantity: index + 1,
           })),
+          paymentSummary: [
+            {
+              method: "cash",
+              netTotalInReais: 90,
+              salesCount: 9,
+            },
+            {
+              method: "pix",
+              netTotalInReais: 0,
+              salesCount: 0,
+            },
+            {
+              method: "credit_card",
+              netTotalInReais: 0,
+              salesCount: 0,
+            },
+            {
+              method: "debit_card",
+              netTotalInReais: 0,
+              salesCount: 0,
+            },
+          ],
         }}
         selectedEventId="11111111-1111-4111-8111-111111111111"
       />,
