@@ -4,9 +4,9 @@ import { useActionState, useCallback, useMemo, useState } from "react";
 
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
-import { normalizeSearchTerm } from "@/shared/utils/search";
 
 import type { PaymentMethod } from "../domain/sale";
+import { ProductPicker } from "./product-picker";
 import type { SaleActionState } from "./sale-action-state";
 
 export type PdvCartProduct = {
@@ -41,7 +41,6 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
 });
 
-const productsPerPage = 8;
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: "Dinheiro",
   credit_card: "Cartao de credito",
@@ -85,17 +84,9 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
       ),
     [items],
   );
-  const filteredProducts = useMemo(
-    () => filterProducts(products, productSearchTerm),
-    [productSearchTerm, products],
-  );
-  const totalProductPages = Math.max(
-    1,
-    Math.ceil(filteredProducts.length / productsPerPage),
-  );
-  const visibleProducts = filteredProducts.slice(
-    (productPage - 1) * productsPerPage,
-    productPage * productsPerPage,
+  const cartQuantitiesByProductId = useMemo(
+    () => new Map(items.map((item) => [item.id, item.quantity])),
+    [items],
   );
   const hasCartItems = items.length > 0;
   const hasAvailableStockForItems = items.every(
@@ -142,82 +133,15 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         </h2>
       </div>
 
-      {products.length === 0 ? (
-        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-          Nenhum produto ativo disponivel para venda.
-        </p>
-      ) : (
-        <section className="grid gap-3">
-          <div className="grid gap-2">
-            <label
-              className="text-sm font-semibold text-slate-700"
-              htmlFor="productSearch"
-            >
-              Buscar produto
-            </label>
-            <input
-              className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-              id="productSearch"
-              onChange={(event) => updateProductSearchTerm(event.target.value)}
-              placeholder="Nome ou SKU"
-              type="search"
-              value={productSearchTerm}
-            />
-            <p className="text-xs font-medium text-slate-500">
-              {filteredProducts.length} produto(s) encontrado(s)
-            </p>
-          </div>
-
-          {visibleProducts.length === 0 ? (
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-              Nenhum produto encontrado para esta busca.
-            </p>
-          ) : (
-            <div className="grid gap-2">
-              {visibleProducts.map((product) => (
-                <ProductListItem
-                  key={product.id}
-                  onAdd={() => addProduct(product)}
-                  product={product}
-                  quantityInCart={
-                    items.find((item) => item.id === product.id)?.quantity ?? 0
-                  }
-                />
-              ))}
-            </div>
-          )}
-
-          {totalProductPages > 1 ? (
-            <div className="flex items-center justify-between gap-3">
-              <button
-                className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275] disabled:border-slate-200 disabled:text-slate-400"
-                disabled={productPage === 1}
-                onClick={() =>
-                  setProductPage((currentPage) => Math.max(1, currentPage - 1))
-                }
-                type="button"
-              >
-                Anterior
-              </button>
-              <span className="text-sm font-semibold text-slate-600">
-                Pagina {productPage} de {totalProductPages}
-              </span>
-              <button
-                className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275] disabled:border-slate-200 disabled:text-slate-400"
-                disabled={productPage === totalProductPages}
-                onClick={() =>
-                  setProductPage((currentPage) =>
-                    Math.min(totalProductPages, currentPage + 1),
-                  )
-                }
-                type="button"
-              >
-                Proxima
-              </button>
-            </div>
-          ) : null}
-        </section>
-      )}
+      <ProductPicker
+        cartQuantitiesByProductId={cartQuantitiesByProductId}
+        onAddProduct={addProduct}
+        onPageChange={setProductPage}
+        onSearchTermChange={updateProductSearchTerm}
+        page={productPage}
+        products={products}
+        searchTerm={productSearchTerm}
+      />
 
       <div className="rounded-md border border-slate-200">
         <div className="border-b border-slate-200 px-3 py-2">
@@ -485,74 +409,11 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   }
 }
 
-type ProductListItemProps = {
-  onAdd: () => void;
-  product: PdvCartProduct;
-  quantityInCart: number;
-};
-
-function ProductListItem({
-  onAdd,
-  product,
-  quantityInCart,
-}: ProductListItemProps) {
-  const hasStock = product.quantityOnHand > 0;
-  const reachedStockLimit = quantityInCart >= product.quantityOnHand;
-
-  return (
-    <article className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
-      <div>
-        <h3 className="text-sm font-semibold text-slate-950">{product.name}</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          {product.sku ?? "Sem SKU"} -{" "}
-          {moneyFormatter.format(product.priceInReais)}
-        </p>
-        <p className="mt-1 text-xs font-medium text-slate-500">
-          Estoque disponivel: {product.quantityOnHand}
-        </p>
-      </div>
-      <button
-        className="min-h-11 rounded-md bg-[#1e3275] px-3 text-sm font-semibold text-white transition hover:bg-[#17275c] disabled:bg-slate-300 disabled:text-slate-600"
-        disabled={!hasStock || reachedStockLimit}
-        onClick={onAdd}
-        type="button"
-      >
-        {!hasStock
-          ? "Sem estoque"
-          : reachedStockLimit
-            ? "Limite no carrinho"
-            : "Adicionar"}
-      </button>
-    </article>
-  );
-}
-
 function toSaleItems(items: CartItem[]) {
   return items.map((item) => ({
     productId: item.id,
     quantity: item.quantity,
   }));
-}
-
-function filterProducts(
-  products: PdvCartProduct[],
-  searchTerm: string,
-): PdvCartProduct[] {
-  const normalizedSearchTerm = normalizeSearchTerm(searchTerm);
-
-  if (!normalizedSearchTerm) {
-    return products;
-  }
-
-  return products.filter((product) => {
-    const productName = normalizeSearchTerm(product.name);
-    const productSku = normalizeSearchTerm(product.sku ?? "");
-
-    return (
-      productName.includes(normalizedSearchTerm) ||
-      productSku.includes(normalizedSearchTerm)
-    );
-  });
 }
 
 function parseBrlAmount(value: string): number {
