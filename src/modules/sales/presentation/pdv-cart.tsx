@@ -6,6 +6,7 @@ import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
 
 import type { PaymentMethod } from "../domain/sale";
+import { CartItems } from "./cart-items";
 import { ProductPicker } from "./product-picker";
 import type { SaleActionState } from "./sale-action-state";
 
@@ -17,7 +18,7 @@ export type PdvCartProduct = {
   sku?: string;
 };
 
-type CartItem = PdvCartProduct & {
+export type PdvCartItem = PdvCartProduct & {
   quantity: number;
 };
 
@@ -49,7 +50,7 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
 };
 
 export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<PdvCartItem[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [productPage, setProductPage] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
@@ -143,65 +144,12 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         searchTerm={productSearchTerm}
       />
 
-      <div className="rounded-md border border-slate-200">
-        <div className="border-b border-slate-200 px-3 py-2">
-          <h3 className="text-sm font-semibold text-slate-950">
-            Itens da venda
-          </h3>
-        </div>
-
-        {items.length === 0 ? (
-          <p className="px-3 py-4 text-sm text-slate-600">
-            Nenhum item adicionado.
-          </p>
-        ) : (
-          <ul className="divide-y divide-slate-200">
-            {items.map((item) => (
-              <li
-                className="grid gap-3 px-3 py-3 sm:grid-cols-[1fr_auto]"
-                key={item.id}
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">
-                    {item.name}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {item.quantity} x {moneyFormatter.format(item.priceInReais)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    aria-label={`Remover uma unidade de ${item.name}`}
-                    className="h-11 w-11 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
-                    onClick={() => decrementProduct(item.id)}
-                    type="button"
-                  >
-                    -
-                  </button>
-                  <span className="min-w-8 text-center text-sm font-semibold">
-                    {item.quantity}
-                  </span>
-                  <button
-                    aria-label={`Adicionar uma unidade de ${item.name}`}
-                    className="h-11 w-11 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
-                    onClick={() => addProduct(item)}
-                    type="button"
-                  >
-                    +
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="flex items-center justify-between border-t border-slate-200 px-3 py-3">
-          <span className="text-sm font-semibold text-slate-700">Total</span>
-          <strong className="text-lg text-slate-950">
-            {moneyFormatter.format(totalInReais)}
-          </strong>
-        </div>
-      </div>
+      <CartItems
+        items={items}
+        onAddProduct={addProduct}
+        onDecrementProduct={decrementProduct}
+        totalInReais={totalInReais}
+      />
 
       <div className="sticky bottom-0 z-10 -mx-5 grid gap-3 border-t border-slate-200 bg-slate-50 p-5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sm:static sm:mx-0 sm:rounded-md sm:border sm:p-3 sm:shadow-none">
         <div className="grid gap-2">
@@ -409,7 +357,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   }
 }
 
-function toSaleItems(items: CartItem[]) {
+function toSaleItems(items: PdvCartItem[]) {
   return items.map((item) => ({
     productId: item.id,
     quantity: item.quantity,
