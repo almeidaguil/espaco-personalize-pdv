@@ -42,7 +42,7 @@ export function StockAdjustmentForm({
         <select
           aria-describedby={errors?.productId ? "productId-error" : undefined}
           aria-invalid={errors?.productId ? true : undefined}
-          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          className="h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           disabled={!hasProducts}
           id="productId"
           name="productId"
@@ -111,7 +111,7 @@ export function StockAdjustmentForm({
         <input
           aria-describedby={errors?.quantity ? "quantity-error" : undefined}
           aria-invalid={errors?.quantity ? true : undefined}
-          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          className="h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           id="quantity"
           inputMode="numeric"
           name="quantity"

@@ -85,7 +85,7 @@ export function StockMovementsOverview({
                 Buscar produto
               </label>
               <input
-                className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+                className="h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
                 id="stock-balance-search"
                 onChange={(event) => {
                   setBalanceSearchTerm(event.target.value);
@@ -108,10 +108,10 @@ export function StockMovementsOverview({
                     className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3"
                     key={balance.productId}
                   >
-                    <p className="text-sm font-semibold text-slate-950">
+                    <p className="min-w-0 break-words text-sm font-semibold text-slate-950">
                       {balance.productLabel}
                     </p>
-                    <strong className="text-lg text-[#1e3275]">
+                    <strong className="shrink-0 text-lg text-[#1e3275]">
                       {balance.quantityOnHand}
                     </strong>
                   </article>
@@ -156,7 +156,7 @@ export function StockMovementsOverview({
                 Tipo de movimentacao
               </label>
               <select
-                className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+                className="h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
                 id="stock-movement-type"
                 onChange={(event) => {
                   setMovementTypeFilter(
@@ -189,8 +189,8 @@ export function StockMovementsOverview({
                     key={movement.id}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-950">
+                      <div className="min-w-0">
+                        <p className="break-words text-sm font-semibold text-slate-950">
                           {movement.productLabel}
                         </p>
                         <p className="mt-1 text-xs text-slate-500">
@@ -200,8 +200,8 @@ export function StockMovementsOverview({
                       <strong
                         className={
                           movement.quantityChange > 0
-                            ? "text-lg text-emerald-700"
-                            : "text-lg text-red-700"
+                            ? "shrink-0 text-lg text-emerald-700"
+                            : "shrink-0 text-lg text-red-700"
                         }
                       >
                         {formatQuantityChange(movement.quantityChange)}
