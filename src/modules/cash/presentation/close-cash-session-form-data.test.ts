@@ -18,10 +18,10 @@ describe("parseCloseCashSessionFormData", () => {
     const formData = new FormData();
     formData.set("cashSessionId", "cash-session-1");
     formData.set("countedAmountInReais", "200,00");
-    formData.set("adminPassword", " 123456 ");
+    formData.set("adminPassword", " admin-password-test ");
 
     expect(parseCloseCashSessionFormData(formData)).toEqual({
-      adminPassword: "123456",
+      adminPassword: "admin-password-test",
       cashSessionId: "cash-session-1",
       countedAmountInReais: 200,
     });

@@ -34,6 +34,7 @@ test("admin creates a product and sees it in the products list", async ({
   await expect(page.getByText("Produto cadastrado com sucesso.")).toBeVisible();
 
   await page.goto("/products");
+  await page.getByLabel("Buscar produto").fill(productName);
 
   const productCard = page
     .getByRole("listitem")

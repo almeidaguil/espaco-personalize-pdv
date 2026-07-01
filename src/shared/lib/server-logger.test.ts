@@ -16,7 +16,7 @@ describe("server logger", () => {
       .mockImplementation(() => undefined);
 
     logServerError("sale.create.failed", {
-      adminPassword: "123456",
+      adminPassword: "admin-password-test",
       operation: "create-sale",
       payload: {
         email: "operator@example.com",
