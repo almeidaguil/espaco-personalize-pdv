@@ -56,10 +56,25 @@ function loadEnvFile(filePath: string) {
       }
 
       const key = line.slice(0, separatorIndex).trim();
-      const value = line.slice(separatorIndex + 1).trim();
+      const value = stripWrappingQuotes(line.slice(separatorIndex + 1).trim());
 
       if (!process.env[key]) {
         process.env[key] = value;
       }
     });
+}
+
+function stripWrappingQuotes(value: string) {
+  const firstCharacter = value.at(0);
+  const lastCharacter = value.at(-1);
+
+  if (
+    value.length >= 2 &&
+    ((firstCharacter === '"' && lastCharacter === '"') ||
+      (firstCharacter === "'" && lastCharacter === "'"))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
 }
