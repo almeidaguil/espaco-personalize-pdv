@@ -150,9 +150,9 @@ async function createSale(
     .click();
 
   if (options.paymentMethodLabel) {
-    await page.getByLabel("Forma de pagamento").selectOption({
-      label: options.paymentMethodLabel,
-    });
+    await page
+      .getByRole("button", { name: options.paymentMethodLabel })
+      .click();
     await expect(
       page.getByText(`${options.paymentMethodLabel} no valor de R$ 15,00`),
     ).toBeVisible();
