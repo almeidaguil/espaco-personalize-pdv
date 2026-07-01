@@ -162,14 +162,10 @@ O que acontece ao cancelar:
 - o status da venda muda para cancelada;
 - o estoque dos itens volta automaticamente.
 
-Senha administrativa operacional atual:
-
-- `123456`
-
 Importante:
 
-- esta senha e temporaria para homologacao;
-- antes da producao final, ela deve ser trocada.
+- use a senha real de um usuario admin ativo;
+- nao use senhas temporarias de homologacao em producao.
 
 ## 6. Fechar Caixa
 
@@ -186,9 +182,7 @@ Se o valor contado for menor que o esperado:
 - o sistema exige `Senha administrativa`;
 - o fechamento so e concluido com a autorizacao correta.
 
-Senha administrativa operacional atual:
-
-- `123456`
+Use a senha real de um usuario admin ativo.
 
 ## Rotina Do Admin
 
@@ -387,13 +381,11 @@ Com a conexao indisponivel:
 
 Solicite um admin com a senha administrativa operacional.
 
-Senha atual de homologacao:
-
-- `123456`
+Use a senha real de um usuario admin ativo.
 
 ## Observacoes Finais
 
-- a senha administrativa operacional `123456` e temporaria e deve ser trocada antes da producao;
+- senhas temporarias de homologacao devem ser trocadas antes da producao;
 - o sistema foi desenhado para deixar a regra critica no servidor;
 - cancelamento de venda, fechamento de caixa com falta e ajustes sensiveis sempre dependem de validacao controlada;
 - antes da entrega final ao cliente, vale limpar os dados de homologacao e manter apenas os acessos reais necessarios.

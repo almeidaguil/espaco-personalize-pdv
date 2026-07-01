@@ -312,13 +312,13 @@ describe("SupabaseCashSessionRepository", () => {
         status: "closed",
       },
       {
-        adminPassword: "123456",
+        adminPassword: "admin-password-test",
       },
     );
 
     expect(supabaseClient.rpcFunctionName).toBe("close_cash_session");
     expect(supabaseClient.rpcArgs).toEqual({
-      p_admin_password: "123456",
+      p_admin_password: "admin-password-test",
       p_cash_session_id: "cash-session-1",
       p_closed_at: "2026-07-10T18:00:00.000Z",
       p_counted_amount_in_cents: 26075,

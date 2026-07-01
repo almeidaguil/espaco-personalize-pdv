@@ -182,7 +182,7 @@ async function cancelSale(page: Page, eventName: string) {
       name: /Confirmo que esta venda deve ser cancelada/,
     })
     .check();
-  await page.getByLabel("Senha administrativa").fill("123456");
+  await page.getByLabel("Senha administrativa").fill(e2eUserPassword ?? "");
   await page.getByRole("button", { name: "Cancelar venda" }).click();
 
   await expect(page.getByText("Venda cancelada com sucesso.")).toBeVisible();

@@ -111,7 +111,7 @@ Antes da producao final, rotacionar:
 - senha do banco remoto usada pela CLI
 - `VERCEL_TOKEN`
 - qualquer token de GitHub ou deploy exposto durante homologacao
-- senha administrativa operacional temporaria `123456`
+- senhas administrativas ou temporarias usadas durante homologacao
 - senhas temporarias de usuarios de teste
 
 Depois da rotacao:

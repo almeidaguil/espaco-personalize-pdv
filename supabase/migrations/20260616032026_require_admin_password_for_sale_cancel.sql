@@ -28,7 +28,7 @@ begin
     raise exception 'Cancellation date is required.';
   end if;
 
-  if coalesce(btrim(p_admin_password), '') <> '123456' then
+  if not public.verify_admin_password(p_admin_password) then
     raise exception 'Admin password is required to cancel a sale.';
   end if;
 
