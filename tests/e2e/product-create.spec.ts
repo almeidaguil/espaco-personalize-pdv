@@ -5,7 +5,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 const e2eUserEmail = process.env.E2E_USER_EMAIL;
 const e2eUserPassword = process.env.E2E_USER_PASSWORD;
-const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const e2eBaseUrl = process.env.E2E_BASE_URL?.trim() || "http://localhost:3000";
 const publicEnv = getPublicEnv();
 
 test.skip(

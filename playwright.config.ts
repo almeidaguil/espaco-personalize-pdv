@@ -5,6 +5,9 @@ import { defineConfig, devices } from "@playwright/test";
 loadEnvFile(".env.local");
 loadEnvFile(".env.e2e.local");
 
+const configuredE2EBaseUrl = process.env.E2E_BASE_URL?.trim();
+const e2eBaseUrl = configuredE2EBaseUrl || "http://localhost:3000";
+
 export default defineConfig({
   expect: {
     timeout: 10_000,
@@ -16,10 +19,10 @@ export default defineConfig({
   timeout: 60_000,
   workers: 1,
   use: {
-    baseURL: process.env.E2E_BASE_URL ?? "http://localhost:3000",
+    baseURL: e2eBaseUrl,
     trace: "retain-on-failure",
   },
-  webServer: process.env.E2E_BASE_URL
+  webServer: configuredE2EBaseUrl
     ? undefined
     : {
         command: "npm run dev -- --hostname localhost --port 3000",
