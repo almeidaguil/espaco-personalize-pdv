@@ -15,10 +15,12 @@ export default function LoginPage() {
       <section className="mx-auto flex min-h-[calc(100vh-4rem)] w-full max-w-md flex-col justify-center">
         <Panel>
           <div className="mb-6">
-            <BrandLogo className="mb-5 h-auto w-32" priority />
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-              Espaco Personalize
-            </p>
+            <div className="mb-5 flex flex-col items-center text-center">
+              <BrandLogo className="mb-3 h-auto w-32" priority />
+              <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+                Espaco Personalize
+              </p>
+            </div>
             <h1 className="mt-1 text-2xl font-semibold">Acessar PDV</h1>
             <p className="mt-2 text-sm leading-6 text-slate-600">
               Entre com seu e-mail e senha para operar vendas, eventos e caixa.
