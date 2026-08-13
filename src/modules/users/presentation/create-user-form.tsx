@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 
+import { FieldError } from "@/shared/components/field-error";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+
 import type { UserActionState } from "./user-action-state";
 
 const initialState: UserActionState = {};
@@ -15,6 +18,7 @@ type CreateUserFormProps = {
 
 export function CreateUserForm({ action }: CreateUserFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const errors = state.fieldErrors;
 
   return (
     <form action={formAction} className="grid gap-4" noValidate>
@@ -26,13 +30,15 @@ export function CreateUserForm({ action }: CreateUserFormProps) {
           Nome completo
         </label>
         <input
+          aria-describedby={errors?.fullName ? "fullName-error" : undefined}
+          aria-invalid={errors?.fullName ? true : undefined}
           className="h-11 rounded-md border border-slate-300 px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           id="fullName"
           name="fullName"
           type="text"
         />
-        {state.fieldErrors?.fullName ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.fullName}</p>
+        {errors?.fullName ? (
+          <FieldError id="fullName-error">{errors.fullName}</FieldError>
         ) : null}
       </div>
 
@@ -41,13 +47,15 @@ export function CreateUserForm({ action }: CreateUserFormProps) {
           E-mail
         </label>
         <input
+          aria-describedby={errors?.email ? "email-error" : undefined}
+          aria-invalid={errors?.email ? true : undefined}
           className="h-11 rounded-md border border-slate-300 px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           id="email"
           name="email"
           type="email"
         />
-        {state.fieldErrors?.email ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.email}</p>
+        {errors?.email ? (
+          <FieldError id="email-error">{errors.email}</FieldError>
         ) : null}
       </div>
 
@@ -59,28 +67,28 @@ export function CreateUserForm({ action }: CreateUserFormProps) {
           Senha temporaria
         </label>
         <input
+          aria-describedby={
+            errors?.temporaryPassword ? "temporaryPassword-error" : undefined
+          }
+          aria-invalid={errors?.temporaryPassword ? true : undefined}
           className="h-11 rounded-md border border-slate-300 px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           id="temporaryPassword"
           name="temporaryPassword"
           type="password"
         />
-        {state.fieldErrors?.temporaryPassword ? (
-          <p className="text-sm text-red-700">
-            {state.fieldErrors.temporaryPassword}
-          </p>
+        {errors?.temporaryPassword ? (
+          <FieldError id="temporaryPassword-error">
+            {errors.temporaryPassword}
+          </FieldError>
         ) : null}
       </div>
 
       {state.formError ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {state.formError}
-        </p>
+        <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
 
       {state.successMessage ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {state.successMessage}
-        </p>
+        <InlineFeedback tone="success">{state.successMessage}</InlineFeedback>
       ) : null}
 
       <button

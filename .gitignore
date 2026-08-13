@@ -13,6 +13,11 @@ dist/
 .env
 .env.*
 !.env.example
+!.env.production.example
+!.env.staging.example
+
+# Local non-versioned project docs
+/LOCAL_*.md
 
 # Logs
 npm-debug.log*
@@ -37,3 +42,4 @@ supabase/.temp/
 Thumbs.db
 .idea/
 .vscode/
+.vercel/

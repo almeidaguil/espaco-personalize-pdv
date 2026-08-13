@@ -2,6 +2,9 @@
 
 import { useActionState, useState } from "react";
 
+import { FieldError } from "@/shared/components/field-error";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+
 import type { LoginActionState } from "./login-action-state";
 
 const initialState: LoginActionState = {};
@@ -21,6 +24,7 @@ export function LoginForm({ action }: LoginFormProps) {
     () => getRememberedEmail() !== "",
   );
   const [showPassword, setShowPassword] = useState(false);
+  const errors = state.fieldErrors;
 
   function handleSubmit() {
     if (rememberEmail) {
@@ -43,6 +47,8 @@ export function LoginForm({ action }: LoginFormProps) {
           E-mail
         </label>
         <input
+          aria-describedby={errors?.email ? "email-error" : undefined}
+          aria-invalid={errors?.email ? true : undefined}
           autoComplete="email"
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           id="email"
@@ -52,8 +58,8 @@ export function LoginForm({ action }: LoginFormProps) {
           type="email"
           value={email}
         />
-        {state.fieldErrors?.email ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.email}</p>
+        {errors?.email ? (
+          <FieldError id="email-error">{errors.email}</FieldError>
         ) : null}
       </div>
 
@@ -66,6 +72,8 @@ export function LoginForm({ action }: LoginFormProps) {
         </label>
         <div className="flex rounded-md border border-slate-300 bg-white transition focus-within:border-[#1e3275] focus-within:ring-2 focus-within:ring-[#1e3275]/15">
           <input
+            aria-describedby={errors?.password ? "password-error" : undefined}
+            aria-invalid={errors?.password ? true : undefined}
             autoComplete="current-password"
             className="h-11 min-w-0 flex-1 rounded-l-md bg-transparent px-3 text-base outline-none"
             id="password"
@@ -83,8 +91,8 @@ export function LoginForm({ action }: LoginFormProps) {
             {showPassword ? "Ocultar" : "Mostrar"}
           </button>
         </div>
-        {state.fieldErrors?.password ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.password}</p>
+        {errors?.password ? (
+          <FieldError id="password-error">{errors.password}</FieldError>
         ) : null}
       </div>
 
@@ -107,9 +115,7 @@ export function LoginForm({ action }: LoginFormProps) {
       </label>
 
       {state.formError ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {state.formError}
-        </p>
+        <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
 
       <button

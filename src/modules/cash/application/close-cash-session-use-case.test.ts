@@ -75,7 +75,7 @@ describe("closeCashSessionUseCase", () => {
 
     const result = await closeCashSessionUseCase(
       {
-        adminPassword: "123456",
+        adminPassword: "admin-password-test",
         cashSessionId: " cash-session-1 ",
         countedAmountInReais: 260.75,
       },
@@ -102,7 +102,7 @@ describe("closeCashSessionUseCase", () => {
       status: "closed",
     });
     expect(cashSessionRepository.updateOptions).toEqual({
-      adminPassword: "123456",
+      adminPassword: "admin-password-test",
     });
   });
 

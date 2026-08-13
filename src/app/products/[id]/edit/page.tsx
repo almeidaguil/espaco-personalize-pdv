@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getProductByIdUseCase } from "@/modules/products/application/get-product-by-id-use-case";
@@ -10,6 +9,9 @@ import {
 import { ProductForm } from "@/modules/products/presentation/product-form";
 import { createProductFormValuesFromProduct } from "@/modules/products/presentation/product-form-data";
 import { updateProductAction } from "@/modules/products/presentation/update-product-action";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -40,76 +42,50 @@ export default async function EditProductPage({
     }
 
     return (
-      <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-        <section className="mx-auto grid w-full max-w-md gap-4">
-          <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex flex-wrap gap-3 text-sm font-semibold">
-              <Link
-                className="text-[#1e3275] transition hover:text-[#142456]"
-                href="/"
-              >
-                Painel
-              </Link>
-              <Link
-                className="text-[#1e3275] transition hover:text-[#142456]"
-                href="/products"
-              >
-                Produtos
-              </Link>
-            </div>
-            <h1 className="text-2xl font-semibold">Editar produto</h1>
-          </header>
+      <PageShell maxWidth="sm">
+        <PageHeader
+          backLinks={[
+            { href: "/", label: "Painel" },
+            { href: "/products", label: "Produtos" },
+          ]}
+          description="Atualize nome, preco, SKU e status do produto selecionado."
+          eyebrow="Produtos"
+          title="Editar produto"
+        />
 
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            Nao foi possivel carregar o produto.
-          </section>
-        </section>
-      </main>
+        <InlineFeedback padding="md" tone="error">
+          Nao foi possivel carregar o produto.
+        </InlineFeedback>
+      </PageShell>
     );
   }
 
   const action = updateProductAction.bind(null, result.product.id);
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-md gap-4">
-        <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap gap-3 text-sm font-semibold">
-            <Link
-              className="text-[#1e3275] transition hover:text-[#142456]"
-              href="/"
-            >
-              Painel
-            </Link>
-            <Link
-              className="text-[#1e3275] transition hover:text-[#142456]"
-              href="/products"
-            >
-              Produtos
-            </Link>
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-            Produtos
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold">Editar produto</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Atualize nome, preco, SKU e status do produto selecionado.
-          </p>
-        </header>
+    <PageShell maxWidth="sm">
+      <PageHeader
+        backLinks={[
+          { href: "/", label: "Painel" },
+          { href: "/products", label: "Produtos" },
+        ]}
+        description="Atualize nome, preco, SKU e status do produto selecionado."
+        eyebrow="Produtos"
+        title="Editar produto"
+      />
 
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-          <ProductForm
-            action={action}
-            initialValues={createProductFormValuesFromProduct({
-              isActive: result.product.isActive,
-              name: result.product.name,
-              priceInReais: result.product.price.toReais(),
-              sku: result.product.sku,
-            })}
-            submitLabel="Salvar alteracoes"
-          />
-        </section>
-      </section>
-    </main>
+      <Panel>
+        <ProductForm
+          action={action}
+          initialValues={createProductFormValuesFromProduct({
+            isActive: result.product.isActive,
+            name: result.product.name,
+            priceInReais: result.product.price.toReais(),
+            sku: result.product.sku,
+          })}
+          submitLabel="Salvar alteracoes"
+        />
+      </Panel>
+    </PageShell>
   );
 }

@@ -2,6 +2,10 @@
 
 import { useActionState } from "react";
 
+import { FieldError } from "@/shared/components/field-error";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+import { Panel } from "@/shared/components/panel";
+
 import type { ManagedUser } from "../domain/managed-user";
 import type { UserActionState } from "./user-action-state";
 
@@ -83,9 +87,11 @@ function ManagedUserCard({
     initialState,
   );
   const isCurrentUser = currentAdminId === user.id;
+  const passwordError = passwordState.fieldErrors?.temporaryPassword;
+  const passwordErrorId = `temporary-password-error-${user.id}`;
 
   return (
-    <article className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+    <Panel as="article" padding="sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2">
@@ -145,12 +151,12 @@ function ManagedUserCard({
             </button>
           </div>
           {roleState.formError ? (
-            <p className="text-sm text-red-700">{roleState.formError}</p>
+            <InlineFeedback tone="error">{roleState.formError}</InlineFeedback>
           ) : null}
           {roleState.successMessage ? (
-            <p className="text-sm text-emerald-700">
+            <InlineFeedback tone="success">
               {roleState.successMessage}
-            </p>
+            </InlineFeedback>
           ) : null}
         </form>
 
@@ -164,6 +170,8 @@ function ManagedUserCard({
           </label>
           <div className="flex gap-2">
             <input
+              aria-describedby={passwordError ? passwordErrorId : undefined}
+              aria-invalid={passwordError ? true : undefined}
               autoComplete="new-password"
               className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
               id={`temporary-password-${user.id}`}
@@ -179,18 +187,18 @@ function ManagedUserCard({
               Redefinir
             </button>
           </div>
-          {passwordState.fieldErrors?.temporaryPassword ? (
-            <p className="text-sm text-red-700">
-              {passwordState.fieldErrors.temporaryPassword}
-            </p>
+          {passwordError ? (
+            <FieldError id={passwordErrorId}>{passwordError}</FieldError>
           ) : null}
           {passwordState.formError ? (
-            <p className="text-sm text-red-700">{passwordState.formError}</p>
+            <InlineFeedback tone="error">
+              {passwordState.formError}
+            </InlineFeedback>
           ) : null}
           {passwordState.successMessage ? (
-            <p className="text-sm text-emerald-700">
+            <InlineFeedback tone="success">
               {passwordState.successMessage}
-            </p>
+            </InlineFeedback>
           ) : null}
         </form>
 
@@ -209,16 +217,18 @@ function ManagedUserCard({
             {user.isActive ? "Desativar" : "Ativar"}
           </button>
           {accessState.formError ? (
-            <p className="mt-2 text-sm text-red-700">{accessState.formError}</p>
+            <InlineFeedback className="mt-2" tone="error">
+              {accessState.formError}
+            </InlineFeedback>
           ) : null}
           {accessState.successMessage ? (
-            <p className="mt-2 text-sm text-emerald-700">
+            <InlineFeedback className="mt-2" tone="success">
               {accessState.successMessage}
-            </p>
+            </InlineFeedback>
           ) : null}
         </form>
       </div>
-    </article>
+    </Panel>
   );
 }
 

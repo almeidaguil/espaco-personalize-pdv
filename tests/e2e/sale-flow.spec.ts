@@ -5,7 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 
 const e2eUserEmail = process.env.E2E_USER_EMAIL;
 const e2eUserPassword = process.env.E2E_USER_PASSWORD;
-const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const e2eBaseUrl = process.env.E2E_BASE_URL?.trim() || "http://localhost:3000";
 const publicEnv = getPublicEnv();
 
 test.skip(
@@ -140,19 +140,21 @@ async function createSale(
   eventName: string,
   options: CreateSaleOptions = {},
 ) {
-  await page.goto("/pdv");
+  await page.goto("/pdv", { waitUntil: "networkidle" });
   await expect(page.getByText(eventName).first()).toBeVisible();
 
   await page.getByLabel("Buscar produto").fill(productName);
+  await expect(page.getByText("1 produto(s) encontrado(s)")).toBeVisible();
   await page
     .locator("article", { hasText: productName })
     .getByRole("button", { name: "Adicionar" })
     .click();
+  await expect(page.locator("li", { hasText: productName })).toBeVisible();
 
   if (options.paymentMethodLabel) {
-    await page.getByLabel("Forma de pagamento").selectOption({
-      label: options.paymentMethodLabel,
-    });
+    await page
+      .getByRole("button", { name: options.paymentMethodLabel })
+      .click();
     await expect(
       page.getByText(`${options.paymentMethodLabel} no valor de R$ 15,00`),
     ).toBeVisible();
@@ -173,6 +175,7 @@ async function cancelSale(page: Page, eventName: string) {
 
   const saleItem = page.locator("li", { hasText: eventName }).first();
   await saleItem.getByRole("link", { name: "Ver detalhes" }).click();
+  await page.waitForLoadState("networkidle");
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Detalhe da venda" }),
@@ -182,7 +185,7 @@ async function cancelSale(page: Page, eventName: string) {
       name: /Confirmo que esta venda deve ser cancelada/,
     })
     .check();
-  await page.getByLabel("Senha administrativa").fill("123456");
+  await page.getByLabel("Senha administrativa").fill(e2eUserPassword ?? "");
   await page.getByRole("button", { name: "Cancelar venda" }).click();
 
   await expect(page.getByText("Venda cancelada com sucesso.")).toBeVisible();

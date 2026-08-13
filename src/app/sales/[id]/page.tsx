@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { getSaleDetailUseCase } from "@/modules/sales/application/get-sale-detail-use-case";
@@ -10,6 +9,8 @@ import {
 import { cancelSaleAction } from "@/modules/sales/presentation/cancel-sale-action";
 import { CancelSaleForm } from "@/modules/sales/presentation/cancel-sale-form";
 import { SaleDetailCard } from "@/modules/sales/presentation/sale-detail-card";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -41,51 +42,35 @@ export default async function SaleDetailsPage({
     }
 
     return (
-      <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-        <section className="mx-auto grid w-full max-w-3xl gap-4">
-          <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-            <Link
-              className="mb-3 inline-flex text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
-              href="/sales"
-            >
-              Voltar para vendas
-            </Link>
-            <h1 className="text-2xl font-semibold">Detalhe da venda</h1>
-          </header>
-          <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-            Nao foi possivel carregar a venda.
-          </section>
-        </section>
-      </main>
+      <PageShell>
+        <PageHeader
+          backLinks={[{ href: "/sales", label: "Voltar para vendas" }]}
+          description="Consulte os itens vendidos, pagamento e troco registrado."
+          eyebrow="Venda"
+          title="Detalhe da venda"
+        />
+        <InlineFeedback padding="md" tone="error">
+          Nao foi possivel carregar a venda.
+        </InlineFeedback>
+      </PageShell>
     );
   }
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-3xl gap-4">
-        <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <Link
-            className="mb-3 inline-flex text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
-            href="/sales"
-          >
-            Voltar para vendas
-          </Link>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-            Venda
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold">Detalhe da venda</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Consulte os itens vendidos, pagamento e troco registrado.
-          </p>
-        </header>
+    <PageShell>
+      <PageHeader
+        backLinks={[{ href: "/sales", label: "Voltar para vendas" }]}
+        description="Consulte os itens vendidos, pagamento e troco registrado."
+        eyebrow="Venda"
+        title="Detalhe da venda"
+      />
 
-        <SaleDetailCard sale={result.sale} />
-        <CancelSaleForm
-          action={cancelSaleAction}
-          isCanceled={result.sale.status === "canceled"}
-          saleId={result.sale.id}
-        />
-      </section>
-    </main>
+      <SaleDetailCard sale={result.sale} />
+      <CancelSaleForm
+        action={cancelSaleAction}
+        isCanceled={result.sale.status === "canceled"}
+        saleId={result.sale.id}
+      />
+    </PageShell>
   );
 }

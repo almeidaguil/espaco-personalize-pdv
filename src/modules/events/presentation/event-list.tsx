@@ -2,7 +2,10 @@
 
 import { useActionState, useMemo, useState } from "react";
 
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PaginationControls } from "@/shared/components/pagination-controls";
+import { Panel } from "@/shared/components/panel";
+import { StatusBadge } from "@/shared/components/status-badge";
 
 import type { EventActionState } from "./event-action-state";
 
@@ -40,21 +43,14 @@ export function EventList({ action, events }: EventListProps) {
   return (
     <div className="grid gap-3">
       {state.formError ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {state.formError}
-        </p>
+        <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
       {state.successMessage ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {state.successMessage}
-        </p>
+        <InlineFeedback tone="success">{state.successMessage}</InlineFeedback>
       ) : null}
       <ul className="grid gap-3">
         {visibleEvents.map((event) => (
-          <li
-            className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
-            key={event.id}
-          >
+          <Panel as="li" key={event.id} padding="sm">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-slate-950">
@@ -64,15 +60,9 @@ export function EventList({ action, events }: EventListProps) {
                   {event.location ?? "Sem local"}
                 </p>
               </div>
-              <span
-                className={
-                  event.isActive
-                    ? "rounded-md bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700"
-                    : "rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600"
-                }
-              >
+              <StatusBadge tone={event.isActive ? "success" : "neutral"}>
                 {event.isActive ? "Ativo" : "Inativo"}
-              </span>
+              </StatusBadge>
             </div>
 
             <strong className="mt-4 block text-sm text-[#1e3275]">
@@ -91,7 +81,7 @@ export function EventList({ action, events }: EventListProps) {
                 </button>
               </form>
             ) : null}
-          </li>
+          </Panel>
         ))}
       </ul>
       <PaginationControls

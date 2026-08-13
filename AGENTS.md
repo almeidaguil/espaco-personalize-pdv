@@ -73,6 +73,18 @@ Na pratica, priorize estes 6 agentes: Tech Lead, Arquiteto, Desenvolvedor Fullst
 - Commits: Conventional Commits.
 - Branches: `feature/nome-da-funcionalidade`.
 
+## Fluxo Git Obrigatorio
+
+- Nunca criar commits diretamente na `main`.
+- Nunca enviar alteracoes diretamente para a `main`.
+- Criar uma branch `feature/*` antes do primeiro commit de cada trabalho.
+- Integrar branches de funcionalidade em `develop` exclusivamente por pull
+  request.
+- Integrar `develop` em `main` exclusivamente por pull request de release.
+- Exigir os checks de qualidade e o gate E2E aplicavel antes do merge.
+- Usar commits assinados e mensagens no padrao Conventional Commits.
+- Nao usar force push em `main` ou `develop`.
+
 ## Padroes Tecnicos Obrigatorios
 
 - Clean Code.

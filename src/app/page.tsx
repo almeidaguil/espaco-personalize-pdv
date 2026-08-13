@@ -22,6 +22,7 @@ import {
   type SupabaseSaleSummaryClient,
 } from "@/modules/sales/infra/supabase-sale-summary-repository";
 import { AppHeader } from "@/shared/components/app-header";
+import { Panel } from "@/shared/components/panel";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const dynamic = "force-dynamic";
@@ -149,7 +150,7 @@ export default async function Home() {
       <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-5 py-6 sm:px-8 lg:px-10">
         <AppHeader showAdminNavigation={isAdmin} title="PDV" />
 
-        <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+        <Panel className="grid gap-4">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
@@ -233,7 +234,7 @@ export default async function Home() {
               .
             </p>
           ) : null}
-        </section>
+        </Panel>
 
         <section className="grid flex-1 gap-3 sm:grid-cols-2">
           {[...modules, ...(isAdmin ? adminModules : [])].map((module) => (

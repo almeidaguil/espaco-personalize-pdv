@@ -1,8 +1,13 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useCallback, useMemo, useState } from "react";
+
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+import { Panel } from "@/shared/components/panel";
 
 import type { PaymentMethod } from "../domain/sale";
+import { CartItems } from "./cart-items";
+import { ProductPicker } from "./product-picker";
 import type { SaleActionState } from "./sale-action-state";
 
 export type PdvCartProduct = {
@@ -13,7 +18,7 @@ export type PdvCartProduct = {
   sku?: string;
 };
 
-type CartItem = PdvCartProduct & {
+export type PdvCartItem = PdvCartProduct & {
   quantity: number;
 };
 
@@ -37,7 +42,6 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
 });
 
-const productsPerPage = 8;
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: "Dinheiro",
   credit_card: "Cartao de credito",
@@ -46,13 +50,30 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
 };
 
 export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
-  const [state, formAction, isPending] = useActionState(action, {});
-  const [items, setItems] = useState<CartItem[]>([]);
+  const [items, setItems] = useState<PdvCartItem[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [productPage, setProductPage] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
   const [receivedAmountInput, setReceivedAmountInput] = useState("");
   const [cashSessionId, setCashSessionId] = useState(cashSessions[0]?.id ?? "");
+  const submitSale = useCallback(
+    async (previousState: SaleActionState, formData: FormData) => {
+      const nextState = await action(previousState, formData);
+
+      if (nextState.successMessage) {
+        setItems([]);
+        setProductSearchTerm("");
+        setProductPage(1);
+        setPaymentMethod("cash");
+        setReceivedAmountInput("");
+      }
+
+      return nextState;
+    },
+    [action],
+  );
+  const [state, formAction, isPending] = useActionState(submitSale, {});
+
   const selectedCashSession = cashSessions.find(
     (session) => session.id === cashSessionId,
   );
@@ -64,17 +85,9 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
       ),
     [items],
   );
-  const filteredProducts = useMemo(
-    () => filterProducts(products, productSearchTerm),
-    [productSearchTerm, products],
-  );
-  const totalProductPages = Math.max(
-    1,
-    Math.ceil(filteredProducts.length / productsPerPage),
-  );
-  const visibleProducts = filteredProducts.slice(
-    (productPage - 1) * productsPerPage,
-    productPage * productsPerPage,
+  const cartQuantitiesByProductId = useMemo(
+    () => new Map(items.map((item) => [item.id, item.quantity])),
+    [items],
   );
   const hasCartItems = items.length > 0;
   const hasAvailableStockForItems = items.every(
@@ -100,10 +113,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
     !isPending;
 
   return (
-    <form
-      action={formAction}
-      className="grid gap-3 rounded-md border border-slate-200 bg-white p-5 shadow-sm"
-    >
+    <Panel action={formAction} as="form" className="grid gap-3">
       <input
         name="eventId"
         type="hidden"
@@ -124,142 +134,22 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         </h2>
       </div>
 
-      {products.length === 0 ? (
-        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-          Nenhum produto ativo disponivel para venda.
-        </p>
-      ) : (
-        <section className="grid gap-3">
-          <div className="grid gap-2">
-            <label
-              className="text-sm font-semibold text-slate-700"
-              htmlFor="productSearch"
-            >
-              Buscar produto
-            </label>
-            <input
-              className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-              id="productSearch"
-              onChange={(event) => updateProductSearchTerm(event.target.value)}
-              placeholder="Nome ou SKU"
-              type="search"
-              value={productSearchTerm}
-            />
-            <p className="text-xs font-medium text-slate-500">
-              {filteredProducts.length} produto(s) encontrado(s)
-            </p>
-          </div>
+      <ProductPicker
+        cartQuantitiesByProductId={cartQuantitiesByProductId}
+        onAddProduct={addProduct}
+        onPageChange={setProductPage}
+        onSearchTermChange={updateProductSearchTerm}
+        page={productPage}
+        products={products}
+        searchTerm={productSearchTerm}
+      />
 
-          {visibleProducts.length === 0 ? (
-            <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-              Nenhum produto encontrado para esta busca.
-            </p>
-          ) : (
-            <div className="grid gap-2">
-              {visibleProducts.map((product) => (
-                <ProductListItem
-                  key={product.id}
-                  onAdd={() => addProduct(product)}
-                  product={product}
-                  quantityInCart={
-                    items.find((item) => item.id === product.id)?.quantity ?? 0
-                  }
-                />
-              ))}
-            </div>
-          )}
-
-          {totalProductPages > 1 ? (
-            <div className="flex items-center justify-between gap-3">
-              <button
-                className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275] disabled:border-slate-200 disabled:text-slate-400"
-                disabled={productPage === 1}
-                onClick={() =>
-                  setProductPage((currentPage) => Math.max(1, currentPage - 1))
-                }
-                type="button"
-              >
-                Anterior
-              </button>
-              <span className="text-sm font-semibold text-slate-600">
-                Pagina {productPage} de {totalProductPages}
-              </span>
-              <button
-                className="min-h-11 rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275] disabled:border-slate-200 disabled:text-slate-400"
-                disabled={productPage === totalProductPages}
-                onClick={() =>
-                  setProductPage((currentPage) =>
-                    Math.min(totalProductPages, currentPage + 1),
-                  )
-                }
-                type="button"
-              >
-                Proxima
-              </button>
-            </div>
-          ) : null}
-        </section>
-      )}
-
-      <div className="rounded-md border border-slate-200">
-        <div className="border-b border-slate-200 px-3 py-2">
-          <h3 className="text-sm font-semibold text-slate-950">
-            Itens da venda
-          </h3>
-        </div>
-
-        {items.length === 0 ? (
-          <p className="px-3 py-4 text-sm text-slate-600">
-            Nenhum item adicionado.
-          </p>
-        ) : (
-          <ul className="divide-y divide-slate-200">
-            {items.map((item) => (
-              <li
-                className="grid gap-3 px-3 py-3 sm:grid-cols-[1fr_auto]"
-                key={item.id}
-              >
-                <div>
-                  <p className="text-sm font-semibold text-slate-950">
-                    {item.name}
-                  </p>
-                  <p className="mt-1 text-sm text-slate-600">
-                    {item.quantity} x {moneyFormatter.format(item.priceInReais)}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    aria-label={`Remover uma unidade de ${item.name}`}
-                    className="h-11 w-11 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
-                    onClick={() => decrementProduct(item.id)}
-                    type="button"
-                  >
-                    -
-                  </button>
-                  <span className="min-w-8 text-center text-sm font-semibold">
-                    {item.quantity}
-                  </span>
-                  <button
-                    aria-label={`Adicionar uma unidade de ${item.name}`}
-                    className="h-11 w-11 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
-                    onClick={() => addProduct(item)}
-                    type="button"
-                  >
-                    +
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        <div className="flex items-center justify-between border-t border-slate-200 px-3 py-3">
-          <span className="text-sm font-semibold text-slate-700">Total</span>
-          <strong className="text-lg text-slate-950">
-            {moneyFormatter.format(totalInReais)}
-          </strong>
-        </div>
-      </div>
+      <CartItems
+        items={items}
+        onAddProduct={addProduct}
+        onDecrementProduct={decrementProduct}
+        totalInReais={totalInReais}
+      />
 
       <div className="sticky bottom-0 z-10 -mx-5 grid gap-3 border-t border-slate-200 bg-slate-50 p-5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sm:static sm:mx-0 sm:rounded-md sm:border sm:p-3 sm:shadow-none">
         <div className="grid gap-2">
@@ -289,30 +179,34 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         </div>
 
         <div className="grid gap-2">
-          <label
-            className="text-sm font-medium text-slate-700"
-            htmlFor="paymentMethod"
-          >
+          <p className="text-sm font-medium text-slate-700" id="paymentMethod">
             Forma de pagamento
-          </label>
-          <select
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-            id="paymentMethod"
-            onChange={(event) =>
-              setPaymentMethod(event.target.value as PaymentMethod)
-            }
-            value={paymentMethod}
+          </p>
+          <div
+            aria-labelledby="paymentMethod"
+            className="grid grid-cols-2 gap-2"
+            role="group"
           >
             {(
               Object.entries(paymentMethodLabels) as Array<
                 [PaymentMethod, string]
               >
             ).map(([value, label]) => (
-              <option key={value} value={value}>
+              <button
+                aria-pressed={paymentMethod === value}
+                className={
+                  paymentMethod === value
+                    ? "min-h-11 rounded-md border border-[#1e3275] bg-[#1e3275] px-3 text-sm font-semibold text-white transition"
+                    : "min-h-11 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                }
+                key={value}
+                onClick={() => setPaymentMethod(value)}
+                type="button"
+              >
                 {label}
-              </option>
+              </button>
             ))}
-          </select>
+          </div>
         </div>
 
         <div className="grid gap-2">
@@ -338,6 +232,31 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
               Para {paymentMethodLabels[paymentMethod].toLowerCase()}, o sistema
               registra o valor exato da venda.
             </p>
+          ) : null}
+          {paymentMethod === "cash" && hasCartItems ? (
+            <div className="flex flex-wrap gap-2">
+              <button
+                className="min-h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                onClick={() =>
+                  setReceivedAmountInput(formatBrlAmount(totalInReais))
+                }
+                type="button"
+              >
+                Valor exato
+              </button>
+              {[50, 100].map((amountInReais) => (
+                <button
+                  className="min-h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                  key={amountInReais}
+                  onClick={() =>
+                    setReceivedAmountInput(formatBrlAmount(amountInReais))
+                  }
+                  type="button"
+                >
+                  {moneyFormatter.format(amountInReais)}
+                </button>
+              ))}
+            </div>
           ) : null}
         </div>
 
@@ -371,14 +290,14 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
         </div>
 
         {state.successMessage ? (
-          <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-semibold text-emerald-700">
+          <InlineFeedback className="py-3 font-semibold" tone="success">
             {state.successMessage}
-          </p>
+          </InlineFeedback>
         ) : null}
         {state.formError ? (
-          <p className="rounded-md border border-red-200 bg-red-50 px-3 py-3 text-sm font-semibold text-red-700">
+          <InlineFeedback className="py-3 font-semibold" tone="error">
             {state.formError}
-          </p>
+          </InlineFeedback>
         ) : null}
 
         <button
@@ -389,7 +308,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
           {isPending ? "Finalizando..." : "Finalizar venda"}
         </button>
       </div>
-    </form>
+    </Panel>
   );
 
   function addProduct(product: PdvCartProduct) {
@@ -438,82 +357,11 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   }
 }
 
-type ProductListItemProps = {
-  onAdd: () => void;
-  product: PdvCartProduct;
-  quantityInCart: number;
-};
-
-function ProductListItem({
-  onAdd,
-  product,
-  quantityInCart,
-}: ProductListItemProps) {
-  const hasStock = product.quantityOnHand > 0;
-  const reachedStockLimit = quantityInCart >= product.quantityOnHand;
-
-  return (
-    <article className="grid gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
-      <div>
-        <h3 className="text-sm font-semibold text-slate-950">{product.name}</h3>
-        <p className="mt-1 text-sm text-slate-600">
-          {product.sku ?? "Sem SKU"} -{" "}
-          {moneyFormatter.format(product.priceInReais)}
-        </p>
-        <p className="mt-1 text-xs font-medium text-slate-500">
-          Estoque disponivel: {product.quantityOnHand}
-        </p>
-      </div>
-      <button
-        className="min-h-11 rounded-md bg-[#1e3275] px-3 text-sm font-semibold text-white transition hover:bg-[#17275c] disabled:bg-slate-300 disabled:text-slate-600"
-        disabled={!hasStock || reachedStockLimit}
-        onClick={onAdd}
-        type="button"
-      >
-        {!hasStock
-          ? "Sem estoque"
-          : reachedStockLimit
-            ? "Limite no carrinho"
-            : "Adicionar"}
-      </button>
-    </article>
-  );
-}
-
-function toSaleItems(items: CartItem[]) {
+function toSaleItems(items: PdvCartItem[]) {
   return items.map((item) => ({
     productId: item.id,
     quantity: item.quantity,
   }));
-}
-
-function filterProducts(
-  products: PdvCartProduct[],
-  searchTerm: string,
-): PdvCartProduct[] {
-  const normalizedSearchTerm = normalizeSearchTerm(searchTerm);
-
-  if (!normalizedSearchTerm) {
-    return products;
-  }
-
-  return products.filter((product) => {
-    const productName = normalizeSearchTerm(product.name);
-    const productSku = normalizeSearchTerm(product.sku ?? "");
-
-    return (
-      productName.includes(normalizedSearchTerm) ||
-      productSku.includes(normalizedSearchTerm)
-    );
-  });
-}
-
-function normalizeSearchTerm(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .trim()
-    .toLowerCase();
 }
 
 function parseBrlAmount(value: string): number {

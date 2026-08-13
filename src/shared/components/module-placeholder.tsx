@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { Panel } from "./panel";
+
 type ModulePlaceholderProps = {
   description: string;
   nextStep: string;
@@ -14,15 +16,15 @@ export function ModulePlaceholder({
   return (
     <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
       <section className="mx-auto grid w-full max-w-3xl gap-4">
-        <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+        <Panel as="header" padding="sm">
           <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
             Modulo
           </p>
           <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
-        </header>
+        </Panel>
 
-        <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+        <Panel>
           <p className="text-sm font-semibold text-slate-950">
             Em desenvolvimento
           </p>
@@ -41,7 +43,7 @@ export function ModulePlaceholder({
               Ver produtos
             </Link>
           </div>
-        </section>
+        </Panel>
       </section>
     </main>
   );

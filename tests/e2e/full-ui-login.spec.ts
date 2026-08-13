@@ -5,7 +5,7 @@ import { createBrowserClient } from "@supabase/ssr";
 
 const e2eUserEmail = process.env.E2E_USER_EMAIL;
 const e2eUserPassword = process.env.E2E_USER_PASSWORD;
-const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const e2eBaseUrl = process.env.E2E_BASE_URL?.trim() || "http://localhost:3000";
 const publicEnv = getPublicEnv();
 
 test.skip(
@@ -28,7 +28,9 @@ test("admin logs in through the UI and traverses main flows", async ({
   await page.getByLabel("Senha").fill(e2eUserPassword ?? "");
   await page.getByRole("button", { name: "Entrar" }).click();
 
-  await expect(page.getByRole("heading", { name: "PDV" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "PDV" }),
+  ).toBeVisible();
 
   await authenticatePage(page);
   await closeAllOpenCashSessions(page);

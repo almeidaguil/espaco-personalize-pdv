@@ -53,9 +53,13 @@ describe("StockMovementsOverview", () => {
     expect(screen.getAllByText("Caneca personalizada")).toHaveLength(4);
     expect(screen.getByText("7")).toBeInTheDocument();
     expect(screen.getByText("-3")).toBeInTheDocument();
-    expect(screen.getByText("Ajuste manual")).toBeInTheDocument();
-    expect(screen.getByText("Venda")).toBeInTheDocument();
-    expect(screen.getByText("Cancelamento de venda")).toBeInTheDocument();
+    expect(screen.getAllByText("Ajuste manual").length).toBeGreaterThanOrEqual(
+      1,
+    );
+    expect(screen.getAllByText("Venda").length).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getAllByText("Cancelamento de venda").length,
+    ).toBeGreaterThanOrEqual(1);
   });
 
   it("renders empty states", () => {
@@ -106,5 +110,73 @@ describe("StockMovementsOverview", () => {
     expect(
       screen.getByText("Mostrando 9-9 de 9 movimentacoes"),
     ).toBeInTheDocument();
+  });
+
+  it("filters balances by product label", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <StockMovementsOverview
+        balances={[
+          {
+            productId: "product-1",
+            productLabel: "Caneca personalizada (CANECA-001)",
+            quantityOnHand: 7,
+          },
+          {
+            productId: "product-2",
+            productLabel: "Chaveiro polvo (CHAVEIRO-001)",
+            quantityOnHand: 3,
+          },
+        ]}
+        movements={[]}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Buscar produto"), "cane");
+
+    expect(
+      screen.getByText("Caneca personalizada (CANECA-001)"),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByText("Chaveiro polvo (CHAVEIRO-001)"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("filters movement history by type", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <StockMovementsOverview
+        balances={[]}
+        movements={[
+          {
+            createdAt: new Date("2026-06-10T12:00:00.000Z"),
+            id: "movement-1",
+            productId: "product-1",
+            productLabel: "Caneca personalizada",
+            quantityChange: -1,
+            type: "sale",
+          },
+          {
+            createdAt: new Date("2026-06-10T13:00:00.000Z"),
+            id: "movement-2",
+            productId: "product-2",
+            productLabel: "Chaveiro polvo",
+            quantityChange: 5,
+            type: "manual_adjustment",
+          },
+        ]}
+      />,
+    );
+
+    await user.selectOptions(
+      screen.getByLabelText("Tipo de movimentacao"),
+      "sale",
+    );
+
+    expect(screen.getByText("Caneca personalizada")).toBeInTheDocument();
+    expect(screen.queryByText("Chaveiro polvo")).not.toBeInTheDocument();
+    expect(screen.getByText("1")).toBeInTheDocument();
   });
 });

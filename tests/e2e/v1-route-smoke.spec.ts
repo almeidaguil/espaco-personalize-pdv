@@ -48,9 +48,10 @@ test("legacy /sale route redirects to the sales screen", async ({ page }) => {
 });
 
 test("reports CSV endpoint responds with controlled validation", async ({
-  request,
+  page,
 }) => {
-  const response = await request.get("/reports/export");
+  await authenticatePage(page);
+  const response = await page.request.get("/reports/export");
 
   expect(response.status()).toBe(400);
   expect(await response.json()).toEqual({

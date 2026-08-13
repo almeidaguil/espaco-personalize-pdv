@@ -77,7 +77,7 @@ begin
     v_cash_session.opening_amount_in_cents + v_completed_sales_total_in_cents;
 
   if p_counted_amount_in_cents < v_expected_amount_in_cents
-    and coalesce(btrim(p_admin_password), '') <> '123456'
+    and not public.verify_admin_password(p_admin_password)
   then
     raise exception 'Admin password is required to close a cash session with shortage.';
   end if;

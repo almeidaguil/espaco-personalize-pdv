@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import {
   SupabaseCurrentUserProfileRepository,
@@ -27,6 +26,8 @@ import {
   SupabaseEventRepository,
   type SupabaseEventClient,
 } from "@/modules/events/infra/supabase-event-repository";
+import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -94,72 +95,55 @@ export default async function CloseCashPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-3xl gap-4">
-        <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap gap-3 text-sm font-semibold">
-            <Link
-              className="text-[#1e3275] transition hover:text-[#142456]"
-              href="/"
-            >
-              Painel
-            </Link>
-            <Link
-              className="text-[#1e3275] transition hover:text-[#142456]"
-              href="/cash/open"
-            >
-              Abrir caixa
-            </Link>
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-            Caixa
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold">Fechar caixa</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Encerre o caixa aberto ao final do turno para travar novas
-            movimentacoes nesse caixa.
-          </p>
-        </header>
+    <PageShell>
+      <PageHeader
+        backLinks={[
+          { href: "/", label: "Painel" },
+          { href: "/cash/open", label: "Abrir caixa" },
+        ]}
+        description="Encerre o caixa aberto ao final do turno para travar novas movimentacoes nesse caixa."
+        eyebrow="Caixa"
+        title="Fechar caixa"
+      />
 
-        {!cashSessionsResult.success ? (
-          <LoadErrorState
-            actions={[{ href: "/cash/close", label: "Tentar novamente" }]}
-            eyebrow="Erro"
-            message={
-              cashSessionsResult.formError ??
-              "Verifique sua conexao e tente carregar os caixas abertos novamente."
-            }
-            title="Nao foi possivel carregar os caixas abertos"
+      {!cashSessionsResult.success ? (
+        <LoadErrorState
+          actions={[{ href: "/cash/close", label: "Tentar novamente" }]}
+          eyebrow="Erro"
+          message={
+            cashSessionsResult.formError ??
+            "Verifique sua conexao e tente carregar os caixas abertos novamente."
+          }
+          title="Nao foi possivel carregar os caixas abertos"
+        />
+      ) : !closingSummariesResult.success ? (
+        <LoadErrorState
+          actions={[{ href: "/cash/close", label: "Tentar novamente" }]}
+          eyebrow="Erro"
+          message="A lista de caixas carregou, mas a conferencia financeira nao pode ser calculada agora."
+          title="Nao foi possivel calcular a conferencia do caixa."
+        />
+      ) : cashSessionsResult.sessions.length === 0 ? (
+        <EmptyState
+          actions={[
+            { href: "/cash/open", label: "Abrir caixa" },
+            { href: "/pdv", label: "Ir ao PDV", variant: "secondary" },
+          ]}
+          eyebrow="Sem caixa aberto"
+          message="Abra um caixa antes das vendas. Quando houver caixa aberto, ele aparecera aqui para conferencia e fechamento."
+          title="Nenhum caixa aberto disponivel para fechamento."
+        />
+      ) : (
+        <Panel>
+          <CloseCashSessionForm
+            action={closeCashSessionAction}
+            sessions={cashSessionsResult.sessions.map((session) =>
+              toCashSessionOption(session, eventNames, closingSummaries),
+            )}
           />
-        ) : !closingSummariesResult.success ? (
-          <LoadErrorState
-            actions={[{ href: "/cash/close", label: "Tentar novamente" }]}
-            eyebrow="Erro"
-            message="A lista de caixas carregou, mas a conferencia financeira nao pode ser calculada agora."
-            title="Nao foi possivel calcular a conferencia do caixa."
-          />
-        ) : cashSessionsResult.sessions.length === 0 ? (
-          <EmptyState
-            actions={[
-              { href: "/cash/open", label: "Abrir caixa" },
-              { href: "/pdv", label: "Ir ao PDV", variant: "secondary" },
-            ]}
-            eyebrow="Sem caixa aberto"
-            message="Abra um caixa antes das vendas. Quando houver caixa aberto, ele aparecera aqui para conferencia e fechamento."
-            title="Nenhum caixa aberto disponivel para fechamento."
-          />
-        ) : (
-          <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-            <CloseCashSessionForm
-              action={closeCashSessionAction}
-              sessions={cashSessionsResult.sessions.map((session) =>
-                toCashSessionOption(session, eventNames, closingSummaries),
-              )}
-            />
-          </section>
-        )}
-      </section>
-    </main>
+        </Panel>
+      )}
+    </PageShell>
   );
 }
 
