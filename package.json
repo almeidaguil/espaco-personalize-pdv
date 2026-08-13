@@ -14,6 +14,7 @@
     "lint": "eslint",
     "type-check": "node scripts/clean-next-dev-cache.mjs && tsc --noEmit",
     "test": "vitest run",
+    "e2e:seed-local": "node scripts/seed-local-e2e-user.mjs",
     "test:e2e": "playwright test",
     "test:e2e:readonly": "playwright test --config playwright.readonly.config.ts",
     "test:e2e:required": "node scripts/verify-e2e-env.mjs && playwright test",

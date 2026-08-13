@@ -80,9 +80,9 @@ necessarias para a etapa atual.
 - Studio local em `http://127.0.0.1:54323`.
 - Mailpit local em `http://127.0.0.1:54324`.
 - Banco PostgreSQL local na porta `54322`.
-- `db reset` validado com 18 migrations aplicadas em ordem.
-- Seed executado; atualmente o arquivo contem apenas um comentario e nao cria
-  dados iniciais.
+- `db reset` validado com 20 migrations aplicadas em ordem.
+- Seed SQL executado; o administrador E2E local e recriado separadamente pelo
+  comando seguro `npm run e2e:seed-local` depois de cada reset.
 - Nove tabelas publicas e quatro RPCs criticas confirmadas.
 - RLS habilitada em todas as tabelas publicas.
 - Lint do banco concluido sem erros.
@@ -141,6 +141,8 @@ necessarias para a etapa atual.
 
 - `.env.e2e.local` criado com as credenciais do administrador local e confirmado
   como ignorado pelo Git.
+- Bootstrap idempotente do administrador E2E local adicionado com bloqueio
+  explicito para qualquer URL de staging ou producao.
 - Verificador obrigatorio confirmou todas as variaveis E2E necessarias.
 - Testes sincronizados com a hidratacao das telas interativas e com os estados
   persistidos apos o fechamento do caixa.

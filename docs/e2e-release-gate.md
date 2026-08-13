@@ -47,8 +47,14 @@ $env:SUPABASE_SECRET_KEY="sua-chave-secreta"
 Depois execute:
 
 ```powershell
+npm.cmd run e2e:seed-local
 npm.cmd run test:e2e:required
 ```
+
+O comando `e2e:seed-local` cria ou atualiza o administrador E2E usando as
+credenciais locais. Ele recusa URLs que nao sejam `localhost` ou `127.0.0.1`,
+portanto nunca deve ser usado para preparar staging ou producao. Execute-o
+novamente depois de `supabase db reset`.
 
 Use `npm.cmd run test:e2e` apenas durante desenvolvimento local, quando aceitar que testes sejam pulados por falta de credenciais.
 
