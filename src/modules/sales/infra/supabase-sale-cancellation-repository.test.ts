@@ -39,7 +39,7 @@ describe("SupabaseSaleCancellationRepository", () => {
 
     await expect(
       repository.cancel({
-        adminPassword: "123456",
+        adminPassword: "admin-password-test",
         canceledAt: new Date("2026-07-10T15:00:00.000Z"),
         saleId: "sale-1",
       }),
@@ -49,7 +49,7 @@ describe("SupabaseSaleCancellationRepository", () => {
 
     expect(supabaseClient.functionName).toBe("cancel_sale");
     expect(supabaseClient.rpcArgs).toEqual({
-      p_admin_password: "123456",
+      p_admin_password: "admin-password-test",
       p_canceled_at: "2026-07-10T15:00:00.000Z",
       p_sale_id: "sale-1",
     });

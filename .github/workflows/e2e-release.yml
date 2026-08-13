@@ -1,12 +1,19 @@
 name: E2E Release Gate
 
 on:
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       base_url:
         description: "Optional deployed URL. Leave empty to run against the local Next.js server started by Playwright."
         required: false
         type: string
+
+concurrency:
+  group: e2e-staging
+  cancel-in-progress: false
 
 jobs:
   e2e:
@@ -15,6 +22,7 @@ jobs:
 
     env:
       E2E_BASE_URL: ${{ inputs.base_url }}
+      E2E_EXPECTED_SUPABASE_PROJECT_REF: gpywbeoqcovjrfnmbdqx
       E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
       E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
@@ -23,12 +31,12 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v5
+        uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
 
       - name: Install

@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 
+import { FieldError } from "@/shared/components/field-error";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+
 import type { StockAdjustmentActionState } from "./stock-adjustment-action-state";
 
 const initialState: StockAdjustmentActionState = {};
@@ -25,6 +28,7 @@ export function StockAdjustmentForm({
 }: StockAdjustmentFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
   const hasProducts = products.length > 0;
+  const errors = state.fieldErrors;
 
   return (
     <form action={formAction} className="grid gap-4" noValidate>
@@ -36,7 +40,9 @@ export function StockAdjustmentForm({
           Produto
         </label>
         <select
-          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          aria-describedby={errors?.productId ? "productId-error" : undefined}
+          aria-invalid={errors?.productId ? true : undefined}
+          className="h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           disabled={!hasProducts}
           id="productId"
           name="productId"
@@ -50,12 +56,16 @@ export function StockAdjustmentForm({
             </option>
           ))}
         </select>
-        {state.fieldErrors?.productId ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.productId}</p>
+        {errors?.productId ? (
+          <FieldError id="productId-error">{errors.productId}</FieldError>
         ) : null}
       </div>
 
-      <fieldset className="grid gap-2">
+      <fieldset
+        aria-describedby={errors?.type ? "type-error" : undefined}
+        aria-invalid={errors?.type ? true : undefined}
+        className="grid gap-2"
+      >
         <legend className="text-sm font-medium text-slate-700">
           Tipo de ajuste
         </legend>
@@ -86,8 +96,8 @@ export function StockAdjustmentForm({
             </span>
           </label>
         </div>
-        {state.fieldErrors?.type ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.type}</p>
+        {errors?.type ? (
+          <FieldError id="type-error">{errors.type}</FieldError>
         ) : null}
       </fieldset>
 
@@ -99,28 +109,26 @@ export function StockAdjustmentForm({
           Quantidade
         </label>
         <input
-          className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+          aria-describedby={errors?.quantity ? "quantity-error" : undefined}
+          aria-invalid={errors?.quantity ? true : undefined}
+          className="h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           id="quantity"
           inputMode="numeric"
           name="quantity"
           placeholder="10"
           type="number"
         />
-        {state.fieldErrors?.quantity ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.quantity}</p>
+        {errors?.quantity ? (
+          <FieldError id="quantity-error">{errors.quantity}</FieldError>
         ) : null}
       </div>
 
       {state.formError ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {state.formError}
-        </p>
+        <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
 
       {state.successMessage ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {state.successMessage}
-        </p>
+        <InlineFeedback tone="success">{state.successMessage}</InlineFeedback>
       ) : null}
 
       <button

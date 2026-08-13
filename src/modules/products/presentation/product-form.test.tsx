@@ -1,18 +1,26 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProductForm } from "./product-form";
+
+const actionState = vi.hoisted(() => ({
+  current: {},
+}));
 
 vi.mock("react", async () => {
   const actual = await vi.importActual<typeof import("react")>("react");
 
   return {
     ...actual,
-    useActionState: () => [{}, vi.fn(), false],
+    useActionState: () => [actionState.current, vi.fn(), false],
   };
 });
 
 describe("ProductForm", () => {
+  beforeEach(() => {
+    actionState.current = {};
+  });
+
   it("renders product creation fields and submit button", () => {
     render(<ProductForm action={vi.fn()} />);
 
@@ -46,5 +54,38 @@ describe("ProductForm", () => {
       screen.getByRole("button", { name: "Salvar alteracoes" }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText("Produto ativo")).not.toBeChecked();
+  });
+
+  it("associates validation errors with their fields", () => {
+    actionState.current = {
+      fieldErrors: {
+        name: "Informe o nome do produto.",
+        priceInReais: "Informe um preco valido.",
+        sku: "Informe o SKU.",
+      },
+    };
+
+    render(<ProductForm action={vi.fn()} />);
+
+    expect(screen.getByLabelText("Nome do produto")).toHaveAttribute(
+      "aria-describedby",
+      "name-error",
+    );
+    expect(screen.getByLabelText("Nome do produto")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(screen.getByText("Informe o nome do produto.")).toHaveAttribute(
+      "id",
+      "name-error",
+    );
+    expect(screen.getByRole("textbox", { name: /^Pre/ })).toHaveAttribute(
+      "aria-describedby",
+      "priceInReais-error",
+    );
+    expect(screen.getByLabelText("SKU")).toHaveAttribute(
+      "aria-describedby",
+      "sku-error",
+    );
   });
 });

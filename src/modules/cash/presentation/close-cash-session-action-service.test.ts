@@ -69,7 +69,7 @@ describe("closeCashSessionActionService", () => {
       createFormData({
         cashSessionId: "cash-session-1",
         countedAmountInReais: "260,75",
-        adminPassword: "123456",
+        adminPassword: "admin-password-test",
       }),
       {
         cashSessionRepository,
@@ -89,7 +89,7 @@ describe("closeCashSessionActionService", () => {
       status: "closed",
     });
     expect(cashSessionRepository.updateOptions).toEqual({
-      adminPassword: "123456",
+      adminPassword: "admin-password-test",
     });
   });
 

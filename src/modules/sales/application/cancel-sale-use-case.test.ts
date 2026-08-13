@@ -52,7 +52,7 @@ describe("cancelSaleUseCase", () => {
 
     const result = await cancelSaleUseCase(
       {
-        adminPassword: "123456",
+        adminPassword: "admin-password-test",
         saleId: " sale-1 ",
       },
       {
@@ -68,7 +68,7 @@ describe("cancelSaleUseCase", () => {
     });
     expect(saleDetailRepository.receivedId).toBe("sale-1");
     expect(saleCancellationRepository.receivedInput).toEqual({
-      adminPassword: "123456",
+      adminPassword: "admin-password-test",
       canceledAt: new Date("2026-07-10T15:00:00.000Z"),
       saleId: "sale-1",
     });

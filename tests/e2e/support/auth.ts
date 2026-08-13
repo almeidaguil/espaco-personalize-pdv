@@ -4,7 +4,7 @@ import { expect, type Page } from "@playwright/test";
 import { createBrowserClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 
-const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const e2eBaseUrl = process.env.E2E_BASE_URL?.trim() || "http://localhost:3000";
 
 export function hasAuthenticatedE2EConfig() {
   const publicEnv = getPublicEnv();

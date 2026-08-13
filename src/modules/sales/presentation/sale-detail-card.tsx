@@ -1,3 +1,5 @@
+import { Panel } from "@/shared/components/panel";
+
 import type { SaleDetail } from "../application/sale-detail-repository";
 
 type SaleDetailCardProps = {
@@ -16,7 +18,7 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 
 export function SaleDetailCard({ sale }: SaleDetailCardProps) {
   return (
-    <section className="grid gap-4 rounded-md border border-slate-200 bg-white p-5 shadow-sm">
+    <Panel className="grid gap-4">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
@@ -77,7 +79,7 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
           </strong>
         </div>
       </div>
-    </section>
+    </Panel>
   );
 }
 

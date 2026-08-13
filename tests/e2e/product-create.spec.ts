@@ -5,7 +5,7 @@ import { expect, type Page, test } from "@playwright/test";
 
 const e2eUserEmail = process.env.E2E_USER_EMAIL;
 const e2eUserPassword = process.env.E2E_USER_PASSWORD;
-const e2eBaseUrl = process.env.E2E_BASE_URL ?? "http://localhost:3000";
+const e2eBaseUrl = process.env.E2E_BASE_URL?.trim() || "http://localhost:3000";
 const publicEnv = getPublicEnv();
 
 test.skip(
@@ -34,6 +34,7 @@ test("admin creates a product and sees it in the products list", async ({
   await expect(page.getByText("Produto cadastrado com sucesso.")).toBeVisible();
 
   await page.goto("/products");
+  await page.getByLabel("Buscar produto").fill(productName);
 
   const productCard = page
     .getByRole("listitem")

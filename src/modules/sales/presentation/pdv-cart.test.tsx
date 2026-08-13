@@ -92,6 +92,35 @@ describe("PdvCart", () => {
     ).toBeEnabled();
   });
 
+  it("fills received amount from cash shortcuts", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInReais: 15,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.click(screen.getByRole("button", { name: "Valor exato" }));
+
+    expect(screen.getByDisplayValue("15,00")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /R\$\s*50,00/ }));
+
+    expect(screen.getByDisplayValue("50,00")).toBeInTheDocument();
+    expect(screen.getByText("Troco R$ 35,00")).toBeInTheDocument();
+  });
+
   it("shows the missing amount when cash payment is insufficient", async () => {
     const user = userEvent.setup();
 
@@ -236,6 +265,47 @@ describe("PdvCart", () => {
     );
   });
 
+  it("clears the cart and payment after a successful sale", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        cashSessions={createCashSessions()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInReais: 15,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.click(screen.getByRole("button", { name: "Pix" }));
+    await user.click(screen.getByRole("button", { name: "Finalizar venda" }));
+
+    expect(
+      await screen.findByText("Venda finalizada com sucesso."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Nenhum item adicionado.")).toBeInTheDocument();
+    expect(screen.queryByText("1 x R$ 15,00")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Valor recebido")).toHaveAttribute(
+      "name",
+      "amountReceivedInReais",
+    );
+    expect(screen.getByLabelText("Valor recebido")).toHaveValue("");
+    expect(screen.getByRole("button", { name: "Dinheiro" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(
+      screen.getByRole("button", { name: "Finalizar venda" }),
+    ).toBeDisabled();
+  });
+
   it("supports non-cash payment methods", async () => {
     const user = userEvent.setup();
 
@@ -255,13 +325,14 @@ describe("PdvCart", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
-    await user.selectOptions(
-      screen.getByLabelText("Forma de pagamento"),
-      "pix",
-    );
+    await user.click(screen.getByRole("button", { name: "Pix" }));
 
     expect(screen.getByDisplayValue("15,00")).toBeInTheDocument();
     expect(screen.getByText("Pix no valor de R$ 15,00")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Pix" })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
     expect(
       screen.getByRole("button", { name: "Finalizar venda" }),
     ).toBeEnabled();

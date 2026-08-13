@@ -75,8 +75,41 @@ describe("CloseCashSessionForm", () => {
 
     await user.type(screen.getByLabelText("Valor contado no caixa"), "200,00");
 
+    expect(screen.getByText("Diferenca: faltam R$ 50,50")).toBeInTheDocument();
     expect(screen.getByText("Faltam R$ 50,50 no caixa.")).toBeInTheDocument();
     expect(screen.getByLabelText("Senha administrativa")).toBeInTheDocument();
+  });
+
+  it("shows positive and balanced cash differences", async () => {
+    const user = userEvent.setup();
+    mockActionState({});
+
+    render(
+      <CloseCashSessionForm
+        action={vi.fn()}
+        sessions={[
+          {
+            canceledSalesCount: 0,
+            canceledSalesTotalInReais: 0,
+            completedSalesCount: 2,
+            completedSalesTotalInReais: 100,
+            expectedAmountInReais: 250.5,
+            id: "cash-session-1",
+            label: "Evento Julho",
+            openingAmountInReais: 150.5,
+          },
+        ]}
+      />,
+    );
+
+    await user.type(screen.getByLabelText("Valor contado no caixa"), "250,50");
+
+    expect(screen.getByText("Diferenca: sem divergencia")).toBeInTheDocument();
+
+    await user.clear(screen.getByLabelText("Valor contado no caixa"));
+    await user.type(screen.getByLabelText("Valor contado no caixa"), "300,50");
+
+    expect(screen.getByText("Diferenca: sobram R$ 50,00")).toBeInTheDocument();
   });
 
   it("renders field errors and success messages", () => {
@@ -110,6 +143,17 @@ describe("CloseCashSessionForm", () => {
     expect(
       screen.getByText("Informe o valor contado em Reais."),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText("Valor contado no caixa")).toHaveAttribute(
+      "aria-describedby",
+      "countedAmountInReais-error-cash-session-1",
+    );
+    expect(screen.getByLabelText("Valor contado no caixa")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    expect(
+      screen.getByText("Informe o caixa aberto.").closest("form"),
+    ).toHaveAttribute("aria-describedby", "cashSessionId-error-cash-session-1");
     expect(screen.getByText("Caixa fechado com sucesso.")).toBeInTheDocument();
   });
 });

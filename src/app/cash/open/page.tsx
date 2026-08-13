@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { listActiveEventsUseCase } from "@/modules/events/application/list-active-events-use-case";
 import type { Event } from "@/modules/events/domain/event";
@@ -12,6 +11,8 @@ import {
   OpenCashSessionForm,
   type OpenCashSessionEventOption,
 } from "@/modules/cash/presentation/open-cash-session-form";
+import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { Panel } from "@/shared/components/panel";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -33,62 +34,46 @@ export default async function OpenCashPage() {
   const result = await listActiveEventsUseCase({ eventRepository });
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-md gap-4">
-        <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 flex flex-wrap gap-3 text-sm font-semibold">
-            <Link
-              className="text-[#1e3275] transition hover:text-[#142456]"
-              href="/"
-            >
-              Painel
-            </Link>
-            <Link
-              className="text-[#1e3275] transition hover:text-[#142456]"
-              href="/pdv"
-            >
-              PDV
-            </Link>
-          </div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-            Caixa
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold">Abrir caixa</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Abra um caixa por evento antes de iniciar as vendas presenciais.
-          </p>
-        </header>
+    <PageShell maxWidth="sm">
+      <PageHeader
+        backLinks={[
+          { href: "/", label: "Painel" },
+          { href: "/pdv", label: "PDV" },
+        ]}
+        description="Abra um caixa por evento antes de iniciar as vendas presenciais."
+        eyebrow="Caixa"
+        title="Abrir caixa"
+      />
 
-        {!result.success ? (
-          <LoadErrorState
-            actions={[{ href: "/cash/open", label: "Tentar novamente" }]}
-            eyebrow="Erro"
-            message={
-              result.formError ??
-              "Verifique sua conexao e tente carregar os eventos ativos novamente."
-            }
-            title="Nao foi possivel carregar eventos ativos"
+      {!result.success ? (
+        <LoadErrorState
+          actions={[{ href: "/cash/open", label: "Tentar novamente" }]}
+          eyebrow="Erro"
+          message={
+            result.formError ??
+            "Verifique sua conexao e tente carregar os eventos ativos novamente."
+          }
+          title="Nao foi possivel carregar eventos ativos"
+        />
+      ) : result.events.length === 0 ? (
+        <EmptyState
+          actions={[
+            { href: "/events/new", label: "Criar evento" },
+            { href: "/events", label: "Ver eventos", variant: "secondary" },
+          ]}
+          eyebrow="Sem evento ativo"
+          message="O caixa sempre precisa estar vinculado a um evento ativo."
+          title="Nenhum evento ativo disponivel para abertura de caixa."
+        />
+      ) : (
+        <Panel>
+          <OpenCashSessionForm
+            action={openCashSessionAction}
+            events={result.events.map(toEventOption)}
           />
-        ) : result.events.length === 0 ? (
-          <EmptyState
-            actions={[
-              { href: "/events/new", label: "Criar evento" },
-              { href: "/events", label: "Ver eventos", variant: "secondary" },
-            ]}
-            eyebrow="Sem evento ativo"
-            message="O caixa sempre precisa estar vinculado a um evento ativo."
-            title="Nenhum evento ativo disponivel para abertura de caixa."
-          />
-        ) : (
-          <section className="rounded-md border border-slate-200 bg-white p-5 shadow-sm">
-            <OpenCashSessionForm
-              action={openCashSessionAction}
-              events={result.events.map(toEventOption)}
-            />
-          </section>
-        )}
-      </section>
-    </main>
+        </Panel>
+      )}
+    </PageShell>
   );
 }
 

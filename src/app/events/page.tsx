@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import { listEventsUseCase } from "@/modules/events/application/list-events-use-case";
 import type { Event } from "@/modules/events/domain/event";
@@ -12,6 +11,7 @@ import {
   type EventListItem,
 } from "@/modules/events/presentation/event-list";
 import { closeEventAction } from "@/modules/events/presentation/close-event-action";
+import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -33,60 +33,38 @@ export default async function EventsPage() {
   const result = await listEventsUseCase({ eventRepository });
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-3xl gap-4">
-        <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <Link
-            className="mb-3 inline-flex text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
-            href="/"
-          >
-            Voltar ao painel
-          </Link>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-                Operacao
-              </p>
-              <h1 className="mt-1 text-2xl font-semibold">Eventos</h1>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                Consulte os eventos presenciais usados para organizar vendas e
-                caixa.
-              </p>
-            </div>
-            <Link
-              className="rounded-md bg-[#f5c313] px-3 py-2 text-sm font-semibold text-[#1e3275] transition hover:bg-[#e7b80f]"
-              href="/events/new"
-            >
-              Novo evento
-            </Link>
-          </div>
-        </header>
+    <PageShell>
+      <PageHeader
+        actions={[{ href: "/events/new", label: "Novo evento" }]}
+        description="Consulte os eventos presenciais usados para organizar vendas e caixa."
+        eyebrow="Operacao"
+        title="Eventos"
+      />
 
-        {!result.success ? (
-          <LoadErrorState
-            actions={[{ href: "/events", label: "Tentar novamente" }]}
-            eyebrow="Erro"
-            message={
-              result.formError ??
-              "Verifique sua conexao e tente carregar os eventos novamente."
-            }
-            title="Nao foi possivel carregar os eventos"
-          />
-        ) : result.events.length === 0 ? (
-          <EmptyState
-            actions={[{ href: "/events/new", label: "Criar evento" }]}
-            eyebrow="Sem eventos"
-            message="Crie um evento ativo para abrir caixa e registrar vendas."
-            title="Nenhum evento cadastrado ainda."
-          />
-        ) : (
-          <EventList
-            action={closeEventAction}
-            events={result.events.map(toEventListItem)}
-          />
-        )}
-      </section>
-    </main>
+      {!result.success ? (
+        <LoadErrorState
+          actions={[{ href: "/events", label: "Tentar novamente" }]}
+          eyebrow="Erro"
+          message={
+            result.formError ??
+            "Verifique sua conexao e tente carregar os eventos novamente."
+          }
+          title="Nao foi possivel carregar os eventos"
+        />
+      ) : result.events.length === 0 ? (
+        <EmptyState
+          actions={[{ href: "/events/new", label: "Criar evento" }]}
+          eyebrow="Sem eventos"
+          message="Crie um evento ativo para abrir caixa e registrar vendas."
+          title="Nenhum evento cadastrado ainda."
+        />
+      ) : (
+        <EventList
+          action={closeEventAction}
+          events={result.events.map(toEventListItem)}
+        />
+      )}
+    </PageShell>
   );
 }
 

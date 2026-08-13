@@ -217,8 +217,9 @@ web3 = 30
 # secret = ""
 
 [auth.email]
-# Allow/disallow new user signups via email to your project.
-enable_signup = false
+# Keep public signups blocked by auth.enable_signup while allowing existing
+# users created by an administrator to authenticate with email and password.
+enable_signup = true
 # If enabled, a user will be required to confirm any email change on both the old, and new email
 # addresses. If disabled, only the new email is required to confirm.
 double_confirm_changes = true
@@ -266,7 +267,7 @@ max_frequency = "5s"
 
 # Use pre-defined map of phone number to OTP for testing.
 # [auth.sms.test_otp]
-# 4152127777 = "123456"
+# 4152127777 = "000000"
 
 # Configure logged in session timeouts.
 # [auth.sessions]

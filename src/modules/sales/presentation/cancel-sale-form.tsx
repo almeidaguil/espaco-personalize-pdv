@@ -2,6 +2,9 @@
 
 import { useActionState, useState } from "react";
 
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+import { Panel } from "@/shared/components/panel";
+
 import type { CancelSaleActionState } from "./cancel-sale-action-state";
 
 const initialState: CancelSaleActionState = {};
@@ -25,7 +28,7 @@ export function CancelSaleForm({
   const isSubmitDisabled = isPending || isCanceled || !isConfirmed;
 
   return (
-    <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+    <Panel padding="sm">
       <div className="grid gap-2">
         <h2 className="text-base font-semibold text-slate-950">Cancelamento</h2>
         <p className="text-sm leading-6 text-slate-600">
@@ -36,15 +39,15 @@ export function CancelSaleForm({
       </div>
 
       {state.formError ? (
-        <p className="mt-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <InlineFeedback className="mt-4" tone="error">
           {state.formError}
-        </p>
+        </InlineFeedback>
       ) : null}
 
       {state.successMessage ? (
-        <p className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+        <InlineFeedback className="mt-4" tone="success">
           {state.successMessage}
-        </p>
+        </InlineFeedback>
       ) : null}
 
       <form action={formAction} className="mt-4" noValidate>
@@ -91,6 +94,6 @@ export function CancelSaleForm({
               : "Cancelar venda"}
         </button>
       </form>
-    </section>
+    </Panel>
   );
 }

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 
 import {
   SupabaseCurrentUserProfileRepository,
@@ -42,6 +41,7 @@ import {
   type SupabaseStockMovementClient,
 } from "@/modules/stock/infra/supabase-stock-movement-repository";
 import { createSaleAction } from "@/modules/sales/presentation/create-sale-action";
+import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
@@ -109,102 +109,86 @@ export default async function PdvPage() {
   );
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
-      <section className="mx-auto grid w-full max-w-3xl gap-4">
-        <header className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
-          <Link
-            className="mb-3 inline-flex text-sm font-semibold text-[#1e3275] transition hover:text-[#142456]"
-            href="/"
-          >
-            Voltar ao painel
-          </Link>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-            Vendas
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold">PDV</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">
-            Venda rapidamente no evento ativo usando produtos, caixa aberto,
-            forma de pagamento registrada e troco calculado quando a venda for
-            em dinheiro.
-          </p>
-        </header>
+    <PageShell>
+      <PageHeader
+        description="Venda rapidamente no evento ativo usando produtos, caixa aberto, forma de pagamento registrada e troco calculado quando a venda for em dinheiro."
+        eyebrow="Vendas"
+        title="PDV"
+      />
 
-        {!eventsResult.success ? (
-          <LoadErrorState
-            actions={[{ href: "/pdv", label: "Tentar novamente" }]}
-            eyebrow="Erro"
-            message={
-              eventsResult.formError ??
-              "Verifique sua conexao e tente carregar o evento ativo novamente."
-            }
-            title="Nao foi possivel carregar o evento ativo"
-          />
-        ) : eventsResult.events.length === 0 ? (
-          <EmptyState
-            actions={[
-              { href: "/events/new", label: "Criar evento" },
-              { href: "/events", label: "Ver eventos", variant: "secondary" },
-            ]}
-            eyebrow="Sem evento ativo"
-            message="Ative ou crie um evento antes de iniciar vendas no PDV."
-            title="Nenhum evento ativo disponivel para venda."
-          />
-        ) : (
-          <>
-            {!cashSessionsResult.success ? (
-              <LoadErrorState
-                actions={[{ href: "/pdv", label: "Tentar novamente" }]}
-                eyebrow="Erro"
-                message={
-                  cashSessionsResult.formError ??
-                  "Verifique sua conexao e tente carregar os caixas abertos novamente."
-                }
-                title="Nao foi possivel carregar os caixas abertos"
-              />
-            ) : (
-              <PdvCashStatus
-                sessions={cashSessionsResult.sessions.map((session) =>
-                  toPdvCashStatusItem(session, eventNames),
-                )}
-              />
-            )}
-            <PdvEventSelector
-              events={eventsResult.events.map(toPdvEventItem)}
+      {!eventsResult.success ? (
+        <LoadErrorState
+          actions={[{ href: "/pdv", label: "Tentar novamente" }]}
+          eyebrow="Erro"
+          message={
+            eventsResult.formError ??
+            "Verifique sua conexao e tente carregar o evento ativo novamente."
+          }
+          title="Nao foi possivel carregar o evento ativo"
+        />
+      ) : eventsResult.events.length === 0 ? (
+        <EmptyState
+          actions={[
+            { href: "/events/new", label: "Criar evento" },
+            { href: "/events", label: "Ver eventos", variant: "secondary" },
+          ]}
+          eyebrow="Sem evento ativo"
+          message="Ative ou crie um evento antes de iniciar vendas no PDV."
+          title="Nenhum evento ativo disponivel para venda."
+        />
+      ) : (
+        <>
+          {!cashSessionsResult.success ? (
+            <LoadErrorState
+              actions={[{ href: "/pdv", label: "Tentar novamente" }]}
+              eyebrow="Erro"
+              message={
+                cashSessionsResult.formError ??
+                "Verifique sua conexao e tente carregar os caixas abertos novamente."
+              }
+              title="Nao foi possivel carregar os caixas abertos"
             />
-            {!productsResult.success ? (
-              <LoadErrorState
-                actions={[{ href: "/pdv", label: "Tentar novamente" }]}
-                eyebrow="Erro"
-                message={
-                  productsResult.formError ??
-                  "Verifique sua conexao e tente carregar os produtos novamente."
-                }
-                title="Nao foi possivel carregar os produtos"
-              />
-            ) : (
-              <PdvCart
-                action={createSaleAction}
-                cashSessions={
-                  cashSessionsResult.success
-                    ? cashSessionsResult.sessions.map((session) =>
-                        toPdvCartCashSession(session, eventNames),
-                      )
-                    : []
-                }
-                products={productsResult.products
-                  .filter((product) => product.isActive)
-                  .map((product) =>
-                    toPdvCartProduct(
-                      product,
-                      stockQuantitiesByProductId.get(product.id) ?? 0,
-                    ),
-                  )}
-              />
-            )}
-          </>
-        )}
-      </section>
-    </main>
+          ) : (
+            <PdvCashStatus
+              sessions={cashSessionsResult.sessions.map((session) =>
+                toPdvCashStatusItem(session, eventNames),
+              )}
+            />
+          )}
+          <PdvEventSelector events={eventsResult.events.map(toPdvEventItem)} />
+          {!productsResult.success ? (
+            <LoadErrorState
+              actions={[{ href: "/pdv", label: "Tentar novamente" }]}
+              eyebrow="Erro"
+              message={
+                productsResult.formError ??
+                "Verifique sua conexao e tente carregar os produtos novamente."
+              }
+              title="Nao foi possivel carregar os produtos"
+            />
+          ) : (
+            <PdvCart
+              action={createSaleAction}
+              cashSessions={
+                cashSessionsResult.success
+                  ? cashSessionsResult.sessions.map((session) =>
+                      toPdvCartCashSession(session, eventNames),
+                    )
+                  : []
+              }
+              products={productsResult.products
+                .filter((product) => product.isActive)
+                .map((product) =>
+                  toPdvCartProduct(
+                    product,
+                    stockQuantitiesByProductId.get(product.id) ?? 0,
+                  ),
+                )}
+            />
+          )}
+        </>
+      )}
+    </PageShell>
   );
 }
 

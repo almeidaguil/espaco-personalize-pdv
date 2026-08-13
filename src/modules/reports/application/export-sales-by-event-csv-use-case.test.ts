@@ -20,12 +20,36 @@ describe("exportSalesByEventCsvUseCase", () => {
             quantity: 2,
           },
         ],
+        paymentSummary: [
+          {
+            method: "cash",
+            netTotalInReais: 30,
+            salesCount: 1,
+          },
+          {
+            method: "pix",
+            netTotalInReais: 15,
+            salesCount: 1,
+          },
+          {
+            method: "credit_card",
+            netTotalInReais: 0,
+            salesCount: 0,
+          },
+          {
+            method: "debit_card",
+            netTotalInReais: 0,
+            salesCount: 0,
+          },
+        ],
       },
     });
 
     expect(result.filename).toBe("relatorio-evento-julho.csv");
     expect(result.mimeType).toBe("text/csv; charset=utf-8");
     expect(result.content).toContain("Resumo;Vendas concluidas;2;45,00");
+    expect(result.content).toContain("Pagamento;Dinheiro;1;30,00");
+    expect(result.content).toContain("Pagamento;Pix;1;15,00");
     expect(result.content).toContain('Produto;"Chaveiro ""Polvo""";2;30,00');
   });
 });

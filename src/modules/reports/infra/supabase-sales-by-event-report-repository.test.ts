@@ -18,6 +18,13 @@ describe("SupabaseSalesByEventReportRepository", () => {
       data: [
         {
           id: "sale-1",
+          payments: [
+            {
+              amount_in_cents: 5000,
+              change_in_cents: 2000,
+              method: "cash",
+            },
+          ],
           sale_items: [
             {
               product_id: "product-1",
@@ -31,6 +38,13 @@ describe("SupabaseSalesByEventReportRepository", () => {
         },
         {
           id: "sale-2",
+          payments: [
+            {
+              amount_in_cents: 1500,
+              change_in_cents: 0,
+              method: "pix",
+            },
+          ],
           sale_items: [
             {
               product_id: "product-1",
@@ -44,6 +58,13 @@ describe("SupabaseSalesByEventReportRepository", () => {
         },
         {
           id: "sale-3",
+          payments: [
+            {
+              amount_in_cents: 1500,
+              change_in_cents: 0,
+              method: "cash",
+            },
+          ],
           sale_items: [
             {
               product_id: "product-1",
@@ -94,6 +115,28 @@ describe("SupabaseSalesByEventReportRepository", () => {
             productId: "product-1",
             productName: "Chaveiro Polvo",
             quantity: 3,
+          },
+        ],
+        paymentSummary: [
+          {
+            method: "cash",
+            netTotalInReais: 30,
+            salesCount: 1,
+          },
+          {
+            method: "pix",
+            netTotalInReais: 15,
+            salesCount: 1,
+          },
+          {
+            method: "credit_card",
+            netTotalInReais: 0,
+            salesCount: 0,
+          },
+          {
+            method: "debit_card",
+            netTotalInReais: 0,
+            salesCount: 0,
           },
         ],
       },

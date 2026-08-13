@@ -2,7 +2,12 @@
 
 import { useMemo, useState } from "react";
 
+import { PaginationControls } from "@/shared/components/pagination-controls";
+import { Panel } from "@/shared/components/panel";
 import { EmptyState } from "@/shared/components/status-state";
+import { DEFAULT_PAGE_SIZE } from "@/shared/types/pagination";
+import { paginateItems } from "@/shared/utils/pagination";
+import { normalizeSearchTerm } from "@/shared/utils/search";
 
 import { ProductList, type ProductListItem } from "./product-list";
 
@@ -12,15 +17,21 @@ type ProductCatalogProps = {
 
 export function ProductCatalog({ products }: ProductCatalogProps) {
   const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const filteredProducts = useMemo(
     () => filterProducts(products, searchTerm),
     [products, searchTerm],
   );
+  const paginatedProducts = paginateItems(filteredProducts, {
+    currentPage,
+    pageSize: DEFAULT_PAGE_SIZE,
+  });
+  const visibleProducts = paginatedProducts.items;
 
   return (
     <div className="grid gap-4">
-      <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+      <Panel padding="sm">
         <div className="grid gap-2">
           <label
             className="text-sm font-medium text-slate-700"
@@ -32,7 +43,10 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
             autoComplete="off"
             className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
             id="product-search"
-            onChange={(event) => setSearchTerm(event.target.value)}
+            onChange={(event) => {
+              setSearchTerm(event.target.value);
+              setCurrentPage(1);
+            }}
             placeholder="Busque por nome ou SKU"
             type="search"
             value={searchTerm}
@@ -41,7 +55,7 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
             {filteredProducts.length} produto(s) encontrado(s)
           </p>
         </div>
-      </section>
+      </Panel>
 
       {filteredProducts.length === 0 ? (
         <EmptyState
@@ -50,7 +64,16 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
           title="Nenhum produto encontrado para a busca informada."
         />
       ) : (
-        <ProductList products={filteredProducts} />
+        <section>
+          <ProductList products={visibleProducts} />
+          <PaginationControls
+            currentPage={paginatedProducts.currentPage}
+            itemLabel="produtos"
+            onPageChange={setCurrentPage}
+            pageSize={paginatedProducts.pageSize}
+            totalItems={paginatedProducts.totalItems}
+          />
+        </section>
       )}
     </div>
   );
@@ -75,12 +98,4 @@ function filterProducts(
       normalizedSku.includes(normalizedSearchTerm)
     );
   });
-}
-
-function normalizeSearchTerm(value: string): string {
-  return value
-    .normalize("NFD")
-    .replace(/\p{Diacritic}/gu, "")
-    .trim()
-    .toLowerCase();
 }

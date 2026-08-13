@@ -2,6 +2,9 @@
 
 import { useActionState } from "react";
 
+import { FieldError } from "@/shared/components/field-error";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+
 import type { CashSessionActionState } from "./cash-session-action-state";
 
 const initialState: CashSessionActionState = {};
@@ -24,6 +27,7 @@ export function OpenCashSessionForm({
   events,
 }: OpenCashSessionFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const errors = state.fieldErrors;
 
   return (
     <form action={formAction} className="grid gap-4" noValidate>
@@ -32,6 +36,8 @@ export function OpenCashSessionForm({
           Evento
         </label>
         <select
+          aria-describedby={errors?.eventId ? "eventId-error" : undefined}
+          aria-invalid={errors?.eventId ? true : undefined}
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           defaultValue=""
           id="eventId"
@@ -46,8 +52,8 @@ export function OpenCashSessionForm({
             </option>
           ))}
         </select>
-        {state.fieldErrors?.eventId ? (
-          <p className="text-sm text-red-700">{state.fieldErrors.eventId}</p>
+        {errors?.eventId ? (
+          <FieldError id="eventId-error">{errors.eventId}</FieldError>
         ) : null}
       </div>
 
@@ -59,6 +65,12 @@ export function OpenCashSessionForm({
           Valor inicial
         </label>
         <input
+          aria-describedby={
+            errors?.openingAmountInReais
+              ? "openingAmountInReais-error"
+              : undefined
+          }
+          aria-invalid={errors?.openingAmountInReais ? true : undefined}
           className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
           id="openingAmountInReais"
           inputMode="decimal"
@@ -66,23 +78,19 @@ export function OpenCashSessionForm({
           placeholder="150,00"
           type="text"
         />
-        {state.fieldErrors?.openingAmountInReais ? (
-          <p className="text-sm text-red-700">
-            {state.fieldErrors.openingAmountInReais}
-          </p>
+        {errors?.openingAmountInReais ? (
+          <FieldError id="openingAmountInReais-error">
+            {errors.openingAmountInReais}
+          </FieldError>
         ) : null}
       </div>
 
       {state.formError ? (
-        <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {state.formError}
-        </p>
+        <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
 
       {state.successMessage ? (
-        <p className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
-          {state.successMessage}
-        </p>
+        <InlineFeedback tone="success">{state.successMessage}</InlineFeedback>
       ) : null}
 
       <button

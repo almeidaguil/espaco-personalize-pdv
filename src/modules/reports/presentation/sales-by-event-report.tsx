@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
 
 import type { Event } from "@/modules/events/domain/event";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
+import { PaginationControls } from "@/shared/components/pagination-controls";
+import { Panel } from "@/shared/components/panel";
 
 import type { SalesByEventReport } from "../application/sales-by-event-report-repository";
 
@@ -18,26 +24,33 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
 });
+const itemsPageSize = 8;
 
 export function SalesByEventReport({
   events,
   report,
   selectedEventId,
 }: SalesByEventReportProps) {
+  const [itemsPage, setItemsPage] = useState(1);
+
   if (events.length === 0) {
     return (
-      <section className="rounded-md border border-slate-200 bg-white p-5 text-sm leading-6 text-slate-600 shadow-sm">
+      <Panel className="text-sm leading-6 text-slate-600">
         Cadastre um evento para gerar relatorios de vendas.
-      </section>
+      </Panel>
     );
   }
 
+  const visibleItems = report
+    ? report.items.slice(
+        (itemsPage - 1) * itemsPageSize,
+        itemsPage * itemsPageSize,
+      )
+    : [];
+
   return (
     <section className="grid gap-4">
-      <form
-        action="/reports"
-        className="rounded-md border border-slate-200 bg-white p-4 shadow-sm"
-      >
+      <Panel as="form" action="/reports" padding="sm">
         <label
           className="text-sm font-semibold text-slate-800"
           htmlFor="eventId"
@@ -61,15 +74,15 @@ export function SalesByEventReport({
             Gerar relatorio
           </button>
         </div>
-      </form>
+      </Panel>
 
       {!report ? (
-        <section className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        <InlineFeedback padding="md" tone="error">
           Nao foi possivel carregar o relatorio deste evento.
-        </section>
+        </InlineFeedback>
       ) : (
         <>
-          <section className="rounded-md border border-slate-200 bg-white p-4 shadow-sm">
+          <Panel padding="sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
@@ -103,9 +116,24 @@ export function SalesByEventReport({
                 )})`}
               />
             </dl>
-          </section>
+          </Panel>
 
-          <section className="overflow-hidden rounded-md border border-slate-200 bg-white shadow-sm">
+          <Panel padding="sm">
+            <h2 className="text-base font-semibold text-slate-950">
+              Resumo por pagamento
+            </h2>
+            <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {report.paymentSummary.map((payment) => (
+                <SummaryCard
+                  key={payment.method}
+                  label={formatPaymentMethod(payment.method)}
+                  value={`${moneyFormatter.format(payment.netTotalInReais)} (${payment.salesCount})`}
+                />
+              ))}
+            </dl>
+          </Panel>
+
+          <Panel className="overflow-hidden" padding="none">
             <div className="border-b border-slate-200 px-4 py-3">
               <h2 className="text-base font-semibold text-slate-950">
                 Itens vendidos
@@ -116,28 +144,39 @@ export function SalesByEventReport({
                 Nenhum item vendido neste evento.
               </p>
             ) : (
-              <ul className="divide-y divide-slate-200">
-                {report.items.map((item) => (
-                  <li
-                    className="grid gap-2 px-4 py-4 sm:grid-cols-[1fr_auto]"
-                    key={item.productId}
-                  >
-                    <div>
-                      <p className="text-sm font-semibold text-slate-950">
-                        {item.productName}
-                      </p>
-                      <p className="mt-1 text-sm text-slate-600">
-                        {item.quantity} unidade(s)
-                      </p>
-                    </div>
-                    <strong className="text-base text-slate-950">
-                      {moneyFormatter.format(item.grossTotalInReais)}
-                    </strong>
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="divide-y divide-slate-200">
+                  {visibleItems.map((item) => (
+                    <li
+                      className="grid gap-2 px-4 py-4 sm:grid-cols-[1fr_auto]"
+                      key={item.productId}
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-slate-950">
+                          {item.productName}
+                        </p>
+                        <p className="mt-1 text-sm text-slate-600">
+                          {item.quantity} unidade(s)
+                        </p>
+                      </div>
+                      <strong className="text-base text-slate-950">
+                        {moneyFormatter.format(item.grossTotalInReais)}
+                      </strong>
+                    </li>
+                  ))}
+                </ul>
+                <div className="px-4 pb-4">
+                  <PaginationControls
+                    currentPage={itemsPage}
+                    itemLabel="itens"
+                    onPageChange={setItemsPage}
+                    pageSize={itemsPageSize}
+                    totalItems={report.items.length}
+                  />
+                </div>
+              </>
             )}
-          </section>
+          </Panel>
         </>
       )}
     </section>
@@ -153,4 +192,17 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
       <dd className="mt-1 text-lg font-semibold text-slate-950">{value}</dd>
     </div>
   );
+}
+
+function formatPaymentMethod(
+  method: SalesByEventReport["paymentSummary"][number]["method"],
+): string {
+  const labels = {
+    cash: "Dinheiro",
+    credit_card: "Cartao de credito",
+    debit_card: "Cartao de debito",
+    pix: "Pix",
+  } as const;
+
+  return labels[method];
 }
