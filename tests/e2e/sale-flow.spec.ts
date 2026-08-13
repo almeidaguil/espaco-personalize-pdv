@@ -140,14 +140,16 @@ async function createSale(
   eventName: string,
   options: CreateSaleOptions = {},
 ) {
-  await page.goto("/pdv");
+  await page.goto("/pdv", { waitUntil: "networkidle" });
   await expect(page.getByText(eventName).first()).toBeVisible();
 
   await page.getByLabel("Buscar produto").fill(productName);
+  await expect(page.getByText("1 produto(s) encontrado(s)")).toBeVisible();
   await page
     .locator("article", { hasText: productName })
     .getByRole("button", { name: "Adicionar" })
     .click();
+  await expect(page.locator("li", { hasText: productName })).toBeVisible();
 
   if (options.paymentMethodLabel) {
     await page
@@ -173,6 +175,7 @@ async function cancelSale(page: Page, eventName: string) {
 
   const saleItem = page.locator("li", { hasText: eventName }).first();
   await saleItem.getByRole("link", { name: "Ver detalhes" }).click();
+  await page.waitForLoadState("networkidle");
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Detalhe da venda" }),

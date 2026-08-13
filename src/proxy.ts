@@ -4,7 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { getAuthRouteProtectionDecision } from "@/modules/auth/application/auth-route-protection";
 import { getPublicEnv } from "@/shared/lib/env";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const env = getPublicEnv();
   let response = NextResponse.next({
     request,
