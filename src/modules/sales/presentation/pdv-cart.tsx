@@ -44,8 +44,8 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
 
 const paymentMethodLabels: Record<PaymentMethod, string> = {
   cash: "Dinheiro",
-  credit_card: "Cartao de credito",
-  debit_card: "Cartao de debito",
+  credit_card: "Cartão de crédito",
+  debit_card: "Cartão de débito",
   pix: "Pix",
 };
 
@@ -53,9 +53,13 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   const [items, setItems] = useState<PdvCartItem[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [productPage, setProductPage] = useState(1);
+
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
+
   const [receivedAmountInput, setReceivedAmountInput] = useState("");
+
   const [cashSessionId, setCashSessionId] = useState(cashSessions[0]?.id ?? "");
+
   const submitSale = useCallback(
     async (previousState: SaleActionState, formData: FormData) => {
       const nextState = await action(previousState, formData);
@@ -72,11 +76,13 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
     },
     [action],
   );
+
   const [state, formAction, isPending] = useActionState(submitSale, {});
 
   const selectedCashSession = cashSessions.find(
     (session) => session.id === cashSessionId,
   );
+
   const totalInReais = useMemo(
     () =>
       items.reduce(
@@ -85,23 +91,31 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
       ),
     [items],
   );
+
   const cartQuantitiesByProductId = useMemo(
     () => new Map(items.map((item) => [item.id, item.quantity])),
     [items],
   );
+
   const hasCartItems = items.length > 0;
+
   const hasAvailableStockForItems = items.every(
     (item) => item.quantityOnHand > 0 && item.quantity <= item.quantityOnHand,
   );
+
   const effectiveReceivedAmountInput =
     paymentMethod === "cash"
       ? receivedAmountInput
       : totalInReais > 0
         ? formatBrlAmount(totalInReais)
         : "";
+
   const receivedAmountInReais = parseBrlAmount(effectiveReceivedAmountInput);
+
   const paymentDifferenceInReais = receivedAmountInReais - totalInReais;
+
   const hasValidReceivedAmount = Number.isFinite(receivedAmountInReais);
+
   const canSubmit =
     Boolean(selectedCashSession) &&
     hasCartItems &&
@@ -113,111 +127,129 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
     !isPending;
 
   return (
-    <Panel action={formAction} as="form" className="grid gap-3">
+    <Panel action={formAction} as="form" className="grid gap-5">
       <input
         name="eventId"
         type="hidden"
         value={selectedCashSession?.eventId ?? ""}
       />
+
       <input
         name="itemsJson"
         type="hidden"
         value={JSON.stringify(toSaleItems(items))}
       />
+
       <input name="paymentMethod" type="hidden" value={paymentMethod} />
+
       <div>
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
           Carrinho
         </p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950">
+
+        <h2 className="mt-1.5 text-xl font-bold text-[var(--brand-foreground)]">
           Monte a venda
         </h2>
+
+        <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
+          Localize os produtos, adicione ao carrinho e finalize o pagamento.
+        </p>
       </div>
 
-      <ProductPicker
-        cartQuantitiesByProductId={cartQuantitiesByProductId}
-        onAddProduct={addProduct}
-        onPageChange={setProductPage}
-        onSearchTermChange={updateProductSearchTerm}
-        page={productPage}
-        products={products}
-        searchTerm={productSearchTerm}
-      />
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(320px,0.8fr)]">
+        <ProductPicker
+          cartQuantitiesByProductId={cartQuantitiesByProductId}
+          onAddProduct={addProduct}
+          onPageChange={setProductPage}
+          onSearchTermChange={updateProductSearchTerm}
+          page={productPage}
+          products={products}
+          searchTerm={productSearchTerm}
+        />
 
-      <CartItems
-        items={items}
-        onAddProduct={addProduct}
-        onDecrementProduct={decrementProduct}
-        totalInReais={totalInReais}
-      />
+        <CartItems
+          items={items}
+          onAddProduct={addProduct}
+          onDecrementProduct={decrementProduct}
+          totalInReais={totalInReais}
+        />
+      </div>
 
-      <div className="sticky bottom-0 z-10 -mx-5 grid gap-3 border-t border-slate-200 bg-slate-50 p-5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] sm:static sm:mx-0 sm:rounded-md sm:border sm:p-3 sm:shadow-none">
-        <div className="grid gap-2">
-          <label
-            className="text-sm font-medium text-slate-700"
-            htmlFor="cashSessionId"
-          >
-            Caixa da venda
-          </label>
-          <select
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-            id="cashSessionId"
-            name="cashSessionId"
-            onChange={(event) => setCashSessionId(event.target.value)}
-            value={cashSessionId}
-          >
-            {cashSessions.length === 0 ? (
-              <option value="">Nenhum caixa aberto</option>
-            ) : (
-              cashSessions.map((session) => (
-                <option key={session.id} value={session.id}>
-                  {session.eventName}
-                </option>
-              ))
-            )}
-          </select>
-        </div>
+      <section className="sticky bottom-0 z-10 -mx-5 grid gap-5 border-t border-[var(--border)] bg-white/95 p-5 shadow-[0_-12px_35px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:static sm:mx-0 sm:rounded-2xl sm:border sm:bg-[var(--surface-muted)] sm:shadow-none">
+        <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid gap-2">
+            <label
+              className="text-sm font-semibold text-[var(--brand-foreground)]"
+              htmlFor="cashSessionId"
+            >
+              Caixa da venda
+            </label>
 
-        <div className="grid gap-2">
-          <p className="text-sm font-medium text-slate-700" id="paymentMethod">
-            Forma de pagamento
-          </p>
-          <div
-            aria-labelledby="paymentMethod"
-            className="grid grid-cols-2 gap-2"
-            role="group"
-          >
-            {(
-              Object.entries(paymentMethodLabels) as Array<
-                [PaymentMethod, string]
-              >
-            ).map(([value, label]) => (
-              <button
-                aria-pressed={paymentMethod === value}
-                className={
-                  paymentMethod === value
-                    ? "min-h-11 rounded-md border border-[#1e3275] bg-[#1e3275] px-3 text-sm font-semibold text-white transition"
-                    : "min-h-11 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
-                }
-                key={value}
-                onClick={() => setPaymentMethod(value)}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
+            <select
+              className="h-12 rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+              id="cashSessionId"
+              name="cashSessionId"
+              onChange={(event) => setCashSessionId(event.target.value)}
+              value={cashSessionId}
+            >
+              {cashSessions.length === 0 ? (
+                <option value="">Nenhum caixa aberto</option>
+              ) : (
+                cashSessions.map((session) => (
+                  <option key={session.id} value={session.id}>
+                    {session.eventName}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+
+          <div className="grid gap-2">
+            <p
+              className="text-sm font-semibold text-[var(--brand-foreground)]"
+              id="paymentMethod"
+            >
+              Forma de pagamento
+            </p>
+
+            <div
+              aria-labelledby="paymentMethod"
+              className="grid grid-cols-2 gap-2"
+              role="group"
+            >
+              {(
+                Object.entries(paymentMethodLabels) as Array<
+                  [PaymentMethod, string]
+                >
+              ).map(([value, label]) => (
+                <button
+                  aria-pressed={paymentMethod === value}
+                  className={
+                    paymentMethod === value
+                      ? "min-h-11 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition"
+                      : "min-h-11 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
+                  }
+                  key={value}
+                  onClick={() => setPaymentMethod(value)}
+                  type="button"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
 
         <div className="grid gap-2">
           <label
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-semibold text-[var(--brand-foreground)]"
             htmlFor="receivedAmount"
           >
             {paymentMethod === "cash" ? "Valor recebido" : "Valor do pagamento"}
           </label>
+
           <input
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+            className="h-12 rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition placeholder:text-neutral-400 focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15 read-only:bg-neutral-100"
             id="receivedAmount"
             inputMode="decimal"
             name="amountReceivedInReais"
@@ -227,16 +259,18 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
             type="text"
             value={effectiveReceivedAmountInput}
           />
+
           {paymentMethod !== "cash" ? (
-            <p className="text-xs leading-5 text-slate-500">
+            <p className="text-xs leading-5 text-[var(--brand-muted)]">
               Para {paymentMethodLabels[paymentMethod].toLowerCase()}, o sistema
               registra o valor exato da venda.
             </p>
           ) : null}
+
           {paymentMethod === "cash" && hasCartItems ? (
             <div className="flex flex-wrap gap-2">
               <button
-                className="min-h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
                 onClick={() =>
                   setReceivedAmountInput(formatBrlAmount(totalInReais))
                 }
@@ -244,9 +278,10 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
               >
                 Valor exato
               </button>
+
               {[50, 100].map((amountInReais) => (
                 <button
-                  className="min-h-10 rounded-md border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                  className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
                   key={amountInReais}
                   onClick={() =>
                     setReceivedAmountInput(formatBrlAmount(amountInReais))
@@ -260,22 +295,22 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
           ) : null}
         </div>
 
-        <div className="rounded-md border border-slate-200 bg-white px-3 py-3">
+        <div className="rounded-xl border border-[var(--border)] bg-white px-4 py-3">
           {!hasCartItems ? (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-[var(--brand-muted)]">
               Adicione itens para calcular o pagamento.
             </p>
           ) : !hasAvailableStockForItems ? (
             <p className="text-sm font-semibold text-red-700">
-              Ajuste o carrinho para respeitar o estoque disponivel.
+              Ajuste o carrinho para respeitar o estoque disponível.
             </p>
           ) : paymentMethod !== "cash" ? (
-            <p className="text-sm font-semibold text-slate-700">
+            <p className="text-sm font-semibold text-[var(--brand-foreground)]">
               {paymentMethodLabels[paymentMethod]} no valor de{" "}
               {moneyFormatter.format(totalInReais)}
             </p>
           ) : !hasValidReceivedAmount ? (
-            <p className="text-sm text-slate-600">
+            <p className="text-sm text-[var(--brand-muted)]">
               Informe o valor recebido para calcular o troco.
             </p>
           ) : paymentDifferenceInReais < 0 ? (
@@ -294,20 +329,33 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
             {state.successMessage}
           </InlineFeedback>
         ) : null}
+
         {state.formError ? (
           <InlineFeedback className="py-3 font-semibold" tone="error">
             {state.formError}
           </InlineFeedback>
         ) : null}
 
-        <button
-          className="min-h-12 rounded-md bg-[#1e3275] px-4 text-sm font-semibold text-white transition hover:bg-[#17275c] disabled:bg-slate-300 disabled:text-slate-600"
-          disabled={!canSubmit}
-          type="submit"
-        >
-          {isPending ? "Finalizando..." : "Finalizar venda"}
-        </button>
-      </div>
+        <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-muted)]">
+              Total da venda
+            </p>
+
+            <strong className="mt-1 block text-2xl font-bold text-[var(--brand-foreground)]">
+              {moneyFormatter.format(totalInReais)}
+            </strong>
+          </div>
+
+          <button
+            className="min-h-12 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-6 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-300 disabled:text-neutral-500"
+            disabled={!canSubmit}
+            type="submit"
+          >
+            {isPending ? "Finalizando..." : "Finalizar venda"}
+          </button>
+        </div>
+      </section>
     </Panel>
   );
 
@@ -320,7 +368,13 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
           return currentItems;
         }
 
-        return [...currentItems, { ...product, quantity: 1 }];
+        return [
+          ...currentItems,
+          {
+            ...product,
+            quantity: 1,
+          },
+        ];
       }
 
       if (existingItem.quantity >= existingItem.quantityOnHand) {
@@ -329,7 +383,10 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
 
       return currentItems.map((item) =>
         item.id === product.id
-          ? { ...item, quantity: item.quantity + 1 }
+          ? {
+              ...item,
+              quantity: item.quantity + 1,
+            }
           : item,
       );
     });
@@ -351,7 +408,12 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
           return [];
         }
 
-        return [{ ...item, quantity: item.quantity - 1 }];
+        return [
+          {
+            ...item,
+            quantity: item.quantity - 1,
+          },
+        ];
       }),
     );
   }

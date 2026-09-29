@@ -8,15 +8,17 @@ type StatusBadgeProps = {
 };
 
 const toneClasses: Record<StatusBadgeTone, string> = {
-  neutral: "bg-slate-100 text-slate-600",
-  success: "bg-emerald-50 text-emerald-700",
-  warning: "bg-amber-50 text-amber-800",
+  neutral:
+    "border-[var(--border)] bg-[var(--surface-muted)] text-[var(--brand-muted)]",
+  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  warning:
+    "border-[var(--brand-accent)]/30 bg-[var(--brand-accent)]/10 text-[#9a7021]",
 };
 
 export function StatusBadge({ children, tone = "neutral" }: StatusBadgeProps) {
   return (
     <span
-      className={`rounded-md px-2 py-1 text-xs font-semibold ${toneClasses[tone]}`}
+      className={`inline-flex items-center rounded-lg border px-2.5 py-1 text-xs font-semibold ${toneClasses[tone]}`}
     >
       {children}
     </span>

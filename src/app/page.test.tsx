@@ -58,7 +58,7 @@ describe("Home", () => {
       screen.getByRole("heading", { level: 1, name: "PDV" }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("img", { name: "Espaco Personalize" }),
+      screen.getByRole("img", { name: "Roberto Multimarcas" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Operacao do dia")).toBeInTheDocument();
     expect(

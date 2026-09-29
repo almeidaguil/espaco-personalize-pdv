@@ -11,12 +11,14 @@ import {
   type EventListItem,
 } from "@/modules/events/presentation/event-list";
 import { closeEventAction } from "@/modules/events/presentation/close-event-action";
+import { AppNavigation } from "@/shared/components/app-navigation";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
+import { brand } from "@/shared/config/brand";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
-  title: "Eventos | Espaco Personalize PDV",
+  title: `Eventos | ${brand.name}`,
 };
 
 export const dynamic = "force-dynamic";
@@ -28,34 +30,56 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 
 export default async function EventsPage() {
   const supabaseClient = await createSupabaseServerClient();
-  const eventClient = supabaseClient as unknown as SupabaseEventClient;
-  const eventRepository = new SupabaseEventRepository(eventClient);
-  const result = await listEventsUseCase({ eventRepository });
+
+  const eventRepository = new SupabaseEventRepository(
+    supabaseClient as unknown as SupabaseEventClient,
+  );
+
+  const result = await listEventsUseCase({
+    eventRepository,
+  });
 
   return (
-    <PageShell>
+    <PageShell maxWidth="xl">
+      <AppNavigation title="Eventos" />
+
       <PageHeader
-        actions={[{ href: "/events/new", label: "Novo evento" }]}
-        description="Consulte os eventos presenciais usados para organizar vendas e caixa."
-        eyebrow="Operacao"
+        actions={[
+          {
+            href: "/events/new",
+            label: "Novo evento",
+          },
+        ]}
+        description="Gerencie as operações usadas para organizar caixa e vendas."
+        eyebrow="Operação"
         title="Eventos"
       />
 
       {!result.success ? (
         <LoadErrorState
-          actions={[{ href: "/events", label: "Tentar novamente" }]}
+          actions={[
+            {
+              href: "/events",
+              label: "Tentar novamente",
+            },
+          ]}
           eyebrow="Erro"
           message={
             result.formError ??
-            "Verifique sua conexao e tente carregar os eventos novamente."
+            "Verifique sua conexão e tente carregar os eventos novamente."
           }
-          title="Nao foi possivel carregar os eventos"
+          title="Não foi possível carregar os eventos"
         />
       ) : result.events.length === 0 ? (
         <EmptyState
-          actions={[{ href: "/events/new", label: "Criar evento" }]}
+          actions={[
+            {
+              href: "/events/new",
+              label: "Criar evento",
+            },
+          ]}
           eyebrow="Sem eventos"
-          message="Crie um evento ativo para abrir caixa e registrar vendas."
+          message="Crie um evento ativo para abrir o caixa e registrar vendas."
           title="Nenhum evento cadastrado ainda."
         />
       ) : (

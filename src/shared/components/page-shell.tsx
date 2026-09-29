@@ -9,17 +9,17 @@ type PageShellProps = {
 };
 
 const maxWidthClasses = {
-  lg: "max-w-4xl",
-  md: "max-w-3xl",
   sm: "max-w-md",
+  md: "max-w-3xl",
+  lg: "max-w-4xl",
   xl: "max-w-5xl",
 } as const;
 
 export function PageShell({ children, maxWidth = "md" }: PageShellProps) {
   return (
-    <main className="min-h-screen bg-[#f6f7fb] px-5 py-6 text-slate-950">
+    <main className="min-h-[100dvh] bg-[var(--brand-background)] px-4 py-5 text-[var(--brand-foreground)] sm:px-6 sm:py-6">
       <section
-        className={`mx-auto grid w-full ${maxWidthClasses[maxWidth]} gap-4`}
+        className={`mx-auto grid w-full ${maxWidthClasses[maxWidth]} gap-5`}
       >
         {children}
       </section>
@@ -48,7 +48,7 @@ type PageHeaderProps = {
 
 export function PageHeader({
   actions = [],
-  backLinks = [{ href: "/", label: "Voltar ao painel" }],
+  backLinks = [],
   description,
   eyebrow,
   title,
@@ -56,36 +56,43 @@ export function PageHeader({
   return (
     <Panel as="header" padding="sm">
       {backLinks.length > 0 ? (
-        <div className="mb-3 flex flex-wrap gap-3 text-sm font-semibold">
+        <div className="mb-4 flex flex-wrap gap-3">
           {backLinks.map((link) => (
             <Link
-              className="text-[#1e3275] transition hover:text-[#142456]"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-muted)] transition hover:text-[var(--brand-accent)]"
               href={link.href}
               key={`${link.href}-${link.label}`}
             >
+              <span aria-hidden="true">←</span>
               {link.label}
             </Link>
           ))}
         </div>
       ) : null}
 
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
             {eyebrow}
           </p>
-          <h1 className="mt-1 text-2xl font-semibold">{title}</h1>
-          <p className="mt-2 text-sm leading-6 text-slate-600">{description}</p>
+
+          <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-[var(--brand-foreground)]">
+            {title}
+          </h1>
+
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--brand-muted)]">
+            {description}
+          </p>
         </div>
 
         {actions.length > 0 ? (
-          <div className="flex flex-wrap justify-end gap-2">
+          <div className="flex shrink-0 flex-wrap gap-2 sm:justify-end">
             {actions.map((action) => (
               <Link
                 className={
                   action.variant === "secondary"
-                    ? "rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275]"
-                    : "rounded-md bg-[#f5c313] px-3 py-2 text-sm font-semibold text-[#1e3275] transition hover:bg-[#e7b80f]"
+                    ? "inline-flex min-h-10 items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
+                    : "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105"
                 }
                 href={action.href}
                 key={`${action.href}-${action.label}`}
