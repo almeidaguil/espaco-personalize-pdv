@@ -5,6 +5,7 @@ import { useActionState } from "react";
 import { FieldError } from "@/shared/components/field-error";
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
+import { StatusBadge } from "@/shared/components/status-badge";
 
 import type { ManagedUser } from "../domain/managed-user";
 import type { UserActionState } from "./user-action-state";
@@ -16,15 +17,19 @@ type ManagedUsersListProps = {
     previousState: UserActionState,
     formData: FormData,
   ) => Promise<UserActionState>;
+
   currentAdminId: string;
+
   passwordAction: (
     previousState: UserActionState,
     formData: FormData,
   ) => Promise<UserActionState>;
+
   roleAction: (
     previousState: UserActionState,
     formData: FormData,
   ) => Promise<UserActionState>;
+
   users: ManagedUser[];
 };
 
@@ -37,14 +42,16 @@ export function ManagedUsersList({
 }: ManagedUsersListProps) {
   if (users.length === 0) {
     return (
-      <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-600">
-        Nenhum usuario encontrado.
-      </p>
+      <Panel>
+        <p className="text-sm text-[var(--brand-muted)]">
+          Nenhum usuário encontrado.
+        </p>
+      </Panel>
     );
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4">
       {users.map((user) => (
         <ManagedUserCard
           accessAction={accessAction}
@@ -78,151 +85,226 @@ function ManagedUserCard({
     roleAction,
     initialState,
   );
+
   const [accessState, accessFormAction, isAccessPending] = useActionState(
     accessAction,
     initialState,
   );
+
   const [passwordState, passwordFormAction, isPasswordPending] = useActionState(
     passwordAction,
     initialState,
   );
+
   const isCurrentUser = currentAdminId === user.id;
+
   const passwordError = passwordState.fieldErrors?.temporaryPassword;
+
   const passwordErrorId = `temporary-password-error-${user.id}`;
 
   return (
-    <Panel as="article" padding="sm">
+    <Panel as="article">
+      {/* Usuário */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <h2 className="text-base font-semibold text-slate-950">
+            <h3 className="text-lg font-bold text-[var(--brand-foreground)]">
               {user.fullName || user.email}
-            </h2>
-            <span className="rounded-full bg-[#1e3275]/10 px-2 py-1 text-xs font-semibold text-[#1e3275]">
+            </h3>
+
+            <StatusBadge tone={user.role === "admin" ? "warning" : "neutral"}>
               {user.role === "admin" ? "Admin" : "Operador"}
-            </span>
-            <span
-              className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                user.isActive
-                  ? "bg-emerald-50 text-emerald-700"
-                  : "bg-red-50 text-red-700"
-              }`}
-            >
+            </StatusBadge>
+
+            <StatusBadge tone={user.isActive ? "success" : "neutral"}>
               {user.isActive ? "Ativo" : "Desativado"}
-            </span>
+            </StatusBadge>
+
+            {isCurrentUser ? (
+              <StatusBadge tone="neutral">Você</StatusBadge>
+            ) : null}
           </div>
-          <p className="mt-1 text-sm text-slate-600">{user.email}</p>
-          <p className="mt-1 text-xs text-slate-500">
+
+          <p className="mt-2 break-all text-sm text-[var(--brand-muted)]">
+            {user.email}
+          </p>
+
+          <p className="mt-1 text-xs leading-5 text-[var(--brand-muted)]">
             Criado em {formatDate(user.createdAt)}
             {user.lastSignInAt
-              ? ` · ultimo login em ${formatDate(user.lastSignInAt)}`
-              : ""}
+              ? ` · Último login em ${formatDate(user.lastSignInAt)}`
+              : " · Ainda não realizou login"}
           </p>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] lg:items-start">
-        <form action={roleFormAction} className="grid gap-2 sm:max-w-xs">
-          <input name="userId" type="hidden" value={user.id} />
-          <label
-            className="text-xs font-semibold uppercase tracking-wide text-slate-500"
-            htmlFor={`role-${user.id}`}
-          >
-            Perfil
-          </label>
-          <div className="flex gap-2">
-            <select
-              className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-              defaultValue={user.role}
-              id={`role-${user.id}`}
-              name="role"
-            >
-              <option value="operator">Operador</option>
-              <option value="admin">Admin</option>
-            </select>
-            <button
-              className="h-11 rounded-md border border-[#1e3275] px-3 text-sm font-semibold text-[#1e3275] transition hover:bg-[#1e3275] hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={
-                isRolePending || (isCurrentUser && user.role === "admin")
-              }
-              type="submit"
-            >
-              Salvar
-            </button>
-          </div>
-          {roleState.formError ? (
-            <InlineFeedback tone="error">{roleState.formError}</InlineFeedback>
-          ) : null}
-          {roleState.successMessage ? (
-            <InlineFeedback tone="success">
-              {roleState.successMessage}
-            </InlineFeedback>
-          ) : null}
-        </form>
+      {/* Controles */}
+      <div className="mt-5 grid gap-4 border-t border-[var(--border)] pt-5">
+        <div className="grid gap-4 xl:grid-cols-2">
+          {/* Perfil */}
+          <form action={roleFormAction} className="grid gap-2">
+            <input name="userId" type="hidden" value={user.id} />
 
-        <form action={passwordFormAction} className="grid gap-2">
-          <input name="userId" type="hidden" value={user.id} />
-          <label
-            className="text-xs font-semibold uppercase tracking-wide text-slate-500"
-            htmlFor={`temporary-password-${user.id}`}
-          >
-            Senha temporaria
-          </label>
-          <div className="flex gap-2">
+            <label
+              className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--brand-muted)]"
+              htmlFor={`role-${user.id}`}
+            >
+              Perfil
+            </label>
+
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <select
+                className="h-11 min-w-0 rounded-xl border border-[var(--border)] bg-white px-3 text-sm text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15 disabled:bg-neutral-100"
+                defaultValue={user.role}
+                id={`role-${user.id}`}
+                name="role"
+              >
+                <option value="operator">Operador</option>
+
+                <option value="admin">Admin</option>
+              </select>
+
+              <button
+                className="h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={
+                  isRolePending || (isCurrentUser && user.role === "admin")
+                }
+                type="submit"
+              >
+                {isRolePending ? "Salvando..." : "Salvar"}
+              </button>
+            </div>
+
+            {isCurrentUser && user.role === "admin" ? (
+              <p className="text-xs leading-5 text-[var(--brand-muted)]">
+                Seu próprio perfil administrativo não pode ser rebaixado aqui.
+              </p>
+            ) : null}
+
+            {roleState.formError ? (
+              <InlineFeedback tone="error">
+                {roleState.formError}
+              </InlineFeedback>
+            ) : null}
+
+            {roleState.successMessage ? (
+              <InlineFeedback tone="success">
+                {roleState.successMessage}
+              </InlineFeedback>
+            ) : null}
+          </form>
+
+          {/* Senha */}
+          <form action={passwordFormAction} className="grid gap-2">
+            <input name="userId" type="hidden" value={user.id} />
+
+            <label
+              className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--brand-muted)]"
+              htmlFor={`temporary-password-${user.id}`}
+            >
+              Nova senha temporária
+            </label>
+
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+              <input
+                aria-describedby={passwordError ? passwordErrorId : undefined}
+                aria-invalid={passwordError ? true : undefined}
+                autoComplete="new-password"
+                className={
+                  passwordError
+                    ? "h-11 min-w-0 rounded-xl border border-red-300 bg-white px-3 text-sm text-[var(--brand-foreground)] outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
+                    : "h-11 min-w-0 rounded-xl border border-[var(--border)] bg-white px-3 text-sm text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+                }
+                id={`temporary-password-${user.id}`}
+                name="temporaryPassword"
+                placeholder="Mínimo 8 caracteres"
+                type="password"
+              />
+
+              <button
+                className="h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021] disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={isPasswordPending}
+                type="submit"
+              >
+                {isPasswordPending ? "Redefinindo..." : "Redefinir"}
+              </button>
+            </div>
+
+            {passwordError ? (
+              <FieldError id={passwordErrorId}>{passwordError}</FieldError>
+            ) : null}
+
+            {passwordState.formError ? (
+              <InlineFeedback tone="error">
+                {passwordState.formError}
+              </InlineFeedback>
+            ) : null}
+
+            {passwordState.successMessage ? (
+              <InlineFeedback tone="success">
+                {passwordState.successMessage}
+              </InlineFeedback>
+            ) : null}
+          </form>
+        </div>
+
+        {/* Acesso */}
+        <form
+          action={accessFormAction}
+          className="flex flex-col gap-2 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between"
+        >
+          <div>
+            <p className="text-sm font-semibold text-[var(--brand-foreground)]">
+              Acesso ao sistema
+            </p>
+
+            <p className="mt-1 text-xs leading-5 text-[var(--brand-muted)]">
+              {user.isActive
+                ? "Desativar impede novos acessos sem apagar o histórico."
+                : "Ativar permite que este usuário volte a acessar o sistema."}
+            </p>
+          </div>
+
+          <div className="shrink-0">
             <input
-              aria-describedby={passwordError ? passwordErrorId : undefined}
-              aria-invalid={passwordError ? true : undefined}
-              autoComplete="new-password"
-              className="h-11 min-w-0 flex-1 rounded-md border border-slate-300 bg-white px-3 text-sm outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-              id={`temporary-password-${user.id}`}
-              name="temporaryPassword"
-              placeholder="Minimo 8 caracteres"
-              type="password"
+              name="isActive"
+              type="hidden"
+              value={user.isActive ? "false" : "true"}
             />
+
+            <input name="userId" type="hidden" value={user.id} />
+
             <button
-              className="h-11 rounded-md border border-[#1e3275] px-3 text-sm font-semibold text-[#1e3275] transition hover:bg-[#1e3275] hover:text-white disabled:cursor-not-allowed disabled:opacity-70"
-              disabled={isPasswordPending}
+              className={
+                user.isActive
+                  ? "h-11 w-full rounded-xl border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                  : "h-11 w-full rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-4 text-sm font-bold text-[var(--brand-primary)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              }
+              disabled={isAccessPending || isCurrentUser}
               type="submit"
             >
-              Redefinir
+              {isAccessPending
+                ? "Salvando..."
+                : user.isActive
+                  ? "Desativar acesso"
+                  : "Ativar acesso"}
             </button>
-          </div>
-          {passwordError ? (
-            <FieldError id={passwordErrorId}>{passwordError}</FieldError>
-          ) : null}
-          {passwordState.formError ? (
-            <InlineFeedback tone="error">
-              {passwordState.formError}
-            </InlineFeedback>
-          ) : null}
-          {passwordState.successMessage ? (
-            <InlineFeedback tone="success">
-              {passwordState.successMessage}
-            </InlineFeedback>
-          ) : null}
-        </form>
 
-        <form action={accessFormAction}>
-          <input
-            name="isActive"
-            type="hidden"
-            value={user.isActive ? "false" : "true"}
-          />
-          <input name="userId" type="hidden" value={user.id} />
-          <button
-            className="h-11 w-full rounded-md border border-slate-300 px-3 text-sm font-semibold text-slate-700 transition hover:border-red-600 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
-            disabled={isAccessPending || isCurrentUser}
-            type="submit"
-          >
-            {user.isActive ? "Desativar" : "Ativar"}
-          </button>
+            {isCurrentUser ? (
+              <p className="mt-2 max-w-48 text-xs leading-5 text-[var(--brand-muted)]">
+                Você não pode desativar seu próprio acesso.
+              </p>
+            ) : null}
+          </div>
+
           {accessState.formError ? (
-            <InlineFeedback className="mt-2" tone="error">
+            <InlineFeedback className="sm:col-span-2" tone="error">
               {accessState.formError}
             </InlineFeedback>
           ) : null}
+
           {accessState.successMessage ? (
-            <InlineFeedback className="mt-2" tone="success">
+            <InlineFeedback className="sm:col-span-2" tone="success">
               {accessState.successMessage}
             </InlineFeedback>
           ) : null}
@@ -232,7 +314,7 @@ function ManagedUserCard({
   );
 }
 
-function formatDate(date: Date) {
+function formatDate(date: Date): string {
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",

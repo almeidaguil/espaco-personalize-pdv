@@ -42,11 +42,12 @@ import {
 } from "@/modules/stock/infra/supabase-stock-movement-repository";
 import { createSaleAction } from "@/modules/sales/presentation/create-sale-action";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { AppNavigation } from "@/shared/components/app-navigation";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
-  title: "PDV | Espaco Personalize PDV",
+  title: "PDV | Roberto Multimarcas ",
 };
 
 export const dynamic = "force-dynamic";
@@ -109,13 +110,14 @@ export default async function PdvPage() {
   );
 
   return (
-    <PageShell>
+    <PageShell maxWidth="xl">
+      <AppNavigation title="PDV" />
+
       <PageHeader
-        description="Venda rapidamente no evento ativo usando produtos, caixa aberto, forma de pagamento registrada e troco calculado quando a venda for em dinheiro."
+        description="Realize vendas com produtos em estoque, caixa aberto e pagamento registrado."
         eyebrow="Vendas"
         title="PDV"
       />
-
       {!eventsResult.success ? (
         <LoadErrorState
           actions={[{ href: "/pdv", label: "Tentar novamente" }]}

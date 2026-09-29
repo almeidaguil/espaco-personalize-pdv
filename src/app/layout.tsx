@@ -1,46 +1,47 @@
 import type { Metadata, Viewport } from "next";
-import { OfflineStatus } from "@/shared/components/offline-status";
-import { ServiceWorkerRegistration } from "@/shared/components/service-worker-registration";
+import type { CSSProperties, ReactNode } from "react";
+
+import { brand } from "@/shared/config/brand";
+
 import "./globals.css";
 
 export const metadata: Metadata = {
-  applicationName: "Espaco Personalize PDV",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: "EP PDV",
+  title: {
+    default: `${brand.name} | Sistema de Gestão`,
+    template: `%s | ${brand.name}`,
   },
-  description: "Sistema privado para vendas presenciais em eventos.",
-  formatDetection: {
-    telephone: false,
-  },
-  icons: {
-    apple: "/apple-touch-icon.png",
-    icon: [
-      { sizes: "192x192", type: "image/png", url: "/icons/icon-192.png" },
-      { sizes: "512x512", type: "image/png", url: "/icons/icon-512.png" },
-    ],
-  },
-  manifest: "/manifest.webmanifest",
-  title: "Espaco Personalize PDV",
+  description: brand.description,
 };
 
 export const viewport: Viewport = {
-  themeColor: "#1e3275",
+  width: "device-width",
+  initialScale: 1,
+  themeColor: brand.colors.primary,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+type RootLayoutProps = {
+  children: ReactNode;
+};
+
+export default function RootLayout({ children }: RootLayoutProps) {
+  const brandStyles = {
+    "--brand-primary": brand.colors.primary,
+    "--brand-primary-hover": brand.colors.primaryHover,
+    "--brand-accent": brand.colors.accent,
+    "--brand-background": brand.colors.background,
+    "--brand-surface": brand.colors.surface,
+    "--brand-foreground": brand.colors.foreground,
+    "--brand-muted": brand.colors.muted,
+
+    "--background": brand.colors.background,
+    "--foreground": brand.colors.foreground,
+    "--surface": brand.colors.surface,
+    "--muted": brand.colors.muted,
+  } as CSSProperties;
+
   return (
-    <html lang="pt-BR" className="h-full antialiased">
-      <body className="flex min-h-full flex-col">
-        <ServiceWorkerRegistration />
-        <OfflineStatus />
-        {children}
-      </body>
+    <html lang="pt-BR">
+      <body style={brandStyles}>{children}</body>
     </html>
   );
 }
