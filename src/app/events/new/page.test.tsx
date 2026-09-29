@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import NewEventPage from "./page";
 
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
+
 vi.mock("@/modules/events/presentation/create-event-action", () => ({
   createEventAction: vi.fn(),
 }));
@@ -16,16 +20,18 @@ describe("NewEventPage", () => {
     render(<NewEventPage />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Novo evento" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Novo evento",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Painel" })).toHaveAttribute(
-      "href",
-      "/",
-    );
-    expect(screen.getByRole("link", { name: "Eventos" })).toHaveAttribute(
-      "href",
-      "/events",
-    );
+
+    expect(
+      screen.getByRole("link", {
+        name: "Voltar para eventos",
+      }),
+    ).toHaveAttribute("href", "/events");
+
     expect(screen.getByLabelText("Formulario de evento")).toBeInTheDocument();
   });
 });

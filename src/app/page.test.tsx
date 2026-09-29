@@ -6,6 +6,9 @@ import Home from "./page";
 vi.mock("@/shared/lib/supabase/server-client", () => ({
   createSupabaseServerClient: vi.fn(async () => ({})),
 }));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+}));
 
 vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
   SupabaseEventRepository: vi.fn(),
@@ -55,12 +58,15 @@ describe("Home", () => {
     render(await Home());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "PDV" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Pronto para vender em Evento Julho",
+      }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("img", { name: "Roberto Multimarcas" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Operacao do dia")).toBeInTheDocument();
+    expect(screen.getByText("Operação do dia")).toBeInTheDocument();
     expect(
       screen.getByText("Pronto para vender em Evento Julho"),
     ).toBeInTheDocument();
@@ -68,7 +74,7 @@ describe("Home", () => {
     expect(screen.getAllByText("Evento Julho").length).toBeGreaterThan(0);
     expect(screen.getByText("Vendas do caixa")).toBeInTheDocument();
     expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
-    expect(screen.getByText("1 concluidas / 1 canceladas")).toBeInTheDocument();
+    expect(screen.getByText("1 concluídas / 1 canceladas")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ir ao PDV" })).toHaveAttribute(
       "href",
       "/pdv",
@@ -95,11 +101,12 @@ describe("Home", () => {
       "href",
       "/sales",
     );
-    expect(screen.getByRole("link", { name: "Configuracoes" })).toHaveAttribute(
-      "href",
-      "/settings",
-    );
-    expect(screen.getAllByText("Disponivel")).toHaveLength(7);
+    expect(
+      screen.getByRole("link", {
+        name: "Configurações",
+      }),
+    ).toHaveAttribute("href", "/settings");
+    expect(screen.getAllByText("Disponível")).toHaveLength(7);
     expect(screen.getByText("Admin")).toBeInTheDocument();
   });
 
@@ -109,7 +116,7 @@ describe("Home", () => {
     render(await Home());
 
     expect(
-      screen.queryByRole("link", { name: "Configuracoes" }),
+      screen.queryByRole("link", { name: "Configurações" }),
     ).not.toBeInTheDocument();
   });
 
@@ -136,7 +143,7 @@ describe("Home", () => {
 
     render(await Home());
 
-    expect(screen.getByText("Crie um evento para comecar")).toBeInTheDocument();
+    expect(screen.getByText("Crie um evento para começar")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Criar evento" })).toHaveAttribute(
       "href",
       "/events/new",
