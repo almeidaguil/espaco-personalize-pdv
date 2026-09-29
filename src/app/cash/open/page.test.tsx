@@ -7,6 +7,10 @@ vi.mock("@/shared/lib/supabase/server-client", () => ({
   createSupabaseServerClient: vi.fn(async () => ({})),
 }));
 
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
+
 vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
   SupabaseEventRepository: vi.fn(),
 }));
@@ -16,7 +20,7 @@ vi.mock("@/modules/cash/presentation/open-cash-session-action", () => ({
 }));
 
 vi.mock("@/modules/cash/presentation/open-cash-session-form", () => ({
-  OpenCashSessionForm: () => <form aria-label="Formulario de abertura" />,
+  OpenCashSessionForm: () => <form aria-label="Formulário de abertura" />,
 }));
 
 const listActiveEventsUseCaseMock = vi.hoisted(() => vi.fn());
@@ -42,17 +46,19 @@ describe("OpenCashPage", () => {
     render(await OpenCashPage());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Abrir caixa" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Abrir caixa",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Painel" })).toHaveAttribute(
-      "href",
-      "/",
-    );
-    expect(screen.getByRole("link", { name: "PDV" })).toHaveAttribute(
-      "href",
-      "/pdv",
-    );
-    expect(screen.getByLabelText("Formulario de abertura")).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("link", {
+        name: "Voltar para o PDV",
+      }),
+    ).toHaveAttribute("href", "/pdv");
+
+    expect(screen.getByLabelText("Formulário de abertura")).toBeInTheDocument();
   });
 
   it("renders the empty state when no active events exist", async () => {
@@ -65,8 +71,20 @@ describe("OpenCashPage", () => {
 
     expect(
       screen.getByText(
-        "Nenhum evento ativo disponivel para abertura de caixa.",
+        "Nenhum evento ativo disponível para abertura de caixa.",
       ),
     ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("link", {
+        name: "Criar evento",
+      }),
+    ).toHaveAttribute("href", "/events/new");
+
+    expect(
+      screen.getByRole("link", {
+        name: "Ver eventos",
+      }),
+    ).toHaveAttribute("href", "/events");
   });
 });

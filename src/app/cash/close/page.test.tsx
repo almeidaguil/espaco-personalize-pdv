@@ -7,6 +7,10 @@ vi.mock("@/shared/lib/supabase/server-client", () => ({
   createSupabaseServerClient: vi.fn(async () => ({})),
 }));
 
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
+
 vi.mock(
   "@/modules/auth/infra/supabase-current-user-profile-repository",
   () => ({
@@ -34,11 +38,13 @@ vi.mock("@/modules/cash/presentation/close-cash-session-action", () => ({
 }));
 
 vi.mock("@/modules/cash/presentation/close-cash-session-form", () => ({
-  CloseCashSessionForm: () => <form aria-label="Formulario de fechamento" />,
+  CloseCashSessionForm: () => <form aria-label="Formulário de fechamento" />,
 }));
 
 const listOpenCashSessionsUseCaseMock = vi.hoisted(() => vi.fn());
+
 const listCashSessionClosingSummariesUseCaseMock = vi.hoisted(() => vi.fn());
+
 const listEventsUseCaseMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/cash/application/list-open-cash-sessions-use-case", () => ({
@@ -72,6 +78,7 @@ describe("CloseCashPage", () => {
       ],
       success: true,
     });
+
     listEventsUseCaseMock.mockResolvedValueOnce({
       events: [
         {
@@ -83,6 +90,7 @@ describe("CloseCashPage", () => {
       ],
       success: true,
     });
+
     listCashSessionClosingSummariesUseCaseMock.mockResolvedValueOnce({
       summaries: [
         {
@@ -101,18 +109,20 @@ describe("CloseCashPage", () => {
     render(await CloseCashPage());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Fechar caixa" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Fechar caixa",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Painel" })).toHaveAttribute(
-      "href",
-      "/",
-    );
-    expect(screen.getByRole("link", { name: "Abrir caixa" })).toHaveAttribute(
-      "href",
-      "/cash/open",
-    );
+
     expect(
-      screen.getByLabelText("Formulario de fechamento"),
+      screen.getByRole("link", {
+        name: "Voltar para o PDV",
+      }),
+    ).toHaveAttribute("href", "/pdv");
+
+    expect(
+      screen.getByLabelText("Formulário de fechamento"),
     ).toBeInTheDocument();
   });
 
@@ -121,10 +131,12 @@ describe("CloseCashPage", () => {
       sessions: [],
       success: true,
     });
+
     listEventsUseCaseMock.mockResolvedValueOnce({
       events: [],
       success: true,
     });
+
     listCashSessionClosingSummariesUseCaseMock.mockResolvedValueOnce({
       summaries: [],
       success: true,
@@ -133,15 +145,28 @@ describe("CloseCashPage", () => {
     render(await CloseCashPage());
 
     expect(
-      screen.getByText("Nenhum caixa aberto disponivel para fechamento."),
+      screen.getByText("Nenhum caixa aberto disponível para fechamento."),
     ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("link", {
+        name: "Abrir caixa",
+      }),
+    ).toHaveAttribute("href", "/cash/open");
+
+    expect(
+      screen.getByRole("link", {
+        name: "Ir ao PDV",
+      }),
+    ).toHaveAttribute("href", "/pdv");
   });
 
   it("renders loading errors", async () => {
     listOpenCashSessionsUseCaseMock.mockResolvedValueOnce({
-      formError: "Nao foi possivel carregar os caixas abertos.",
+      formError: "Não foi possível carregar os caixas abertos.",
       success: false,
     });
+
     listEventsUseCaseMock.mockResolvedValueOnce({
       events: [],
       success: true,
@@ -150,7 +175,7 @@ describe("CloseCashPage", () => {
     render(await CloseCashPage());
 
     expect(
-      screen.getByText("Nao foi possivel carregar os caixas abertos."),
+      screen.getByText("Não foi possível carregar os caixas abertos."),
     ).toBeInTheDocument();
   });
 });

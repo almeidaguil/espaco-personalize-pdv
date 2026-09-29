@@ -23,12 +23,23 @@ describe("EventForm", () => {
     render(<EventForm action={vi.fn()} />);
 
     expect(screen.getByLabelText("Nome do evento")).toBeInTheDocument();
+
     expect(screen.getByLabelText("Local")).toBeInTheDocument();
-    expect(screen.getByLabelText("Inicio")).toBeInTheDocument();
-    expect(screen.getByLabelText("Termino")).toBeInTheDocument();
-    expect(screen.getByLabelText("Evento ativo")).toBeChecked();
+
+    expect(screen.getByLabelText("Início")).toBeInTheDocument();
+
+    expect(screen.getByLabelText("Término")).toBeInTheDocument();
+
     expect(
-      screen.getByRole("button", { name: "Salvar evento" }),
+      screen.getByRole("checkbox", {
+        name: /Evento ativo/i,
+      }),
+    ).toBeChecked();
+
+    expect(
+      screen.getByRole("button", {
+        name: "Salvar evento",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -47,13 +58,14 @@ describe("EventForm", () => {
     for (const [label, errorId] of [
       ["Nome do evento", "name-error"],
       ["Local", "location-error"],
-      ["Inicio", "startsAt-error"],
-      ["Termino", "endsAt-error"],
+      ["Início", "startsAt-error"],
+      ["Término", "endsAt-error"],
     ]) {
       expect(screen.getByLabelText(label)).toHaveAttribute(
         "aria-describedby",
         errorId,
       );
+
       expect(screen.getByLabelText(label)).toHaveAttribute(
         "aria-invalid",
         "true",

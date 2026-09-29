@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import EventsPage from "./page";
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
 
 vi.mock("@/shared/lib/supabase/server-client", () => ({
   createSupabaseServerClient: vi.fn(async () => ({})),
@@ -20,6 +22,8 @@ const listEventsUseCaseMock = vi.hoisted(() => vi.fn());
 vi.mock("@/modules/events/application/list-events-use-case", () => ({
   listEventsUseCase: listEventsUseCaseMock,
 }));
+
+import EventsPage from "./page";
 
 describe("EventsPage", () => {
   it("renders events returned by the use case", async () => {
@@ -40,16 +44,20 @@ describe("EventsPage", () => {
     render(await EventsPage());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Eventos" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Eventos",
+      }),
     ).toBeInTheDocument();
+
     expect(
-      screen.getByRole("link", { name: "Voltar ao painel" }),
-    ).toHaveAttribute("href", "/");
-    expect(screen.getByRole("link", { name: "Novo evento" })).toHaveAttribute(
-      "href",
-      "/events/new",
-    );
+      screen.getByRole("link", {
+        name: "Novo evento",
+      }),
+    ).toHaveAttribute("href", "/events/new");
+
     expect(screen.getByText("Evento Julho")).toBeInTheDocument();
+
     expect(screen.getByText("Centro de Eventos")).toBeInTheDocument();
   });
 
@@ -64,5 +72,11 @@ describe("EventsPage", () => {
     expect(
       screen.getByText("Nenhum evento cadastrado ainda."),
     ).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("link", {
+        name: "Criar evento",
+      }),
+    ).toHaveAttribute("href", "/events/new");
   });
 });

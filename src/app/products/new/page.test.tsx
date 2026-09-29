@@ -3,6 +3,10 @@ import { describe, expect, it, vi } from "vitest";
 
 import NewProductPage from "./page";
 
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
+
 vi.mock("@/modules/products/presentation/create-product-action", () => ({
   createProductAction: vi.fn(),
 }));
@@ -16,16 +20,18 @@ describe("NewProductPage", () => {
     render(<NewProductPage />);
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Novo produto" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Novo produto",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Painel" })).toHaveAttribute(
-      "href",
-      "/",
-    );
-    expect(screen.getByRole("link", { name: "Produtos" })).toHaveAttribute(
-      "href",
-      "/products",
-    );
+
+    expect(
+      screen.getByRole("link", {
+        name: "Voltar para produtos",
+      }),
+    ).toHaveAttribute("href", "/products");
+
     expect(screen.getByLabelText("Formulario de produto")).toBeInTheDocument();
   });
 });

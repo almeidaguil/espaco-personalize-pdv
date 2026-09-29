@@ -24,12 +24,14 @@ describe("SalesList", () => {
 
     expect(screen.getByText("Evento Julho")).toBeInTheDocument();
     expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
-    expect(screen.getByText("Concluida")).toBeInTheDocument();
-    expect(screen.getByText("1 venda(s) encontrada(s)")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Ver detalhes" })).toHaveAttribute(
-      "href",
-      "/sales/sale-1",
-    );
+    expect(screen.getByText("Concluída")).toBeInTheDocument();
+    expect(screen.getByText("1 venda")).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("link", {
+        name: "Ver detalhes",
+      }),
+    ).toHaveAttribute("href", "/sales/sale-1");
   });
 
   it("renders an empty state", () => {
@@ -71,8 +73,10 @@ describe("SalesList", () => {
     await user.selectOptions(screen.getByLabelText("Status"), "canceled");
 
     expect(screen.getByText("Evento cancelado")).toBeInTheDocument();
+
     expect(screen.queryByText("Evento concluido")).not.toBeInTheDocument();
-    expect(screen.getByText("1 venda(s) encontrada(s)")).toBeInTheDocument();
+
+    expect(screen.getByText("1 venda")).toBeInTheDocument();
   });
 
   it("paginates sales", async () => {
@@ -93,13 +97,21 @@ describe("SalesList", () => {
     );
 
     expect(screen.getByText("Mostrando 1-8 de 9 vendas")).toBeInTheDocument();
+
     expect(screen.getByText("Evento 1")).toBeInTheDocument();
+
     expect(screen.queryByText("Evento 9")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Proxima" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Proxima",
+      }),
+    );
 
     expect(screen.getByText("Mostrando 9-9 de 9 vendas")).toBeInTheDocument();
+
     expect(screen.getByText("Evento 9")).toBeInTheDocument();
+
     expect(screen.queryByText("Evento 1")).not.toBeInTheDocument();
   });
 });

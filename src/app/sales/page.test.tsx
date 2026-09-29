@@ -7,6 +7,10 @@ vi.mock("@/shared/lib/supabase/server-client", () => ({
   createSupabaseServerClient: vi.fn(async () => ({})),
 }));
 
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
+
 vi.mock("@/modules/sales/infra/supabase-sale-summary-repository", () => ({
   SupabaseSaleSummaryRepository: vi.fn(),
 }));
@@ -36,9 +40,14 @@ describe("SalesPage", () => {
     render(await SalesPage());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Vendas" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Vendas",
+      }),
     ).toBeInTheDocument();
+
     expect(screen.getByText("Evento Julho")).toBeInTheDocument();
+
     expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
   });
 
@@ -51,7 +60,13 @@ describe("SalesPage", () => {
     render(await SalesPage());
 
     expect(
-      screen.getByText("Nao foi possivel carregar as vendas."),
+      screen.getByText("Não foi possível carregar as vendas"),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        "Verifique sua conexão e tente carregar o histórico novamente.",
+      ),
     ).toBeInTheDocument();
   });
 });

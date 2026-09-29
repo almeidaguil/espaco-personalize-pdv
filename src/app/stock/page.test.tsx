@@ -9,6 +9,10 @@ vi.mock("@/shared/lib/supabase/server-client", () => ({
   createSupabaseServerClient: vi.fn(async () => ({})),
 }));
 
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
+
 vi.mock("@/modules/products/infra/supabase-product-repository", () => ({
   SupabaseProductRepository: vi.fn(),
 }));
@@ -47,6 +51,7 @@ vi.mock("@/modules/stock/presentation/stock-movements-overview", () => ({
       {balances.map((balance) => (
         <span key={balance.productId}>{balance.productLabel}</span>
       ))}
+
       {movements.map((movement) => (
         <span key={movement.id}>{movement.productLabel}</span>
       ))}
@@ -55,6 +60,7 @@ vi.mock("@/modules/stock/presentation/stock-movements-overview", () => ({
 }));
 
 const listProductsUseCaseMock = vi.hoisted(() => vi.fn());
+
 const listStockMovementsSummaryUseCaseMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/modules/products/application/list-products-use-case", () => ({
@@ -88,6 +94,7 @@ describe("StockPage", () => {
       ],
       success: true,
     });
+
     listStockMovementsSummaryUseCaseMock.mockResolvedValueOnce({
       balances: [
         {
@@ -108,15 +115,22 @@ describe("StockPage", () => {
     render(await StockPage());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Estoque" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Controle de estoque",
+      }),
     ).toBeInTheDocument();
+
     expect(
       screen.getByLabelText("Formulario de ajuste de estoque"),
     ).toBeInTheDocument();
+
     expect(
       screen.getAllByText("Caneca personalizada (CANECA-001)").length,
     ).toBeGreaterThanOrEqual(1);
+
     expect(screen.getByLabelText("Resumo de estoque")).toBeInTheDocument();
+
     expect(screen.queryByText("Produto inativo")).not.toBeInTheDocument();
   });
 
@@ -125,6 +139,7 @@ describe("StockPage", () => {
       products: [],
       success: true,
     });
+
     listStockMovementsSummaryUseCaseMock.mockResolvedValueOnce({
       balances: [],
       movements: [],
@@ -134,10 +149,15 @@ describe("StockPage", () => {
     render(await StockPage());
 
     expect(
-      screen.getByText(/Cadastre ou ative um produto/),
+      screen.getByText(
+        "Cadastre ou ative um produto antes de ajustar o estoque.",
+      ),
     ).toBeInTheDocument();
+
     expect(
-      screen.getByRole("link", { name: "Cadastrar produto" }),
+      screen.getByRole("link", {
+        name: "Cadastrar produto",
+      }),
     ).toHaveAttribute("href", "/products/new");
   });
 });
