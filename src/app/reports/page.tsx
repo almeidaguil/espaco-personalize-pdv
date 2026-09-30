@@ -11,12 +11,14 @@ import {
   type SupabaseSalesByEventReportClient,
 } from "@/modules/reports/infra/supabase-sales-by-event-report-repository";
 import { SalesByEventReport } from "@/modules/reports/presentation/sales-by-event-report";
+import { AppNavigation } from "@/shared/components/app-navigation";
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
+import { brand } from "@/shared/config/brand";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
-  title: "Relatorios | Espaco Personalize PDV",
+  title: `Relatórios | ${brand.name}`,
 };
 
 export const dynamic = "force-dynamic";
@@ -31,16 +33,22 @@ export default async function ReportsPage({
   searchParams,
 }: ReportsPageProps = {}) {
   const resolvedSearchParams = await searchParams;
+
   const supabaseClient = await createSupabaseServerClient();
+
   const eventClient = supabaseClient as unknown as SupabaseEventClient;
+
   const reportClient =
     supabaseClient as unknown as SupabaseSalesByEventReportClient;
 
   const eventsResult = await listEventsUseCase({
     eventRepository: new SupabaseEventRepository(eventClient),
   });
+
   const events = eventsResult.success ? eventsResult.events : [];
+
   const selectedEventId = resolvedSearchParams?.eventId ?? events[0]?.id ?? "";
+
   const reportResult = selectedEventId
     ? await getSalesByEventReportUseCase({
         eventId: selectedEventId,
@@ -51,16 +59,18 @@ export default async function ReportsPage({
     : null;
 
   return (
-    <PageShell maxWidth="lg">
+    <PageShell maxWidth="xl">
+      <AppNavigation title="Relatórios" />
+
       <PageHeader
-        description="Acompanhe vendas por evento, totais cancelados e produtos vendidos."
-        eyebrow="Relatorios"
-        title="Relatorios"
+        description="Acompanhe vendas, formas de pagamento e produtos vendidos por operação."
+        eyebrow="Relatórios"
+        title="Relatórios"
       />
 
       {!eventsResult.success ? (
         <InlineFeedback padding="md" tone="error">
-          {eventsResult.formError}
+          {eventsResult.formError ?? "Não foi possível carregar os eventos."}
         </InlineFeedback>
       ) : (
         <SalesByEventReport

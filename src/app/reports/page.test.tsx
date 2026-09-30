@@ -10,7 +10,9 @@ vi.mock("@/shared/lib/supabase/server-client", () => ({
 vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
   SupabaseEventRepository: vi.fn(),
 }));
-
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
 vi.mock(
   "@/modules/reports/infra/supabase-sales-by-event-report-repository",
   () => ({
@@ -74,7 +76,10 @@ describe("ReportsPage", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Relatorios" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Relatórios",
+      }),
     ).toBeInTheDocument();
     expect(screen.getByText("Evento Julho")).toBeInTheDocument();
     expect(getSalesByEventReportUseCaseMock).toHaveBeenCalledWith(

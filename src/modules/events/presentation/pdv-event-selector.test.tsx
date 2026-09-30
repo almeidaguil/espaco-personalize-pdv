@@ -27,11 +27,14 @@ describe("PdvEventSelector", () => {
     expect(
       screen.getByRole("heading", {
         level: 2,
-        name: "Evento ativo da operacao",
+        name: "Evento ativo da operação",
       }),
     ).toBeInTheDocument();
+
     expect(screen.getByText("Evento Julho")).toBeInTheDocument();
+
     expect(screen.getByText(/Centro de Eventos/)).toBeInTheDocument();
+
     expect(screen.queryByText("Evento Agosto")).not.toBeInTheDocument();
   });
 });

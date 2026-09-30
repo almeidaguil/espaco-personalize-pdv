@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+
 import { listProductsUseCase } from "@/modules/products/application/list-products-use-case";
 import type { Product } from "@/modules/products/domain/product";
 import {
@@ -16,66 +17,92 @@ import {
   type StockAdjustmentProductOption,
 } from "@/modules/stock/presentation/stock-adjustment-form";
 import { StockMovementsOverview } from "@/modules/stock/presentation/stock-movements-overview";
+import { AppNavigation } from "@/shared/components/app-navigation";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { Panel } from "@/shared/components/panel";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
-  title: "Estoque | Espaco Personalize PDV",
+  title: "Estoque | Roberto Multimarcas",
 };
 
 export const dynamic = "force-dynamic";
 
 export default async function StockPage() {
   const supabaseClient = await createSupabaseServerClient();
+
   const productRepository = new SupabaseProductRepository(
     supabaseClient as unknown as SupabaseProductClient,
   );
+
   const stockMovementClient =
     supabaseClient as unknown as SupabaseStockMovementClient;
+
   const stockMovementRepository = new SupabaseStockMovementRepository(
     stockMovementClient,
   );
-  const result = await listProductsUseCase({ productRepository });
+
+  const result = await listProductsUseCase({
+    productRepository,
+  });
+
   const summaryResult = await listStockMovementsSummaryUseCase({
     productRepository,
     stockMovementRepository,
   });
 
+  const activeProductOptions = result.success
+    ? toActiveProductOptions(result.products)
+    : [];
+
   return (
-    <PageShell>
+    <PageShell maxWidth="xl">
+      <AppNavigation title="Estoque" />
+
       <PageHeader
-        description="Controle saldos, entradas e ajustes manuais sem alterar produtos diretamente."
-        eyebrow="Modulo"
-        title="Estoque"
+        description="Controle saldos, entradas e ajustes manuais dos produtos da loja."
+        eyebrow="Estoque"
+        title="Controle de estoque"
       />
 
       <Panel padding="sm">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
           Ajuste de estoque
         </p>
-        <h2 className="mt-1 text-2xl font-semibold">Registrar movimentacao</h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+
+        <h2 className="mt-1.5 text-2xl font-bold tracking-tight text-[var(--brand-foreground)]">
+          Registrar movimentação
+        </h2>
+
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--brand-muted)]">
           Escolha um produto ativo e registre a entrada inicial ou um ajuste
-          manual. A validacao final acontece no servidor.
+          manual. A validação final acontece no servidor.
         </p>
       </Panel>
 
       {!result.success ? (
         <LoadErrorState
-          actions={[{ href: "/stock", label: "Tentar novamente" }]}
+          actions={[
+            {
+              href: "/stock",
+              label: "Tentar novamente",
+            },
+          ]}
           eyebrow="Erro"
           message={
             result.formError ??
-            "Verifique sua conexao e tente carregar os produtos ativos novamente."
+            "Verifique sua conexão e tente carregar os produtos ativos novamente."
           }
-          title="Nao foi possivel carregar os produtos"
+          title="Não foi possível carregar os produtos"
         />
-      ) : toActiveProductOptions(result.products).length === 0 ? (
+      ) : activeProductOptions.length === 0 ? (
         <EmptyState
           actions={[
-            { href: "/products/new", label: "Cadastrar produto" },
+            {
+              href: "/products/new",
+              label: "Cadastrar produto",
+            },
             {
               href: "/products",
               label: "Ver produtos",
@@ -84,26 +111,31 @@ export default async function StockPage() {
           ]}
           eyebrow="Sem produto ativo"
           message="Cadastre ou ative um produto antes de ajustar o estoque."
-          title="Estoque sem produto disponivel."
+          title="Estoque sem produto disponível."
         />
       ) : (
         <Panel>
           <StockAdjustmentForm
             action={adjustStockAction}
-            products={toActiveProductOptions(result.products)}
+            products={activeProductOptions}
           />
         </Panel>
       )}
 
       {!summaryResult.success ? (
         <LoadErrorState
-          actions={[{ href: "/stock", label: "Tentar novamente" }]}
+          actions={[
+            {
+              href: "/stock",
+              label: "Tentar novamente",
+            },
+          ]}
           eyebrow="Erro"
           message={
             summaryResult.formError ??
-            "Verifique sua conexao e tente carregar saldos e movimentacoes novamente."
+            "Verifique sua conexão e tente carregar saldos e movimentações novamente."
           }
-          title="Nao foi possivel carregar o estoque"
+          title="Não foi possível carregar o estoque"
         />
       ) : (
         <StockMovementsOverview
