@@ -172,7 +172,7 @@ export default async function Home() {
       <Panel className="grid gap-5">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
               Operação do dia
             </p>
 
@@ -203,7 +203,7 @@ export default async function Home() {
                 className={
                   action.variant === "primary"
                     ? "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105"
-                    : "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
+                    : "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                 }
                 href={action.href}
                 key={action.href}
@@ -274,7 +274,7 @@ export default async function Home() {
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">
-                <h2 className="text-lg font-bold text-[var(--brand-foreground)] transition group-hover:text-[#9a7021]">
+                <h2 className="text-lg font-bold text-[var(--brand-foreground)] transition group-hover:text-[var(--brand-accent-foreground)]">
                   {module.title}
                 </h2>
 
@@ -290,7 +290,7 @@ export default async function Home() {
               </StatusBadge>
             </div>
 
-            <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-[#9a7021] opacity-0 transition duration-200 group-hover:opacity-100">
+            <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent-foreground)] opacity-0 transition duration-200 group-hover:opacity-100">
               Acessar
               <span
                 aria-hidden="true"

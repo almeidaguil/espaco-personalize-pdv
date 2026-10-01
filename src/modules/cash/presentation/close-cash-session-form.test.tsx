@@ -47,6 +47,11 @@ describe("CloseCashSessionForm", () => {
 
     expect(screen.getByLabelText("Valor contado no caixa")).toBeInTheDocument();
 
+    expect(screen.getByDisplayValue("cash-session-1")).toHaveAttribute(
+      "name",
+      "cashSessionId",
+    );
+
     expect(
       screen.getByRole("button", {
         name: "Fechar caixa",

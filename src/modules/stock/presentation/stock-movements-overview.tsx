@@ -69,7 +69,7 @@ export function StockMovementsOverview({
       <Panel>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
               Saldos
             </p>
 
@@ -123,7 +123,7 @@ export function StockMovementsOverview({
                       {balance.productLabel}
                     </p>
 
-                    <strong className="shrink-0 text-lg font-bold text-[#9a7021]">
+                    <strong className="shrink-0 text-lg font-bold text-[var(--brand-accent-foreground)]">
                       {balance.quantityOnHand}
                     </strong>
                   </article>
@@ -146,7 +146,7 @@ export function StockMovementsOverview({
       <Panel>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
               Histórico
             </p>
 

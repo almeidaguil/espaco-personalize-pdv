@@ -95,7 +95,7 @@ export function SalesByEventReport({
           <Panel>
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent)]">
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
                   Relatório por evento
                 </p>
 
@@ -105,7 +105,7 @@ export function SalesByEventReport({
               </div>
 
               <Link
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021] sm:w-auto"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)] sm:w-auto"
                 href={`/reports/export?eventId=${report.eventId}`}
               >
                 Exportar CSV
@@ -138,7 +138,7 @@ export function SalesByEventReport({
           {/* Pagamentos */}
           <Panel>
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent)]">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
                 Financeiro
               </p>
 
@@ -171,7 +171,7 @@ export function SalesByEventReport({
           {/* Itens */}
           <Panel className="overflow-hidden" padding="none">
             <div className="border-b border-[var(--border)] px-5 py-4">
-              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent)]">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
                 Produtos
               </p>
 

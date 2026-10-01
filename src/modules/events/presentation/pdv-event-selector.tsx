@@ -21,7 +21,7 @@ export function PdvEventSelector({ events }: PdvEventSelectorProps) {
   return (
     <Panel>
       <div className="mb-4">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
           Evento
         </p>
 
@@ -46,7 +46,7 @@ export function PdvEventSelector({ events }: PdvEventSelectorProps) {
             </p>
           </div>
 
-          <span className="text-sm font-semibold text-[#9a7021]">
+          <span className="text-sm font-semibold text-[var(--brand-accent-foreground)]">
             {activeEvent.startsAtLabel}
           </span>
         </div>

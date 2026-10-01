@@ -7,11 +7,12 @@
   --brand-primary: #111111;
   --brand-primary-hover: #262626;
   --brand-accent: #cda34f;
+  --brand-accent-foreground: #805b16;
 
   --surface: #ffffff;
   --surface-muted: #f4f1ea;
   --border: #e5e1d8;
-  --muted: #6b7280;
+  --muted: #5f6672;
 
   --app-font-sans:
     Arial, Helvetica, ui-sans-serif, system-ui, -apple-system,

@@ -28,6 +28,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
     "--brand-primary": brand.colors.primary,
     "--brand-primary-hover": brand.colors.primaryHover,
     "--brand-accent": brand.colors.accent,
+    "--brand-accent-foreground": brand.colors.accentForeground,
     "--brand-background": brand.colors.background,
     "--brand-surface": brand.colors.surface,
     "--brand-foreground": brand.colors.foreground,

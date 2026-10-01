@@ -165,7 +165,7 @@ function ManagedUserCard({
               </select>
 
               <button
-                className="h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021] disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)] disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={
                   isRolePending || (isCurrentUser && user.role === "admin")
                 }
@@ -222,7 +222,7 @@ function ManagedUserCard({
               />
 
               <button
-                className="h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021] disabled:cursor-not-allowed disabled:opacity-50"
+                className="h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)] disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={isPasswordPending}
                 type="submit"
               >

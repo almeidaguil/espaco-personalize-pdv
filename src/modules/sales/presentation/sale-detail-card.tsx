@@ -23,7 +23,7 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
       {/* Resumo */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent)]">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
             {sale.eventName}
           </p>
 
@@ -76,7 +76,7 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
 
       {/* Pagamento */}
       <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
-        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent)]">
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
           Pagamento
         </p>
 

@@ -10,6 +10,7 @@ type BrandConfig = {
     primary: string;
     primaryHover: string;
     accent: string;
+    accentForeground: string;
     background: string;
     surface: string;
     foreground: string;
@@ -28,6 +29,7 @@ const brands: Record<BrandKey, BrandConfig> = {
       primary: "#1e3275",
       primaryHover: "#17275c",
       accent: "#f5c313",
+      accentForeground: "#1e3275",
       background: "#f6f7fb",
       surface: "#ffffff",
       foreground: "#0f172a",
@@ -45,10 +47,11 @@ const brands: Record<BrandKey, BrandConfig> = {
       primary: "#111111",
       primaryHover: "#262626",
       accent: "#cda34f",
+      accentForeground: "#805b16",
       background: "#f7f5f0",
       surface: "#ffffff",
       foreground: "#171717",
-      muted: "#6b7280",
+      muted: "#5f6672",
     },
   },
 };

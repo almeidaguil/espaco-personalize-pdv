@@ -77,7 +77,7 @@ export function EventList({ action, events }: EventListProps) {
                   {event.location ?? "Sem local"}
                 </p>
 
-                <p className="mt-3 text-sm font-semibold text-[#9a7021]">
+                <p className="mt-3 text-sm font-semibold text-[var(--brand-accent-foreground)]">
                   {event.periodLabel}
                 </p>
               </div>

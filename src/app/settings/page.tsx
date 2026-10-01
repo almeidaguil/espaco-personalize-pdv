@@ -59,7 +59,7 @@ export default async function SettingsPage() {
           </InlineFeedback>
 
           <Link
-            className="text-sm font-semibold text-[#9a7021] transition hover:text-[var(--brand-accent)]"
+            className="text-sm font-semibold text-[var(--brand-accent-foreground)] transition hover:text-[var(--brand-primary)]"
             href="/"
           >
             ← Voltar ao painel
@@ -110,7 +110,7 @@ export default async function SettingsPage() {
       <section className="grid gap-5 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)] lg:items-start">
         {/* Criar operador */}
         <Panel as="article">
-          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent)]">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
             Usuários
           </p>
 
@@ -131,7 +131,7 @@ export default async function SettingsPage() {
         {/* Usuários existentes */}
         <section className="grid gap-4">
           <Panel>
-            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent)]">
+            <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
               Acessos
             </p>
 

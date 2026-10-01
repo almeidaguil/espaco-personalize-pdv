@@ -76,9 +76,11 @@ export function CloseCashSessionForm({
             key={session.id}
             noValidate
           >
+            <input name="cashSessionId" type="hidden" value={session.id} />
+
             {/* Cabeçalho */}
             <div>
-              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent)]">
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
                 Caixa em operação
               </p>
 

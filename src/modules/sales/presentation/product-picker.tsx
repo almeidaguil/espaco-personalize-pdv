@@ -94,7 +94,7 @@ export function ProductPicker({
       {totalPages > 1 ? (
         <div className="flex items-center justify-between gap-3">
           <button
-            className="min-h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021] disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)] disabled:cursor-not-allowed disabled:opacity-40"
             disabled={page === 1}
             onClick={() =>
               onPageChange((currentPage) => Math.max(1, currentPage - 1))
@@ -109,7 +109,7 @@ export function ProductPicker({
           </span>
 
           <button
-            className="min-h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021] disabled:cursor-not-allowed disabled:opacity-40"
+            className="min-h-11 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)] disabled:cursor-not-allowed disabled:opacity-40"
             disabled={page === totalPages}
             onClick={() =>
               onPageChange((currentPage) =>

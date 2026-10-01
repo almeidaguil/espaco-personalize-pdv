@@ -19,7 +19,7 @@ type StatusStateProps = {
 const toneClasses = {
   empty: {
     border: "border-[var(--border)]",
-    eyebrow: "text-[var(--brand-accent)]",
+    eyebrow: "text-[var(--brand-accent-foreground)]",
     panel: "bg-[var(--brand-surface)]",
     title: "text-[var(--brand-foreground)]",
     message: "text-[var(--brand-muted)]",
@@ -76,7 +76,7 @@ export function StatusState({
             <Link
               className={
                 action.variant === "secondary"
-                  ? "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
+                  ? "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                   : "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105"
               }
               href={action.href}

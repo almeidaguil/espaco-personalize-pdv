@@ -59,7 +59,7 @@ export function PageHeader({
         <div className="mb-4 flex flex-wrap gap-3">
           {backLinks.map((link) => (
             <Link
-              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-muted)] transition hover:text-[var(--brand-accent)]"
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--brand-muted)] transition hover:text-[var(--brand-accent-foreground)]"
               href={link.href}
               key={`${link.href}-${link.label}`}
             >
@@ -72,7 +72,7 @@ export function PageHeader({
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
             {eyebrow}
           </p>
 
@@ -91,7 +91,7 @@ export function PageHeader({
               <Link
                 className={
                   action.variant === "secondary"
-                    ? "inline-flex min-h-10 items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent)]"
+                    ? "inline-flex min-h-10 items-center justify-center rounded-xl border border-black/10 bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                     : "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105"
                 }
                 href={action.href}

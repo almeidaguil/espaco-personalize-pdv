@@ -56,7 +56,7 @@ export function CartItems({
               <div className="flex items-center gap-2">
                 <button
                   aria-label={`Remover uma unidade de ${item.name}`}
-                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-lg font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-lg font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                   onClick={() => onDecrementProduct(item.id)}
                   type="button"
                 >
@@ -69,7 +69,7 @@ export function CartItems({
 
                 <button
                   aria-label={`Adicionar uma unidade de ${item.name}`}
-                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-lg font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-lg font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                   onClick={() => onAddProduct(item)}
                   type="button"
                 >

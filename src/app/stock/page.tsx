@@ -67,7 +67,7 @@ export default async function StockPage() {
       />
 
       <Panel padding="sm">
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
           Ajuste de estoque
         </p>
 

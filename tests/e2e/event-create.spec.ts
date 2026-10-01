@@ -28,8 +28,8 @@ test("admin creates an event and sees it in the events list", async ({
   await page.goto("/events/new");
   await page.getByLabel("Nome do evento").fill(eventName);
   await page.getByLabel("Local").fill(eventLocation);
-  await page.getByLabel("Inicio").fill("2026-07-10T09:00");
-  await page.getByLabel("Termino").fill("2026-07-10T18:00");
+  await page.getByLabel("Início").fill("2026-07-10T09:00");
+  await page.getByLabel("Término").fill("2026-07-10T18:00");
   await page.getByLabel("Evento ativo").uncheck();
   await page.getByRole("button", { name: "Salvar evento" }).click();
 

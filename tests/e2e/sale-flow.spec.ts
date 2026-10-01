@@ -65,13 +65,13 @@ test("admin records non-cash sales and closes cash with reconciliation", async (
     paymentMethodLabel: "Pix",
   });
   await createSale(page, productName, eventName, {
-    paymentMethodLabel: "Cartao de credito",
+    paymentMethodLabel: "Cartão de crédito",
   });
 
   await page.goto("/cash/close");
   const cashCloseForm = page.locator("form", { hasText: eventName }).first();
 
-  await expect(cashCloseForm).toContainText("2 vendas concluidas");
+  await expect(cashCloseForm).toContainText("Concluídas: 2");
   await expect(cashCloseForm).toContainText("R$ 100,00");
   await expect(cashCloseForm.getByLabel("Senha administrativa")).toHaveCount(0);
 
@@ -130,7 +130,7 @@ async function openCashSession(page: Page) {
 }
 
 type CreateSaleOptions = {
-  paymentMethodLabel?: "Cartao de credito" | "Cartao de debito" | "Pix";
+  paymentMethodLabel?: "Cartão de crédito" | "Cartão de débito" | "Pix";
   receivedAmount?: string;
 };
 

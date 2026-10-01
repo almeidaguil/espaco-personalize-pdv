@@ -143,7 +143,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
       <input name="paymentMethod" type="hidden" value={paymentMethod} />
 
       <div>
-        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent)]">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
           Carrinho
         </p>
 
@@ -227,7 +227,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
                   className={
                     paymentMethod === value
                       ? "min-h-11 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition"
-                      : "min-h-11 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
+                      : "min-h-11 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                   }
                   key={value}
                   onClick={() => setPaymentMethod(value)}
@@ -270,7 +270,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
           {paymentMethod === "cash" && hasCartItems ? (
             <div className="flex flex-wrap gap-2">
               <button
-                className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
+                className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                 onClick={() =>
                   setReceivedAmountInput(formatBrlAmount(totalInReais))
                 }
@@ -281,7 +281,7 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
 
               {[50, 100].map((amountInReais) => (
                 <button
-                  className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[#9a7021]"
+                  className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                   key={amountInReais}
                   onClick={() =>
                     setReceivedAmountInput(formatBrlAmount(amountInReais))
