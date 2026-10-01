@@ -1,457 +1,348 @@
-# Plano De Desenvolvimento - Sistema PDV Para Loja De Impressao 3D
+# Plano De Desenvolvimento - Roberto Multimarcas PDV
+
+> Este documento descreve a arquitetura alvo. Durante a transicao, o runtime
+> ainda possui o fluxo legado de eventos; ele somente sera removido depois que
+> banco, aplicacao e testes estiverem prontos.
 
 ## 1. Objetivo
 
-Criar um sistema online, mobile first, privado, para controlar vendas presenciais em eventos, estoque, formas de pagamento, caixa e relatorios da loja de impressao 3D.
+Manter um sistema privado, mobile first e instalavel como PWA para a operacao
+diaria da loja fisica Roberto Multimarcas.
 
-Nome do projeto: **Espaco Personalize PDV**.
+O sistema controla:
+
+- usuarios e permissoes;
+- produtos e estoque;
+- caixas independentes por vendedor;
+- vendas e pagamentos;
+- cancelamentos;
+- reconciliacao financeira;
+- relatorios por periodo, operador e sessao;
+- exportacao CSV.
+
+O produto nao utiliza eventos. A sessao de caixa do operador e o contexto
+financeiro obrigatorio de cada venda.
 
 ## 2. Arquitetura Geral
 
 ```txt
-Usuario
+Usuario autenticado
 ->
-Celular / MacBook / Windows
+Aplicacao Web/PWA Next.js
 ->
-Sistema Web/PWA
+Use cases no servidor
 ->
-Vercel
+RPCs transacionais e repositorios
 ->
-Next.js
-->
-Supabase
-->
-Banco de dados + Login + Seguranca
+Supabase Auth + Postgres + RLS
+```
+
+Hospedagem e entrega:
+
+```txt
+feature/* -> PR para develop -> Vercel Preview/Staging
+develop -> PR de release para main -> Vercel Production
 ```
 
 ## 3. Tecnologias
 
-- Frontend: Next.js, React e TypeScript.
-- Estilo visual: Tailwind CSS.
-- Banco de dados: Supabase Postgres.
-- Login: Supabase Auth com e-mail e senha.
-- Hospedagem: Vercel.
-- Repositorio: GitHub privado.
-- App no celular: PWA instalavel.
+- Next.js e React.
+- TypeScript forte.
+- Tailwind CSS.
+- Supabase Postgres e Auth.
+- Zod.
+- Vitest e Testing Library.
+- Playwright.
+- ESLint e Prettier.
+- Husky e Commitlint.
+- GitHub Actions.
+- Vercel.
 
-## 4. Modulos
+## 4. Perfis
 
-### Login E Usuarios
+### Administrador
 
-Funcoes:
+- Gerencia usuarios e permissoes.
+- Gerencia produtos e estoque.
+- Consulta todos os caixas e vendas.
+- Executa fechamento administrativo auditado.
+- Cancela vendas conforme as regras de seguranca.
+- Acessa relatorios e exportacoes.
 
-- Login.
-- Logout.
-- Recuperacao de senha.
-- Perfis de acesso.
+### Operador
 
-Perfis:
+- Abre o proprio caixa.
+- Usa somente o proprio caixa aberto no PDV.
+- Registra vendas.
+- Consulta as vendas permitidas pela politica de acesso.
+- Fecha o proprio caixa.
+- Visualiza produtos e estoque necessarios para vender.
 
-- Admin: controla tudo.
-- Operador: faz vendas, abre e fecha caixa, visualiza produtos.
+## 5. Modulos
+
+### Autenticacao E Usuarios
+
+- Login e logout.
+- Sessao persistente.
+- Perfis `admin` e `operator`.
+- Ativacao, inativacao e redefinicao de senha por administrador.
+- Rotas e actions protegidas no servidor.
 
 ### Dashboard
 
-Resumo inicial:
+Para o operador:
 
-- Vendas do dia.
-- Vendas do evento atual.
-- Total em dinheiro.
-- Total em Pix.
-- Total em cartao.
-- Produtos mais vendidos.
-- Estoque baixo.
+- status do proprio caixa;
+- atalho para abrir, operar ou fechar;
+- resumo das proprias vendas do dia.
+
+Para o administrador:
+
+- caixas abertos por vendedor;
+- vendas e pagamentos do dia;
+- divergencias de fechamento;
+- produtos mais vendidos;
+- alertas de estoque.
 
 ### Produtos
 
-Campos:
-
-- Nome.
-- Categoria.
-- Preco de venda.
-- Custo.
-- Lucro estimado.
-- Estoque.
-- SKU/codigo.
-- Foto.
-- Ativo/inativo.
-
-### Categorias
-
-Categorias iniciais:
-
-- Chaveiros.
-- Vasos.
-- Decoracao.
-- Utilidades.
-- Personalizados.
-- Brinquedos.
-- Brindes.
-- Outros.
-
-### Eventos
-
-Cada venda deve ser vinculada a um evento.
-
-Exemplos:
-
-- Feira Junho 2026.
-- Congresso de Psicologia.
-- Loja online.
-- Venda avulsa.
-
-Campos:
-
-- Nome.
-- Data.
-- Local.
-- Status.
-- Observacoes.
-
-### PDV
-
-Tela principal de operacao.
-
-Funcoes:
-
-- Selecionar evento ativo.
-- Buscar produto.
-- Adicionar ao carrinho.
-- Alterar quantidade.
-- Remover item.
-- Aplicar desconto.
-- Escolher forma de pagamento.
-- Calcular troco.
-- Finalizar venda.
-- Baixar estoque automaticamente.
-
-Formas de pagamento:
-
-- Pix.
-- Dinheiro.
-- Cartao de credito.
-- Cartao de debito.
-- Misto.
-- Cortesia.
+- Cadastro, edicao e inativacao.
+- Nome, SKU, categoria, preco e imagem.
+- Busca otimizada para o PDV.
+- Estoque nunca e alterado diretamente pelo cadastro.
 
 ### Caixa
 
-Controle de caixa por evento/turno.
+- Um caixa aberto por operador.
+- Varios operadores com caixas simultaneos.
+- Varias sessoes fechadas do mesmo operador no mesmo dia.
+- Saldo inicial, data operacional e horario de abertura.
+- Totais por forma de pagamento.
+- Valor esperado, contado e diferenca.
+- Fechamento proprio ou administrativo auditado.
 
-Funcoes:
+### PDV
 
-- Abrir caixa.
-- Informar valor inicial.
-- Registrar vendas.
-- Fechar caixa.
-- Comparar valores esperados.
-- Adicionar observacoes.
-
-No fechamento:
-
-- Dinheiro esperado.
-- Pix recebido.
-- Cartao recebido.
-- Total vendido.
-- Descontos.
-- Divergencia.
-- Observacoes.
+- Usa automaticamente o caixa aberto do usuario atual.
+- Bloqueia vendas sem caixa aberto.
+- Busca e selecao de produtos.
+- Carrinho com quantidades e totais.
+- Dinheiro, Pix, credito e debito.
+- Calculo de troco.
+- Finalizacao transacional.
+- Baixa de estoque atomica.
 
 ### Vendas
 
-Cada venda salva:
+Cada venda registra:
 
-- Numero da venda.
-- Data e hora.
-- Operador.
-- Evento.
-- Produtos.
-- Quantidades.
-- Subtotal.
-- Desconto.
-- Total.
-- Forma de pagamento.
-- Valor recebido.
-- Troco.
-- Status.
+- identificador;
+- sessao de caixa;
+- operador;
+- data e hora;
+- itens, quantidades e precos historicos;
+- total;
+- pagamento e troco;
+- status.
 
-Status:
-
-- Concluida.
-- Cancelada.
-
-Ao cancelar uma venda:
-
-- O estoque volta automaticamente.
-- A venda continua registrada como cancelada.
+Cancelamentos preservam a venda, registram auditoria e devolvem o estoque.
 
 ### Estoque
 
-O estoque deve ser controlado por movimentacoes.
+O saldo e derivado de movimentacoes:
 
-Tipos:
+- entrada inicial;
+- entrada manual;
+- ajuste;
+- saida por venda;
+- devolucao por cancelamento.
 
-- Entrada manual.
-- Saida por venda.
-- Ajuste.
-- Devolucao por cancelamento.
-
-Regra central: produto nunca altera estoque diretamente. Todo ajuste gera movimentacao.
+Vendas concorrentes devem bloquear o estoque necessario e nunca permitir saldo
+negativo.
 
 ### Relatorios
 
-Relatorios essenciais:
+- Periodo e data operacional.
+- Operador.
+- Sessao de caixa.
+- Forma de pagamento.
+- Vendas concluidas e canceladas.
+- Produtos e quantidades.
+- Divergencias de caixa.
+- Consolidado diario de todos os vendedores.
+- Exportacao CSV com os mesmos filtros e totais da interface.
 
-- Vendas por dia.
-- Vendas por evento.
-- Vendas por produto.
-- Vendas por forma de pagamento.
-- Lucro estimado.
-- Estoque baixo.
-- Produtos mais vendidos.
+## 6. Regras De Negocio
 
-Exportacoes:
+- Toda venda pertence ao caixa aberto do operador autenticado.
+- O servidor deriva o operador da sessao autenticada.
+- Cada operador possui no maximo um caixa aberto.
+- Operadores diferentes podem trabalhar simultaneamente.
+- O mesmo operador pode fechar e reabrir caixa no mesmo dia.
+- Caixa fechado nao recebe vendas.
+- Venda, itens, pagamento e baixa de estoque sao atomicos.
+- Cancelamento mantem historico e devolve estoque.
+- Produto nao altera estoque diretamente.
+- Todo ajuste de estoque gera movimentacao.
+- Fechamentos registram valores esperado, contado e divergencia.
+- Operadores nao usam nem fecham caixas de outros operadores.
+- Fechamentos administrativos registram o responsavel.
+- Datas operacionais usam `America/Sao_Paulo`.
 
-- CSV de vendas.
-- CSV de produtos.
-- CSV de estoque.
-- CSV do evento.
-
-## 5. Banco De Dados
+## 7. Banco De Dados Alvo
 
 Tabelas principais:
 
 - `profiles`
 - `products`
 - `categories`
-- `events`
 - `cash_sessions`
 - `sales`
 - `sale_items`
 - `payments`
 - `stock_movements`
 
-### products
+### `cash_sessions`
 
 ```txt
 id
-name
-category_id
-sku
-price
-cost
-stock_quantity
-min_stock
-image_url
-active
+operator_id
+business_date
+opening_amount_in_cents
+status
+opened_at
+closed_at
+counted_amount_in_cents
+expected_amount_in_cents
+difference_amount_in_cents
+closed_by
 created_at
+updated_at
 ```
 
-### sales
+Restricao central: indice unico parcial por `operator_id` quando o status for
+`open`.
+
+### `sales`
 
 ```txt
 id
-event_id
 operator_id
 cash_session_id
-subtotal
-discount
-total
 status
+total_in_cents
+completed_at
+canceled_at
 created_at
+updated_at
 ```
 
-### sale_items
+### `sale_items`
 
 ```txt
 id
 sale_id
 product_id
+product_name
 quantity
-unit_price
-total
+unit_price_in_cents
+total_in_cents
+created_at
 ```
 
-### payments
+### `payments`
 
 ```txt
 id
 sale_id
 method
-amount
-received_amount
-change_amount
+amount_in_cents
+change_in_cents
+created_at
 ```
 
-### stock_movements
+### `stock_movements`
 
 ```txt
 id
 product_id
 type
-quantity
+quantity_change
 reason
 sale_id
+created_by
 created_at
 ```
 
-## 6. Seguranca
-
-Medidas obrigatorias:
+## 8. Seguranca
 
 - Login obrigatorio.
-- Permissoes por perfil.
-- Row Level Security no banco.
-- Usuarios comuns nao acessam dados diretamente.
-- Registro de cancelamentos.
-- Backup/exportacao.
-- Variaveis secretas protegidas na Vercel.
+- Autorizacao por perfil no servidor e no banco.
+- RLS em todas as tabelas publicas.
+- Escritas financeiras diretas bloqueadas.
+- RPCs com `search_path` fixo e validacao de `auth.uid()`.
+- Valores financeiros, identidade e timestamps recalculados ou derivados no
+  servidor.
+- Segredos somente em ambientes locais protegidos ou provedores autorizados.
+- Nenhuma credencial em logs, commits, traces ou artefatos.
+- Operacoes administrativas com auditoria.
 
-## 7. Fases De Desenvolvimento
+## 9. Rotas Alvo
 
-### Fase 1 - Base Do Projeto
+- `/login`
+- `/dashboard`
+- `/products`
+- `/products/new`
+- `/products/[id]/edit`
+- `/pdv`
+- `/sales`
+- `/sales/[id]`
+- `/cash/open`
+- `/cash/close`
+- `/stock`
+- `/reports`
+- `/settings`
 
-Criar:
+As rotas `/events` e `/events/new` sao legadas e serao removidas no PR de
+limpeza depois do corte funcional.
 
-- Projeto Next.js.
-- Tailwind.
-- Conexao com Supabase.
-- GitHub privado.
-- Deploy na Vercel.
-- Layout base.
-- Login.
+## 10. Estrategia De Evolucao
 
-Resultado: sistema online com login funcionando.
+A reestruturacao segue o
+[plano para loja fisica](plano-reestruturacao-loja-fisica.md) e o
+[ADR 0001](adr/0001-loja-fisica-caixas-por-operador.md).
 
-### Fase 2 - Cadastros
+Ordem resumida:
 
-Criar:
+1. formalizar contrato e arquitetura;
+2. preparar banco compativel;
+3. migrar relatorios;
+4. desacoplar historico de vendas;
+5. ativar caixa e PDV por operador;
+6. remover eventos;
+7. validar concorrencia e E2E multioperador;
+8. reinicializar ambientes com protecoes;
+9. promover a release.
 
-- Produtos.
-- Categorias.
-- Eventos.
-- Usuarios/perfis.
+Cada etapa deve manter o runtime funcional e passar os gates de qualidade.
 
-Resultado: cadastro de produtos e preparacao de evento.
-
-### Fase 3 - PDV
-
-Criar:
-
-- Tela de venda.
-- Carrinho.
-- Desconto.
-- Pagamento.
-- Troco.
-- Finalizacao.
-- Baixa automatica de estoque.
-
-Resultado: sistema pronto para vender em evento.
-
-### Fase 4 - Caixa
-
-Criar:
-
-- Abertura de caixa.
-- Fechamento de caixa.
-- Resumo por forma de pagamento.
-- Conferencia de valores.
-
-Resultado: controle financeiro basico do evento.
-
-### Fase 5 - Estoque
-
-Criar:
-
-- Historico de movimentacoes.
-- Entrada manual.
-- Ajuste.
-- Estoque minimo.
-- Alerta de estoque baixo.
-
-Resultado: controle real dos produtos.
-
-### Fase 6 - Relatorios
-
-Criar:
-
-- Relatorio diario.
-- Relatorio por evento.
-- Relatorio por produto.
-- Relatorio por pagamento.
-- Exportacao CSV.
-
-Resultado: analise do evento depois da venda.
-
-### Fase 7 - PWA
-
-Criar:
-
-- Instalacao no celular.
-- Icone.
-- Tela inicial.
-- Otimizacao mobile.
-
-Resultado: sistema com experiencia de app.
-
-## 8. Telas Principais
-
-```txt
-/login
-/dashboard
-/products
-/products/new
-/events
-/events/new
-/pdv
-/sales
-/sales/[id]
-/cash/open
-/cash/close
-/stock
-/reports
-/settings
-```
-
-## 9. MVP Ideal
-
-A primeira versao util deve ter:
-
-- Login.
-- Cadastro de produtos.
-- Cadastro de eventos.
-- PDV.
-- Pagamento.
-- Troco.
-- Baixa de estoque.
-- Vendas registradas.
-- Relatorio por evento.
-- Exportacao CSV.
-
-## 10. Fora Do Escopo Inicial
-
-Nao fazer na primeira versao:
+## 11. Fora Do Escopo Atual
 
 - Nota fiscal.
-- Integracao com maquininha.
+- Integracao direta com maquininha.
 - Pagamento online.
-- App nativo.
-- Sistema multi-loja complexo.
-- Controle financeiro avancado.
-- Impressao de recibo.
-- Leitor de codigo de barras.
+- Aplicativo nativo.
+- Sistema multi-loja.
+- Controle contabil avancado.
+- Impressao fiscal.
+- Fechamento automatico de caixa sem conferencia humana.
 
-## Resumo Da Arquitetura
+## 12. Criterio De Produto Pronto
 
-```txt
-Next.js
-TypeScript
-Tailwind
-Supabase Auth
-Supabase Postgres
-Supabase Storage
-Vercel
-GitHub privado
-PWA
-CSV Export
-```
+- Um operador abre, vende, fecha e reabre caixa no mesmo dia.
+- Dois ou mais vendedores operam simultaneamente sem mistura financeira.
+- O estoque permanece correto sob concorrencia.
+- Cancelamentos mantem historico e compensam estoque.
+- Relatorios consolidam e detalham caixas corretamente.
+- O banco e a aplicacao nao dependem de eventos.
+- Quality e E2E passam antes de cada promocao.

@@ -1,4 +1,4 @@
-# Padroes Tecnicos Oficiais - Espaco Personalize PDV
+# Padroes Tecnicos Oficiais - Roberto Multimarcas PDV
 
 Este documento define a base tecnica obrigatoria do projeto.
 
@@ -126,9 +126,20 @@ Ele apenas envia a intencao:
 - Finalizar venda.
 - Cancelar venda.
 - Abrir caixa.
+- Fechar caixa.
 - Ajustar estoque.
 
 A regra deve ser validada no servidor e nos use cases.
+
+Para operacoes financeiras:
+
+- o servidor deriva o usuario de `auth.uid()`;
+- o frontend nao informa `operator_id` confiavel;
+- timestamps operacionais usam o relogio do servidor;
+- abertura, fechamento, venda e cancelamento usam RPCs transacionais;
+- cada operador possui no maximo um caixa aberto;
+- operadores diferentes podem operar simultaneamente;
+- o mesmo operador pode abrir outra sessao depois de fechar a anterior.
 
 ## Validacao
 
@@ -150,6 +161,8 @@ Tipos:
 - Unitarios.
 - Integracao.
 - E2E.
+- Banco/RLS/RPC.
+- Concorrencia.
 
 Prioridade de cobertura:
 
@@ -157,6 +170,8 @@ Prioridade de cobertura:
 - Estoque.
 - Cancelamento.
 - Caixa.
+- Isolamento entre operadores.
+- Concorrencia de estoque e abertura de caixa.
 - Permissoes.
 - Exportacao CSV.
 
@@ -166,6 +181,12 @@ Diretriz:
 - Application deve testar casos de uso com mocks/fakes de repositories.
 - Infra deve ter testes de integracao quando houver contrato importante.
 - Presentation deve usar Testing Library para componentes e Playwright para fluxos essenciais.
+- Regras de RLS e RPC devem ser testadas contra Supabase real local ou ambiente
+  isolado; mocks nao substituem esse gate.
+- Corridas criticas devem usar clientes autenticados independentes e operacoes
+  simultaneas controladas.
+- E2E autenticado obrigatorio deve falhar quando credenciais estiverem ausentes,
+  nunca ser aprovado por testes pulados.
 
 ## CI/CD
 
@@ -182,6 +203,8 @@ Regra:
 
 - Nenhum codigo entra quebrado.
 - Pull requests devem passar lint, type-check, testes e build.
+- PRs com migrations ou fluxos financeiros tambem devem validar reset local,
+  RLS/RPC e E2E obrigatorio.
 
 ## Convencoes
 
@@ -217,3 +240,6 @@ Cada entrega deve, quando aplicavel:
 - Ter testes proporcionais ao risco.
 - Passar lint, type-check, test e build.
 - Nao mover regra critica para o frontend.
+- Preservar compatibilidade de runtime em PRs intermediarios de migration.
+- Nao reescrever migrations ja aplicadas.
+- Nao registrar segredos em logs, traces ou artefatos.

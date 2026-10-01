@@ -1,6 +1,12 @@
-# Espaco Personalize PDV
+# Roberto Multimarcas PDV
 
-Sistema privado, mobile first e PWA para vendas presenciais em eventos, estoque, caixa e relatorios.
+Sistema privado, mobile first e PWA para vendas, estoque, caixas por operador e
+relatorios de uma loja fisica.
+
+O repositorio esta em transicao do fluxo legado orientado a eventos para a
+operacao permanente da Roberto Multimarcas. Consulte o
+[plano de reestruturacao](docs/plano-reestruturacao-loja-fisica.md) e o
+[ADR de caixas por operador](docs/adr/0001-loja-fisica-caixas-por-operador.md).
 
 ## Stack
 
@@ -64,6 +70,8 @@ promocao de migrations e processo de release.
 
 - [Plano de desenvolvimento](docs/plano-desenvolvimento-pdv.md)
 - [Plano de execucao incremental](docs/plano-execucao-incremental.md)
+- [Plano de reestruturacao para loja fisica](docs/plano-reestruturacao-loja-fisica.md)
+- [ADR: loja fisica com caixas por operador](docs/adr/0001-loja-fisica-caixas-por-operador.md)
 - [Padroes tecnicos](docs/padroes-tecnicos.md)
 - [Gate E2E de release](docs/e2e-release-gate.md)
 - [Manual do usuario final](docs/manual-usuario-final.md)

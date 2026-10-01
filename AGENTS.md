@@ -1,12 +1,15 @@
-# Espaco Personalize PDV
+# Roberto Multimarcas PDV
 
 Estas instrucoes orientam agentes trabalhando neste workspace.
 
 ## Contexto Do Projeto
 
-Projeto: Espaco Personalize PDV.
+Projeto: Roberto Multimarcas PDV.
 
-Objetivo: sistema privado de vendas para eventos presenciais.
+Objetivo: sistema privado de vendas para uma loja fisica.
+
+O nome do repositorio ainda e legado da operacao Espaco Personalize. O produto
+e a documentacao nova devem usar Roberto Multimarcas.
 
 Stack fixa:
 
@@ -35,15 +38,23 @@ Principios:
 Modulos principais:
 
 - Produtos
-- Eventos
 - PDV
 - Caixa
 - Estoque
 - Relatorios
 
+O modulo de eventos esta em processo de remocao e nao deve receber novas
+funcionalidades.
+
 Documento de referencia do plano: [docs/plano-desenvolvimento-pdv.md](docs/plano-desenvolvimento-pdv.md).
 
 Plano incremental de execucao: [docs/plano-execucao-incremental.md](docs/plano-execucao-incremental.md).
+
+Plano da reestruturacao atual:
+[docs/plano-reestruturacao-loja-fisica.md](docs/plano-reestruturacao-loja-fisica.md).
+
+Decisao arquitetural vigente:
+[docs/adr/0001-loja-fisica-caixas-por-operador.md](docs/adr/0001-loja-fisica-caixas-por-operador.md).
 
 Padroes tecnicos oficiais: [docs/padroes-tecnicos.md](docs/padroes-tecnicos.md).
 
@@ -152,8 +163,12 @@ Regra de ouro:
 - Cancelamento devolve estoque e mantem historico.
 - Produto nunca altera estoque diretamente.
 - Todo ajuste de estoque gera movimentacao.
-- Cada venda deve estar vinculada a um evento.
-- Caixa deve ser controlado por evento/turno.
+- Cada venda deve estar vinculada ao caixa aberto do operador autenticado.
+- Cada operador pode ter no maximo um caixa aberto por vez.
+- Operadores diferentes podem manter caixas abertos simultaneamente.
+- O mesmo operador pode fechar e abrir outro caixa no mesmo dia.
+- O frontend nunca escolhe ou informa o operador de uma operacao financeira; o
+  servidor deriva a identidade da sessao autenticada.
 
 ## MVP
 
@@ -161,13 +176,13 @@ A primeira versao util deve conter:
 
 - Login.
 - Cadastro de produtos.
-- Cadastro de eventos.
 - PDV.
+- Abertura e fechamento de caixa por operador.
 - Pagamento.
 - Troco.
 - Baixa de estoque.
 - Vendas registradas.
-- Relatorio por evento.
+- Relatorio por periodo, operador e caixa.
 - Exportacao CSV.
 
 ## Rotas Principais
@@ -176,8 +191,6 @@ A primeira versao util deve conter:
 - `/dashboard`
 - `/products`
 - `/products/new`
-- `/events`
-- `/events/new`
 - `/pdv`
 - `/sales`
 - `/sales/[id]`
@@ -192,7 +205,6 @@ A primeira versao util deve conter:
 - `profiles`
 - `products`
 - `categories`
-- `events`
 - `cash_sessions`
 - `sales`
 - `sale_items`
@@ -205,3 +217,16 @@ A primeira versao util deve conter:
 - Validar no servidor.
 - Proteger APIs e actions.
 - Evitar logica critica no frontend.
+
+## Regras Da Transicao
+
+- Preservar o funcionamento do runtime atual em cada PR intermediario.
+- Introduzir mudancas de banco de forma aditiva antes do corte funcional.
+- Remover eventos somente depois que caixa, vendas e relatorios nao dependerem
+  mais deles.
+- Nao reescrever migrations ja aplicadas; criar novas migrations de evolucao.
+- O reset dos bancos esta autorizado para a troca de operacao, mas qualquer
+  reset remoto exige confirmacao explicita do ambiente e validacao do project
+  ref imediatamente antes da execucao.
+- Manual, runbook, checklist de go-live e gate E2E devem continuar descrevendo
+  o runtime implantado ate o PR de corte correspondente.
