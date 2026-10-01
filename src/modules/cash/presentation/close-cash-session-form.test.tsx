@@ -42,15 +42,26 @@ describe("CloseCashSessionForm", () => {
     expect(
       screen.getByText("Evento Julho - aberto em 10/07/2026, 09:00"),
     ).toBeInTheDocument();
+
     expect(screen.getByText("R$ 250,50")).toBeInTheDocument();
+
     expect(screen.getByLabelText("Valor contado no caixa")).toBeInTheDocument();
+
+    expect(screen.getByDisplayValue("cash-session-1")).toHaveAttribute(
+      "name",
+      "cashSessionId",
+    );
+
     expect(
-      screen.getByRole("button", { name: "Fechar caixa" }),
+      screen.getByRole("button", {
+        name: "Fechar caixa",
+      }),
     ).toBeInTheDocument();
   });
 
   it("requires admin password when counted amount is lower than expected", async () => {
     const user = userEvent.setup();
+
     mockActionState({});
 
     render(
@@ -75,13 +86,20 @@ describe("CloseCashSessionForm", () => {
 
     await user.type(screen.getByLabelText("Valor contado no caixa"), "200,00");
 
-    expect(screen.getByText("Diferenca: faltam R$ 50,50")).toBeInTheDocument();
-    expect(screen.getByText("Faltam R$ 50,50 no caixa.")).toBeInTheDocument();
+    expect(screen.getByText("Diferença")).toBeInTheDocument();
+
+    expect(screen.getByText("Faltam R$ 50,50")).toBeInTheDocument();
+
+    expect(
+      screen.getByText(/em relação ao valor esperado/i),
+    ).toBeInTheDocument();
+
     expect(screen.getByLabelText("Senha administrativa")).toBeInTheDocument();
   });
 
   it("shows positive and balanced cash differences", async () => {
     const user = userEvent.setup();
+
     mockActionState({});
 
     render(
@@ -104,12 +122,13 @@ describe("CloseCashSessionForm", () => {
 
     await user.type(screen.getByLabelText("Valor contado no caixa"), "250,50");
 
-    expect(screen.getByText("Diferenca: sem divergencia")).toBeInTheDocument();
+    expect(screen.getByText("Sem divergência")).toBeInTheDocument();
 
     await user.clear(screen.getByLabelText("Valor contado no caixa"));
+
     await user.type(screen.getByLabelText("Valor contado no caixa"), "300,50");
 
-    expect(screen.getByText("Diferenca: sobram R$ 50,00")).toBeInTheDocument();
+    expect(screen.getByText("Sobram R$ 50,00")).toBeInTheDocument();
   });
 
   it("renders field errors and success messages", () => {
@@ -140,20 +159,25 @@ describe("CloseCashSessionForm", () => {
     );
 
     expect(screen.getByText("Informe o caixa aberto.")).toBeInTheDocument();
+
     expect(
       screen.getByText("Informe o valor contado em Reais."),
     ).toBeInTheDocument();
+
     expect(screen.getByLabelText("Valor contado no caixa")).toHaveAttribute(
       "aria-describedby",
       "countedAmountInReais-error-cash-session-1",
     );
+
     expect(screen.getByLabelText("Valor contado no caixa")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
+
     expect(
       screen.getByText("Informe o caixa aberto.").closest("form"),
     ).toHaveAttribute("aria-describedby", "cashSessionId-error-cash-session-1");
+
     expect(screen.getByText("Caixa fechado com sucesso.")).toBeInTheDocument();
   });
 });

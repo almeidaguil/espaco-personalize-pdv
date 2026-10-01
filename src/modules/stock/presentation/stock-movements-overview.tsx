@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 
 import { PaginationControls } from "@/shared/components/pagination-controls";
 import { Panel } from "@/shared/components/panel";
+import { StatusBadge } from "@/shared/components/status-badge";
 import { normalizeSearchTerm } from "@/shared/utils/search";
 
 import type {
@@ -20,8 +21,10 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "short",
 });
+
 const balancesPageSize = 8;
 const movementsPageSize = 8;
+
 const movementTypeLabels: Record<StockMovementSummaryItem["type"], string> = {
   initial_adjustment: "Ajuste inicial",
   manual_adjustment: "Ajuste manual",
@@ -39,53 +42,61 @@ export function StockMovementsOverview({
   const [movementTypeFilter, setMovementTypeFilter] = useState<
     StockMovementSummaryItem["type"] | "all"
   >("all");
+
   const filteredBalances = useMemo(
     () => filterBalances(balances, balanceSearchTerm),
     [balanceSearchTerm, balances],
   );
+
   const filteredMovements = useMemo(
     () => filterMovements(movements, movementTypeFilter),
     [movementTypeFilter, movements],
   );
+
   const visibleBalances = filteredBalances.slice(
     (balancesPage - 1) * balancesPageSize,
     balancesPage * balancesPageSize,
   );
+
   const visibleMovements = filteredMovements.slice(
     (movementsPage - 1) * movementsPageSize,
     movementsPage * movementsPageSize,
   );
 
   return (
-    <section className="grid gap-4">
+    <section className="grid gap-5">
+      {/* Saldos */}
       <Panel>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
               Saldos
             </p>
-            <h2 className="mt-1 text-xl font-semibold">Estoque atual</h2>
+
+            <h2 className="mt-1.5 text-xl font-bold tracking-tight text-[var(--brand-foreground)]">
+              Estoque atual
+            </h2>
           </div>
-          <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-            {filteredBalances.length}
-          </span>
+
+          <StatusBadge>{filteredBalances.length}</StatusBadge>
         </div>
 
         {balances.length === 0 ? (
-          <p className="mt-4 text-sm leading-6 text-slate-600">
+          <p className="mt-4 text-sm leading-6 text-[var(--brand-muted)]">
             Nenhum produto com saldo registrado ainda.
           </p>
         ) : (
           <>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-5 grid gap-2">
               <label
-                className="text-sm font-medium text-slate-700"
+                className="text-sm font-semibold text-[var(--brand-foreground)]"
                 htmlFor="stock-balance-search"
               >
                 Buscar produto
               </label>
+
               <input
-                className="h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+                className="h-12 w-full min-w-0 rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition placeholder:text-neutral-400 focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
                 id="stock-balance-search"
                 onChange={(event) => {
                   setBalanceSearchTerm(event.target.value);
@@ -98,20 +109,21 @@ export function StockMovementsOverview({
             </div>
 
             {visibleBalances.length === 0 ? (
-              <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+              <p className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--brand-muted)]">
                 Nenhum saldo encontrado para esta busca.
               </p>
             ) : (
               <div className="mt-4 grid gap-2">
                 {visibleBalances.map((balance) => (
                   <article
-                    className="flex items-center justify-between gap-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3"
+                    className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 transition hover:border-[var(--brand-accent)]/50"
                     key={balance.productId}
                   >
-                    <p className="min-w-0 break-words text-sm font-semibold text-slate-950">
+                    <p className="min-w-0 break-words text-sm font-semibold text-[var(--brand-foreground)]">
                       {balance.productLabel}
                     </p>
-                    <strong className="shrink-0 text-lg text-[#1e3275]">
+
+                    <strong className="shrink-0 text-lg font-bold text-[var(--brand-accent-foreground)]">
                       {balance.quantityOnHand}
                     </strong>
                   </article>
@@ -120,6 +132,7 @@ export function StockMovementsOverview({
             )}
           </>
         )}
+
         <PaginationControls
           currentPage={balancesPage}
           itemLabel="produtos"
@@ -129,34 +142,38 @@ export function StockMovementsOverview({
         />
       </Panel>
 
+      {/* Histórico */}
       <Panel>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-              Historico
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
+              Histórico
             </p>
-            <h2 className="mt-1 text-xl font-semibold">Movimentacoes</h2>
+
+            <h2 className="mt-1.5 text-xl font-bold tracking-tight text-[var(--brand-foreground)]">
+              Movimentações
+            </h2>
           </div>
-          <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-            {filteredMovements.length}
-          </span>
+
+          <StatusBadge>{filteredMovements.length}</StatusBadge>
         </div>
 
         {movements.length === 0 ? (
-          <p className="mt-4 text-sm leading-6 text-slate-600">
-            Nenhuma movimentacao registrada ainda.
+          <p className="mt-4 text-sm leading-6 text-[var(--brand-muted)]">
+            Nenhuma movimentação registrada ainda.
           </p>
         ) : (
           <>
-            <div className="mt-4 grid gap-2">
+            <div className="mt-5 grid gap-2">
               <label
-                className="text-sm font-medium text-slate-700"
+                className="text-sm font-semibold text-[var(--brand-foreground)]"
                 htmlFor="stock-movement-type"
               >
-                Tipo de movimentacao
+                Tipo de movimentação
               </label>
+
               <select
-                className="h-11 w-full min-w-0 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+                className="h-12 w-full min-w-0 rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
                 id="stock-movement-type"
                 onChange={(event) => {
                   setMovementTypeFilter(
@@ -164,11 +181,13 @@ export function StockMovementsOverview({
                       | StockMovementSummaryItem["type"]
                       | "all",
                   );
+
                   setMovementsPage(1);
                 }}
                 value={movementTypeFilter}
               >
                 <option value="all">Todos os tipos</option>
+
                 {Object.entries(movementTypeLabels).map(([value, label]) => (
                   <option key={value} value={value}>
                     {label}
@@ -178,36 +197,39 @@ export function StockMovementsOverview({
             </div>
 
             {visibleMovements.length === 0 ? (
-              <p className="mt-4 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                Nenhuma movimentacao encontrada para este filtro.
+              <p className="mt-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm text-[var(--brand-muted)]">
+                Nenhuma movimentação encontrada para este filtro.
               </p>
             ) : (
               <div className="mt-4 grid gap-2">
                 {visibleMovements.map((movement) => (
                   <article
-                    className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3"
+                    className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3"
                     key={movement.id}
                   >
-                    <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-start justify-between gap-4">
                       <div className="min-w-0">
-                        <p className="break-words text-sm font-semibold text-slate-950">
+                        <p className="break-words text-sm font-semibold text-[var(--brand-foreground)]">
                           {movement.productLabel}
                         </p>
-                        <p className="mt-1 text-xs text-slate-500">
+
+                        <p className="mt-1 text-xs text-[var(--brand-muted)]">
                           {dateFormatter.format(movement.createdAt)}
                         </p>
                       </div>
+
                       <strong
                         className={
                           movement.quantityChange > 0
-                            ? "shrink-0 text-lg text-emerald-700"
-                            : "shrink-0 text-lg text-red-700"
+                            ? "shrink-0 text-lg font-bold text-emerald-700"
+                            : "shrink-0 text-lg font-bold text-red-700"
                         }
                       >
                         {formatQuantityChange(movement.quantityChange)}
                       </strong>
                     </div>
-                    <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+
+                    <p className="mt-2 text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-muted)]">
                       {formatMovementType(movement.type)}
                     </p>
                   </article>
@@ -216,9 +238,10 @@ export function StockMovementsOverview({
             )}
           </>
         )}
+
         <PaginationControls
           currentPage={movementsPage}
-          itemLabel="movimentacoes"
+          itemLabel="movimentações"
           onPageChange={setMovementsPage}
           pageSize={movementsPageSize}
           totalItems={filteredMovements.length}

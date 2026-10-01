@@ -10,7 +10,9 @@ vi.mock("@/shared/lib/supabase/server-client", () => ({
 vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
   SupabaseEventRepository: vi.fn(),
 }));
-
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
 vi.mock(
   "@/modules/auth/infra/supabase-current-user-profile-repository",
   () => ({
@@ -100,16 +102,14 @@ describe("PdvPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "PDV" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Voltar ao painel" }),
-    ).toHaveAttribute("href", "/");
+
     expect(
       screen.getByRole("heading", {
         level: 2,
         name: "Caixa aberto para venda",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Evento ativo da operacao")).toBeInTheDocument();
+    screen.getByText("Evento ativo da operação");
     expect(screen.getAllByText("Evento Julho").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("Carrinho do PDV")).toBeInTheDocument();
   });

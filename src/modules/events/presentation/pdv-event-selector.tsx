@@ -21,24 +21,35 @@ export function PdvEventSelector({ events }: PdvEventSelectorProps) {
   return (
     <Panel>
       <div className="mb-4">
-        <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+        <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
           Evento
         </p>
-        <h2 className="mt-1 text-lg font-semibold text-slate-950">
-          Evento ativo da operacao
+
+        <h2 className="mt-1.5 text-lg font-bold text-[var(--brand-foreground)]">
+          Evento ativo da operação
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600">
+
+        <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
           As vendas ficam vinculadas ao caixa aberto deste evento.
         </p>
       </div>
 
-      <article className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3">
-        <h3 className="text-sm font-semibold text-slate-950">
-          {activeEvent.name}
-        </h3>
-        <p className="mt-1 text-sm text-slate-600">
-          {activeEvent.location ?? "Sem local"} - {activeEvent.startsAtLabel}
-        </p>
+      <article className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div>
+            <h3 className="text-sm font-bold text-[var(--brand-foreground)]">
+              {activeEvent.name}
+            </h3>
+
+            <p className="mt-1 text-sm text-[var(--brand-muted)]">
+              {activeEvent.location ?? "Sem local"}
+            </p>
+          </div>
+
+          <span className="text-sm font-semibold text-[var(--brand-accent-foreground)]">
+            {activeEvent.startsAtLabel}
+          </span>
+        </div>
       </article>
     </Panel>
   );

@@ -1,32 +1,48 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { AppHeader } from "./app-header";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
+}));
+
+vi.mock("@/modules/auth/presentation/logout-action", () => ({
+  logoutAction: vi.fn(),
+}));
 
 describe("AppHeader", () => {
   it("renders sales navigation by default", () => {
     render(<AppHeader title="PDV" />);
 
-    expect(screen.getByRole("link", { name: "Vendas" })).toHaveAttribute(
-      "href",
-      "/sales",
-    );
     expect(
-      screen.queryByRole("link", { name: "Configuracoes" }),
+      screen.getByRole("link", {
+        name: "Vendas",
+      }),
+    ).toHaveAttribute("href", "/sales");
+
+    expect(
+      screen.queryByRole("link", {
+        name: "Configurações",
+      }),
     ).not.toBeInTheDocument();
-    expect(screen.getByText("Mais opcoes")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Produtos" })).toHaveAttribute(
-      "href",
-      "/products",
-    );
+
+    expect(screen.getByText("Mais opções")).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("link", {
+        name: "Produtos",
+      }),
+    ).toHaveAttribute("href", "/products");
   });
 
   it("renders settings navigation when admin navigation is enabled", () => {
     render(<AppHeader showAdminNavigation title="PDV" />);
 
-    expect(screen.getByRole("link", { name: "Configuracoes" })).toHaveAttribute(
-      "href",
-      "/settings",
-    );
+    expect(
+      screen.getByRole("link", {
+        name: "Configurações",
+      }),
+    ).toHaveAttribute("href", "/settings");
   });
 });

@@ -1,4 +1,5 @@
 import { Panel } from "@/shared/components/panel";
+import { StatusBadge } from "@/shared/components/status-badge";
 
 import type { SaleDetail } from "../application/sale-detail-repository";
 
@@ -18,76 +19,107 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 
 export function SaleDetailCard({ sale }: SaleDetailCardProps) {
   return (
-    <Panel className="grid gap-4">
-      <div className="flex items-start justify-between gap-3">
+    <Panel className="grid gap-5">
+      {/* Resumo */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
             {sale.eventName}
           </p>
-          <h2 className="mt-1 text-lg font-semibold text-slate-950">
+
+          <h2 className="mt-2 text-2xl font-bold text-[var(--brand-foreground)]">
             {moneyFormatter.format(sale.totalInReais)}
           </h2>
-          <p className="mt-1 text-sm text-slate-600">
+
+          <p className="mt-1 text-sm text-[var(--brand-muted)]">
             {dateFormatter.format(sale.completedAt)}
           </p>
         </div>
-        <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">
-          {sale.status === "completed" ? "Concluida" : "Cancelada"}
-        </span>
+
+        <StatusBadge tone={sale.status === "completed" ? "success" : "neutral"}>
+          {sale.status === "completed" ? "Concluída" : "Cancelada"}
+        </StatusBadge>
       </div>
 
-      <div className="rounded-md border border-slate-200">
-        <div className="border-b border-slate-200 px-3 py-2">
-          <h3 className="text-sm font-semibold text-slate-950">Itens</h3>
+      {/* Itens */}
+      <section className="overflow-hidden rounded-xl border border-[var(--border)]">
+        <div className="border-b border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3">
+          <h3 className="text-sm font-bold text-[var(--brand-foreground)]">
+            Itens da venda
+          </h3>
         </div>
-        <ul className="divide-y divide-slate-200">
+
+        <ul className="divide-y divide-[var(--border)]">
           {sale.items.map((item) => (
-            <li className="grid gap-1 px-3 py-3" key={item.productId}>
-              <div className="flex items-start justify-between gap-3">
-                <p className="text-sm font-semibold text-slate-950">
+            <li
+              className="grid gap-2 px-4 py-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+              key={item.productId}
+            >
+              <div>
+                <p className="text-sm font-bold text-[var(--brand-foreground)]">
                   {item.productName}
                 </p>
-                <strong className="text-sm text-slate-950">
-                  {moneyFormatter.format(item.totalInReais)}
-                </strong>
+
+                <p className="mt-1 text-sm text-[var(--brand-muted)]">
+                  {item.quantity} ×{" "}
+                  {moneyFormatter.format(item.unitPriceInReais)}
+                </p>
               </div>
-              <p className="text-sm text-slate-600">
-                {item.quantity} x {moneyFormatter.format(item.unitPriceInReais)}
-              </p>
+
+              <strong className="text-base font-bold text-[var(--brand-foreground)]">
+                {moneyFormatter.format(item.totalInReais)}
+              </strong>
             </li>
           ))}
         </ul>
-      </div>
+      </section>
 
-      <div className="grid gap-2 rounded-md border border-slate-200 bg-slate-50 p-3">
-        <div className="flex justify-between gap-3 text-sm">
-          <span className="text-slate-600">Metodo</span>
-          <strong className="text-slate-950">
-            {formatPaymentMethod(sale.payment.method)}
-          </strong>
-        </div>
-        <div className="flex justify-between gap-3 text-sm">
-          <span className="text-slate-600">Pagamento</span>
-          <strong className="text-slate-950">
-            {moneyFormatter.format(sale.payment.amountInReais)}
-          </strong>
-        </div>
-        <div className="flex justify-between gap-3 text-sm">
-          <span className="text-slate-600">Troco</span>
-          <strong className="text-slate-950">
-            {moneyFormatter.format(sale.payment.changeInReais)}
-          </strong>
-        </div>
-      </div>
+      {/* Pagamento */}
+      <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
+          Pagamento
+        </p>
+
+        <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+          <PaymentItem
+            label="Método"
+            value={formatPaymentMethod(sale.payment.method)}
+          />
+
+          <PaymentItem
+            label="Valor recebido"
+            value={moneyFormatter.format(sale.payment.amountInReais)}
+          />
+
+          <PaymentItem
+            label="Troco"
+            value={moneyFormatter.format(sale.payment.changeInReais)}
+          />
+        </dl>
+      </section>
     </Panel>
+  );
+}
+
+function PaymentItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-xl border border-[var(--border)] bg-white p-4">
+      <dt className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--brand-muted)]">
+        {label}
+      </dt>
+
+      <dd className="mt-2 text-base font-bold text-[var(--brand-foreground)]">
+        {value}
+      </dd>
+    </div>
   );
 }
 
 function formatPaymentMethod(method: SaleDetail["payment"]["method"]): string {
   const labels = {
     cash: "Dinheiro",
-    credit_card: "Cartao de credito",
-    debit_card: "Cartao de debito",
+    credit_card: "Cartão de crédito",
+    debit_card: "Cartão de débito",
     pix: "Pix",
   } as const;
 

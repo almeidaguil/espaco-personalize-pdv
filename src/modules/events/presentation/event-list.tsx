@@ -30,60 +30,76 @@ const pageSize = 6;
 
 export function EventList({ action, events }: EventListProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+
   const [currentPage, setCurrentPage] = useState(1);
+
   const sortedEvents = useMemo(
     () => sortEventsByActiveStatus(events),
     [events],
   );
+
   const visibleEvents = sortedEvents.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
   );
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-4">
       {state.formError ? (
         <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
+
       {state.successMessage ? (
         <InlineFeedback tone="success">{state.successMessage}</InlineFeedback>
       ) : null}
+
       <ul className="grid gap-3">
         {visibleEvents.map((event) => (
-          <Panel as="li" key={event.id} padding="sm">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-base font-semibold text-slate-950">
-                  {event.name}
-                </h2>
-                <p className="mt-1 text-sm text-slate-500">
+          <Panel
+            as="li"
+            className="transition duration-200 hover:border-[var(--brand-accent)]/50"
+            key={event.id}
+            padding="sm"
+          >
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h2 className="text-lg font-bold text-[var(--brand-foreground)]">
+                    {event.name}
+                  </h2>
+
+                  <StatusBadge tone={event.isActive ? "success" : "neutral"}>
+                    {event.isActive ? "Ativo" : "Inativo"}
+                  </StatusBadge>
+                </div>
+
+                <p className="mt-2 text-sm text-[var(--brand-muted)]">
                   {event.location ?? "Sem local"}
                 </p>
+
+                <p className="mt-3 text-sm font-semibold text-[var(--brand-accent-foreground)]">
+                  {event.periodLabel}
+                </p>
               </div>
-              <StatusBadge tone={event.isActive ? "success" : "neutral"}>
-                {event.isActive ? "Ativo" : "Inativo"}
-              </StatusBadge>
+
+              {event.isActive ? (
+                <form action={formAction} className="shrink-0" noValidate>
+                  <input name="eventId" type="hidden" value={event.id} />
+
+                  <button
+                    className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isPending}
+                    type="submit"
+                  >
+                    {isPending ? "Finalizando..." : "Finalizar evento"}
+                  </button>
+                </form>
+              ) : null}
             </div>
-
-            <strong className="mt-4 block text-sm text-[#1e3275]">
-              {event.periodLabel}
-            </strong>
-
-            {event.isActive ? (
-              <form action={formAction} className="mt-4" noValidate>
-                <input name="eventId" type="hidden" value={event.id} />
-                <button
-                  className="h-10 rounded-md border border-slate-200 px-3 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275] disabled:cursor-not-allowed disabled:opacity-70"
-                  disabled={isPending}
-                  type="submit"
-                >
-                  {isPending ? "Finalizando..." : "Finalizar evento"}
-                </button>
-              </form>
-            ) : null}
           </Panel>
         ))}
       </ul>
+
       <PaginationControls
         currentPage={currentPage}
         itemLabel="eventos"

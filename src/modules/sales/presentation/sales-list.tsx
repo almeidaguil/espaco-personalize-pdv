@@ -25,15 +25,19 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "short",
 });
+
 const pageSize = 8;
 
 export function SalesList({ sales }: SalesListProps) {
   const [statusFilter, setStatusFilter] = useState<SaleStatusFilter>("all");
+
   const [currentPage, setCurrentPage] = useState(1);
+
   const filteredSales = useMemo(
     () => filterSalesByStatus(sales, statusFilter),
     [sales, statusFilter],
   );
+
   const visibleSales = filteredSales.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize,
@@ -42,40 +46,60 @@ export function SalesList({ sales }: SalesListProps) {
   if (sales.length === 0) {
     return (
       <EmptyState
-        actions={[{ href: "/pdv", label: "Ir ao PDV" }]}
+        actions={[
+          {
+            href: "/pdv",
+            label: "Ir ao PDV",
+          },
+        ]}
         eyebrow="Sem vendas"
-        message="As vendas concluidas aparecerao aqui com status, total e acesso aos detalhes."
+        message="As vendas concluídas aparecerão aqui com status, valor e acesso aos detalhes."
         title="Nenhuma venda registrada ainda."
       />
     );
   }
 
   return (
-    <section className="grid gap-4">
-      <Panel padding="sm">
-        <div className="grid gap-2">
-          <label
-            className="text-sm font-medium text-slate-700"
-            htmlFor="sales-status-filter"
-          >
-            Status
-          </label>
-          <select
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-            id="sales-status-filter"
-            onChange={(event) => {
-              setStatusFilter(event.target.value as SaleStatusFilter);
-              setCurrentPage(1);
-            }}
-            value={statusFilter}
-          >
-            <option value="all">Todos os status</option>
-            <option value="completed">Concluidas</option>
-            <option value="canceled">Canceladas</option>
-          </select>
-          <p className="text-xs text-slate-500">
-            {filteredSales.length} venda(s) encontrada(s)
-          </p>
+    <section className="grid gap-5">
+      {/* Filtros */}
+      <Panel>
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="grid gap-2">
+            <label
+              className="text-sm font-semibold text-[var(--brand-foreground)]"
+              htmlFor="sales-status-filter"
+            >
+              Status
+            </label>
+
+            <select
+              className="h-12 w-full rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+              id="sales-status-filter"
+              onChange={(event) => {
+                setStatusFilter(event.target.value as SaleStatusFilter);
+
+                setCurrentPage(1);
+              }}
+              value={statusFilter}
+            >
+              <option value="all">Todos os status</option>
+
+              <option value="completed">Concluídas</option>
+
+              <option value="canceled">Canceladas</option>
+            </select>
+          </div>
+
+          <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3">
+            <p className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--brand-muted)]">
+              Resultados
+            </p>
+
+            <p className="mt-1 text-sm font-bold text-[var(--brand-foreground)]">
+              {filteredSales.length}{" "}
+              {filteredSales.length === 1 ? "venda" : "vendas"}
+            </p>
+          </div>
         </div>
       </Panel>
 
@@ -87,44 +111,64 @@ export function SalesList({ sales }: SalesListProps) {
         />
       ) : (
         <Panel className="overflow-hidden" padding="none">
-          <div className="border-b border-slate-200 px-4 py-3">
-            <h2 className="text-base font-semibold text-slate-950">
-              Vendas registradas
-            </h2>
+          {/* Cabeçalho */}
+          <div className="flex flex-col gap-2 border-b border-[var(--border)] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
+                Histórico
+              </p>
+
+              <h2 className="mt-1 text-lg font-bold text-[var(--brand-foreground)]">
+                Vendas registradas
+              </h2>
+            </div>
+
+            <span className="text-sm text-[var(--brand-muted)]">
+              Página {currentPage}
+            </span>
           </div>
-          <ul className="divide-y divide-slate-200">
+
+          {/* Lista */}
+          <ul className="divide-y divide-[var(--border)]">
             {visibleSales.map((sale) => (
-              <li className="grid gap-3 px-4 py-4" key={sale.id}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-950">
+              <li
+                className="grid gap-4 px-5 py-5 transition hover:bg-[var(--surface-muted)]/50 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
+                key={sale.id}
+              >
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h3 className="text-base font-bold text-[var(--brand-foreground)]">
                       {sale.eventName}
-                    </p>
-                    <p className="mt-1 text-sm text-slate-600">
-                      {dateFormatter.format(sale.completedAt)}
-                    </p>
+                    </h3>
+
+                    <StatusBadge
+                      tone={sale.status === "completed" ? "success" : "neutral"}
+                    >
+                      {sale.status === "completed" ? "Concluída" : "Cancelada"}
+                    </StatusBadge>
                   </div>
-                  <StatusBadge
-                    tone={sale.status === "completed" ? "success" : "neutral"}
-                  >
-                    {sale.status === "completed" ? "Concluida" : "Cancelada"}
-                  </StatusBadge>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <strong className="text-lg text-slate-950">
+
+                  <p className="mt-2 text-sm text-[var(--brand-muted)]">
+                    {dateFormatter.format(sale.completedAt)}
+                  </p>
+
+                  <strong className="mt-3 block text-xl font-bold text-[var(--brand-foreground)]">
                     {moneyFormatter.format(sale.totalInReais)}
                   </strong>
-                  <Link
-                    className="rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275]"
-                    href={`/sales/${sale.id}`}
-                  >
-                    Ver detalhes
-                  </Link>
                 </div>
+
+                <Link
+                  className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)] sm:w-auto"
+                  href={`/sales/${sale.id}`}
+                >
+                  Ver detalhes
+                </Link>
               </li>
             ))}
           </ul>
-          <div className="px-4 pb-4">
+
+          {/* Paginação */}
+          <div className="border-t border-[var(--border)] px-5 py-4">
             <PaginationControls
               currentPage={currentPage}
               itemLabel="vendas"

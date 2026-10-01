@@ -24,6 +24,7 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
 });
+
 const itemsPageSize = 8;
 
 export function SalesByEventReport({
@@ -35,8 +36,8 @@ export function SalesByEventReport({
 
   if (events.length === 0) {
     return (
-      <Panel className="text-sm leading-6 text-slate-600">
-        Cadastre um evento para gerar relatorios de vendas.
+      <Panel className="text-sm leading-6 text-[var(--brand-muted)]">
+        Cadastre um evento para gerar relatórios de vendas.
       </Panel>
     );
   }
@@ -49,68 +50,84 @@ export function SalesByEventReport({
     : [];
 
   return (
-    <section className="grid gap-4">
-      <Panel as="form" action="/reports" padding="sm">
-        <label
-          className="text-sm font-semibold text-slate-800"
-          htmlFor="eventId"
-        >
-          Evento
-        </label>
-        <div className="mt-2 grid gap-3 sm:grid-cols-[1fr_auto]">
-          <select
-            className="min-h-11 rounded-md border border-slate-300 bg-white px-3 text-base text-slate-950 outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
-            defaultValue={selectedEventId}
-            id="eventId"
-            name="eventId"
+    <section className="grid gap-5">
+      {/* Filtro */}
+      <Panel as="form" action="/reports">
+        <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <div className="grid gap-2">
+            <label
+              className="text-sm font-semibold text-[var(--brand-foreground)]"
+              htmlFor="eventId"
+            >
+              Evento
+            </label>
+
+            <select
+              className="h-12 w-full rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+              defaultValue={selectedEventId}
+              id="eventId"
+              name="eventId"
+            >
+              {events.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name} · {dateFormatter.format(event.startsAt)}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button
+            className="h-12 w-full rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-5 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105 sm:w-auto"
+            type="submit"
           >
-            {events.map((event) => (
-              <option key={event.id} value={event.id}>
-                {event.name} - {dateFormatter.format(event.startsAt)}
-              </option>
-            ))}
-          </select>
-          <button className="min-h-11 rounded-md bg-[#1e3275] px-4 text-sm font-semibold text-white transition hover:bg-[#142456]">
-            Gerar relatorio
+            Gerar relatório
           </button>
         </div>
       </Panel>
 
       {!report ? (
         <InlineFeedback padding="md" tone="error">
-          Nao foi possivel carregar o relatorio deste evento.
+          Não foi possível carregar o relatório deste evento.
         </InlineFeedback>
       ) : (
         <>
-          <Panel padding="sm">
-            <div className="flex flex-wrap items-start justify-between gap-3">
+          {/* Resumo geral */}
+          <Panel>
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-                  Relatorio por evento
+                <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
+                  Relatório por evento
                 </p>
-                <h2 className="mt-1 text-xl font-semibold text-slate-950">
+
+                <h2 className="mt-1.5 text-xl font-bold text-[var(--brand-foreground)]">
                   {report.eventName}
                 </h2>
               </div>
+
               <Link
-                className="rounded-md border border-[#1e3275] px-3 py-2 text-sm font-semibold text-[#1e3275] transition hover:bg-[#1e3275] hover:text-white"
+                className="inline-flex min-h-11 w-full items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)] sm:w-auto"
                 href={`/reports/export?eventId=${report.eventId}`}
               >
                 Exportar CSV
               </Link>
             </div>
 
-            <dl className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <dl className="mt-5 grid gap-3 sm:grid-cols-3">
               <SummaryCard
+                highlight
                 label="Total bruto"
                 value={moneyFormatter.format(report.grossTotalInReais)}
               />
+
               <SummaryCard
-                label="Vendas concluidas"
+                label="Vendas concluídas"
+                tone="success"
                 value={String(report.completedSalesCount)}
               />
+
               <SummaryCard
                 label="Vendas canceladas"
+                tone="danger"
                 value={`${report.canceledSalesCount} (${moneyFormatter.format(
                   report.canceledTotalInReais,
                 )})`}
@@ -118,54 +135,82 @@ export function SalesByEventReport({
             </dl>
           </Panel>
 
-          <Panel padding="sm">
-            <h2 className="text-base font-semibold text-slate-950">
-              Resumo por pagamento
-            </h2>
-            <dl className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {report.paymentSummary.map((payment) => (
-                <SummaryCard
-                  key={payment.method}
-                  label={formatPaymentMethod(payment.method)}
-                  value={`${moneyFormatter.format(payment.netTotalInReais)} (${payment.salesCount})`}
-                />
-              ))}
-            </dl>
+          {/* Pagamentos */}
+          <Panel>
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
+                Financeiro
+              </p>
+
+              <h2 className="mt-1 text-lg font-bold text-[var(--brand-foreground)]">
+                Resumo por pagamento
+              </h2>
+            </div>
+
+            {report.paymentSummary.length === 0 ? (
+              <p className="mt-4 text-sm text-[var(--brand-muted)]">
+                Nenhum pagamento registrado neste evento.
+              </p>
+            ) : (
+              <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {report.paymentSummary.map((payment) => (
+                  <SummaryCard
+                    key={payment.method}
+                    label={formatPaymentMethod(payment.method)}
+                    value={`${moneyFormatter.format(
+                      payment.netTotalInReais,
+                    )} · ${payment.salesCount} ${
+                      payment.salesCount === 1 ? "venda" : "vendas"
+                    }`}
+                  />
+                ))}
+              </dl>
+            )}
           </Panel>
 
+          {/* Itens */}
           <Panel className="overflow-hidden" padding="none">
-            <div className="border-b border-slate-200 px-4 py-3">
-              <h2 className="text-base font-semibold text-slate-950">
+            <div className="border-b border-[var(--border)] px-5 py-4">
+              <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
+                Produtos
+              </p>
+
+              <h2 className="mt-1 text-lg font-bold text-[var(--brand-foreground)]">
                 Itens vendidos
               </h2>
             </div>
+
             {report.items.length === 0 ? (
-              <p className="p-4 text-sm leading-6 text-slate-600">
+              <p className="p-5 text-sm leading-6 text-[var(--brand-muted)]">
                 Nenhum item vendido neste evento.
               </p>
             ) : (
               <>
-                <ul className="divide-y divide-slate-200">
+                <ul className="divide-y divide-[var(--border)]">
                   {visibleItems.map((item) => (
                     <li
-                      className="grid gap-2 px-4 py-4 sm:grid-cols-[1fr_auto]"
+                      className="grid gap-3 px-5 py-4 transition hover:bg-[var(--surface-muted)]/50 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center"
                       key={item.productId}
                     >
                       <div>
-                        <p className="text-sm font-semibold text-slate-950">
+                        <p className="text-sm font-bold text-[var(--brand-foreground)]">
                           {item.productName}
                         </p>
-                        <p className="mt-1 text-sm text-slate-600">
-                          {item.quantity} unidade(s)
+
+                        <p className="mt-1 text-sm text-[var(--brand-muted)]">
+                          {item.quantity}{" "}
+                          {item.quantity === 1 ? "unidade" : "unidades"}
                         </p>
                       </div>
-                      <strong className="text-base text-slate-950">
+
+                      <strong className="text-base font-bold text-[var(--brand-foreground)]">
                         {moneyFormatter.format(item.grossTotalInReais)}
                       </strong>
                     </li>
                   ))}
                 </ul>
-                <div className="px-4 pb-4">
+
+                <div className="border-t border-[var(--border)] px-5 py-4">
                   <PaginationControls
                     currentPage={itemsPage}
                     itemLabel="itens"
@@ -183,13 +228,39 @@ export function SalesByEventReport({
   );
 }
 
-function SummaryCard({ label, value }: { label: string; value: string }) {
+type SummaryCardProps = {
+  highlight?: boolean;
+  label: string;
+  tone?: "default" | "success" | "danger";
+  value: string;
+};
+
+function SummaryCard({
+  highlight = false,
+  label,
+  tone = "default",
+  value,
+}: SummaryCardProps) {
+  const valueClassName =
+    tone === "success"
+      ? "text-emerald-700"
+      : tone === "danger"
+        ? "text-red-700"
+        : "text-[var(--brand-foreground)]";
+
   return (
-    <div className="rounded-md border border-slate-200 bg-slate-50 p-3">
-      <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+    <div
+      className={
+        highlight
+          ? "rounded-xl border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/[0.07] p-4"
+          : "rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4"
+      }
+    >
+      <dt className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--brand-muted)]">
         {label}
       </dt>
-      <dd className="mt-1 text-lg font-semibold text-slate-950">{value}</dd>
+
+      <dd className={`mt-2 text-lg font-bold ${valueClassName}`}>{value}</dd>
     </div>
   );
 }
@@ -199,8 +270,8 @@ function formatPaymentMethod(
 ): string {
   const labels = {
     cash: "Dinheiro",
-    credit_card: "Cartao de credito",
-    debit_card: "Cartao de debito",
+    credit_card: "Cartão de crédito",
+    debit_card: "Cartão de débito",
     pix: "Pix",
   } as const;
 

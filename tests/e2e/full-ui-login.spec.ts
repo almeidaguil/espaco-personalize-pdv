@@ -29,7 +29,10 @@ test("admin logs in through the UI and traverses main flows", async ({
   await page.getByRole("button", { name: "Entrar" }).click();
 
   await expect(
-    page.getByRole("heading", { level: 1, name: "PDV" }),
+    page.getByRole("heading", {
+      level: 1,
+      name: /Abra o caixa antes de vender|Pronto para vender/,
+    }),
   ).toBeVisible();
 
   await authenticatePage(page);
@@ -56,7 +59,9 @@ test("admin logs in through the UI and traverses main flows", async ({
   await expect(page.getByText("Caixa aberto com sucesso.")).toBeVisible();
 
   await page.goto("/pdv");
-  await expect(page.getByText("PDV")).toBeVisible();
+  await expect(
+    page.getByRole("heading", { level: 1, name: "PDV" }),
+  ).toBeVisible();
   await expect(
     page.getByText(getEventNameFromOption(activeEvent?.label ?? "")).first(),
   ).toBeVisible();

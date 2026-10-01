@@ -24,17 +24,25 @@ export function CancelSaleForm({
   saleId,
 }: CancelSaleFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+
   const [isConfirmed, setIsConfirmed] = useState(false);
+
   const isSubmitDisabled = isPending || isCanceled || !isConfirmed;
 
   return (
-    <Panel padding="sm">
+    <Panel>
       <div className="grid gap-2">
-        <h2 className="text-base font-semibold text-slate-950">Cancelamento</h2>
-        <p className="text-sm leading-6 text-slate-600">
-          Ao cancelar, o estoque dos itens vendidos volta automaticamente e o
-          historico da venda permanece registrado. Esta acao exige senha
-          administrativa.
+        <p className="text-xs font-bold uppercase tracking-[0.12em] text-red-600">
+          Ação administrativa
+        </p>
+
+        <h2 className="text-lg font-bold text-[var(--brand-foreground)]">
+          Cancelamento da venda
+        </h2>
+
+        <p className="max-w-2xl text-sm leading-6 text-[var(--brand-muted)]">
+          Ao cancelar, o estoque dos itens vendidos será devolvido
+          automaticamente e o histórico da venda continuará registrado.
         </p>
       </div>
 
@@ -50,49 +58,60 @@ export function CancelSaleForm({
         </InlineFeedback>
       ) : null}
 
-      <form action={formAction} className="mt-4" noValidate>
+      <form action={formAction} className="mt-5 grid gap-4" noValidate>
         <input name="saleId" type="hidden" value={saleId} />
-        <div className="mb-4 grid gap-2">
+
+        <div className="grid gap-2">
           <label
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-semibold text-[var(--brand-foreground)]"
             htmlFor="adminPassword"
           >
             Senha administrativa
           </label>
+
           <input
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+            className="h-12 w-full rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition placeholder:text-neutral-400 focus:border-red-400 focus:ring-2 focus:ring-red-100 disabled:cursor-not-allowed disabled:bg-neutral-100 disabled:text-neutral-500"
             disabled={isPending || isCanceled}
             id="adminPassword"
             name="adminPassword"
-            placeholder="Senha temporaria"
+            placeholder="Digite a senha temporária"
             type="password"
           />
+
+          <p className="text-xs leading-5 text-[var(--brand-muted)]">
+            Esta ação exige autorização administrativa.
+          </p>
         </div>
-        <label className="mb-4 flex items-start gap-3 rounded-md border border-red-100 bg-red-50 px-3 py-3 text-sm text-red-900">
+
+        <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm leading-6 text-red-900">
           <input
             checked={isConfirmed}
-            className="mt-1 h-4 w-4 accent-red-700"
+            className="mt-1 h-4 w-4 shrink-0 accent-red-700"
             disabled={isPending || isCanceled}
             name="confirmCancellation"
             onChange={(event) => setIsConfirmed(event.target.checked)}
             type="checkbox"
           />
+
           <span>
-            Confirmo que esta venda deve ser cancelada e que o estoque sera
+            Confirmo que esta venda deve ser cancelada e que o estoque será
             devolvido automaticamente.
           </span>
         </label>
-        <button
-          className="h-11 w-full rounded-md border border-red-200 bg-red-50 px-4 text-sm font-semibold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-65 sm:w-auto"
-          disabled={isSubmitDisabled}
-          type="submit"
-        >
-          {isCanceled
-            ? "Venda cancelada"
-            : isPending
-              ? "Cancelando..."
-              : "Cancelar venda"}
-        </button>
+
+        <div className="flex border-t border-[var(--border)] pt-5 sm:justify-end">
+          <button
+            className="h-12 w-full rounded-xl border border-red-200 bg-red-50 px-6 text-sm font-bold text-red-700 transition hover:border-red-300 hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-44"
+            disabled={isSubmitDisabled}
+            type="submit"
+          >
+            {isCanceled
+              ? "Venda cancelada"
+              : isPending
+                ? "Cancelando..."
+                : "Cancelar venda"}
+          </button>
+        </div>
       </form>
     </Panel>
   );

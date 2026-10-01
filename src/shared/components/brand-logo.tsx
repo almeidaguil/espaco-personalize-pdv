@@ -1,5 +1,7 @@
 import Image from "next/image";
 
+import { brand } from "@/shared/config/brand";
+
 type BrandLogoProps = {
   className?: string;
   priority?: boolean;
@@ -8,12 +10,12 @@ type BrandLogoProps = {
 export function BrandLogo({ className, priority = false }: BrandLogoProps) {
   return (
     <Image
-      alt="Espaco Personalize"
+      alt={brand.name}
       className={className}
-      height={90}
+      height={120}
       priority={priority}
-      src="/brand/ep-logo-site.png"
-      width={160}
+      src={brand.logo}
+      width={240}
     />
   );
 }

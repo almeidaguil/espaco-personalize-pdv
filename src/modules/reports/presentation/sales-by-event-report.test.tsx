@@ -59,15 +59,28 @@ describe("SalesByEventReport", () => {
     );
 
     expect(screen.getByLabelText("Evento")).toBeInTheDocument();
+
     expect(screen.getAllByText("R$ 45,00")).toHaveLength(2);
+
     expect(screen.getByText("Resumo por pagamento")).toBeInTheDocument();
+
     expect(screen.getByText("Dinheiro")).toBeInTheDocument();
-    expect(screen.getByText("R$ 30,00 (1)")).toBeInTheDocument();
+
+    expect(screen.getByText("R$ 30,00 · 1 venda")).toBeInTheDocument();
+
     expect(screen.getByText("Pix")).toBeInTheDocument();
-    expect(screen.getByText("R$ 15,00 (1)")).toBeInTheDocument();
+
+    expect(screen.getByText("R$ 15,00 · 1 venda")).toBeInTheDocument();
+
     expect(screen.getByText("Chaveiro Polvo")).toBeInTheDocument();
-    expect(screen.getByText("3 unidade(s)")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Exportar CSV" })).toHaveAttribute(
+
+    expect(screen.getByText("3 unidades")).toBeInTheDocument();
+
+    expect(
+      screen.getByRole("link", {
+        name: "Exportar CSV",
+      }),
+    ).toHaveAttribute(
       "href",
       "/reports/export?eventId=11111111-1111-4111-8111-111111111111",
     );
@@ -77,7 +90,7 @@ describe("SalesByEventReport", () => {
     render(<SalesByEventReport events={[]} report={null} selectedEventId="" />);
 
     expect(
-      screen.getByText("Cadastre um evento para gerar relatorios de vendas."),
+      screen.getByText("Cadastre um evento para gerar relatórios de vendas."),
     ).toBeInTheDocument();
   });
 
@@ -135,13 +148,21 @@ describe("SalesByEventReport", () => {
     );
 
     expect(screen.getByText("Mostrando 1-8 de 9 itens")).toBeInTheDocument();
+
     expect(screen.getByText("Produto 1")).toBeInTheDocument();
+
     expect(screen.queryByText("Produto 9")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Proxima" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: "Proxima",
+      }),
+    );
 
     expect(screen.getByText("Mostrando 9-9 de 9 itens")).toBeInTheDocument();
+
     expect(screen.getByText("Produto 9")).toBeInTheDocument();
+
     expect(screen.queryByText("Produto 1")).not.toBeInTheDocument();
   });
 });
