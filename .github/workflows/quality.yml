@@ -52,3 +52,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          # The build prerenders authenticated routes that initialize the
+          # Supabase client. CI only needs valid public configuration shapes;
+          # it must not depend on production credentials or expose secret keys.
+          NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-publishable-key
