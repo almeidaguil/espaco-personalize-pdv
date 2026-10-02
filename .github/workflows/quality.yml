@@ -10,6 +10,9 @@ on:
       - develop
       - main
 
+permissions:
+  contents: read
+
 jobs:
   quality:
     name: Quality checks
@@ -58,3 +61,39 @@ jobs:
           # it must not depend on production credentials or expose secret keys.
           NEXT_PUBLIC_SUPABASE_URL: http://127.0.0.1:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-publishable-key
+
+  database:
+    name: Database contract
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Setup Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Start local Supabase
+        # The command normally prints ephemeral local keys. They are not needed
+        # by later steps because the database gate reads them in memory.
+        run: npx supabase start >/dev/null
+        env:
+          SUPABASE_TELEMETRY_DISABLED: "1"
+
+      - name: Run database gate
+        run: npm run test:db
+        env:
+          SUPABASE_TELEMETRY_DISABLED: "1"
+
+      - name: Stop local Supabase
+        if: always()
+        run: npx supabase stop --no-backup
+        env:
+          SUPABASE_TELEMETRY_DISABLED: "1"

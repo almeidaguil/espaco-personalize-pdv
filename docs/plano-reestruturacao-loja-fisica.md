@@ -261,23 +261,34 @@ Objetivo: preparar o banco para o novo modelo sem quebrar a versao atual.
 
 Tarefas:
 
-- [ ] Adicionar `business_date` a `cash_sessions`, calculado no fuso da loja.
-- [ ] Permitir `event_id` nulo temporariamente em `cash_sessions` e `sales`.
-- [ ] Criar indices por data, operador e sessao.
-- [ ] Criar as novas versoes transacionais das RPCs de abertura e venda.
-- [ ] Fazer o servidor derivar usuario e timestamps.
-- [ ] Preservar temporariamente as RPCs antigas para compatibilidade.
-- [ ] Preparar a restricao de um caixa aberto por operador.
-- [ ] Revisar grants, RLS e `search_path` de todas as funcoes financeiras.
+- [x] Adicionar `business_date` a `cash_sessions`, calculado no fuso da loja.
+- [x] Permitir `event_id` nulo temporariamente em `cash_sessions` e `sales`.
+- [x] Criar indices por data, operador e sessao.
+- [x] Criar as novas versoes transacionais das RPCs de abertura e venda.
+- [x] Fazer o servidor derivar usuario e timestamps.
+- [x] Preservar temporariamente as RPCs antigas para compatibilidade.
+- [x] Preparar a restricao de um caixa aberto por operador.
+- [x] Revisar grants, RLS e `search_path` de todas as funcoes financeiras.
 
 Testes e aceite:
 
-- [ ] `supabase db reset` aplica todas as migrations do zero.
-- [ ] A aplicacao atual continua operando durante a transicao.
-- [ ] Duas aberturas concorrentes para o mesmo operador resultam em uma unica
+- [x] `supabase db reset` aplica todas as migrations do zero.
+- [x] A aplicacao atual continua operando durante a transicao.
+- [x] Duas aberturas concorrentes para o mesmo operador resultam em uma unica
       sessao aberta.
-- [ ] Dois operadores diferentes conseguem abrir caixas simultaneamente.
-- [ ] Escritas financeiras diretas continuam bloqueadas.
+- [x] Dois operadores diferentes conseguem abrir caixas simultaneamente.
+- [x] Escritas financeiras diretas continuam bloqueadas.
+
+Rollback:
+
+- o rollback preferencial e logico: a aplicacao antiga continua usando as RPCs
+  e colunas legadas preservadas;
+- antes de remover as RPCs, triggers e indices novos, deve-se revogar sua
+  execucao e confirmar que nenhum fluxo ativo depende deles;
+- `event_id` so pode voltar a `not null` depois de associar ou remover
+  explicitamente todas as sessoes e vendas sem evento;
+- grants e policies anteriores so podem ser restaurados durante uma janela
+  controlada, pois reabrem escritas e leituras que este PR restringe.
 
 ### PR 03 - Relatorios Por Periodo, Operador E Caixa
 
@@ -488,6 +499,7 @@ npm run format:check
 npm run lint
 npm run type-check
 npm run test
+npm run test:db
 npm run build
 npm run test:e2e:required
 ```
@@ -499,30 +511,34 @@ PRs com migration tambem exigem:
 - smoke das RPCs com usuario admin e operador;
 - verificacao de que nenhuma chave real foi versionada.
 
-O workflow `Quality` atual nao executa Playwright nem inicia Supabase real. Ate
-que o PR 07 torne esses gates automaticos, PRs 02 a 06 devem registrar no corpo
-do pull request a execucao local de `supabase db reset`, dos testes de RLS/RPC e
-de `npm run test:e2e:required`. O comando `npm run test:e2e` isolado nao e gate,
-porque pode pular fluxos autenticados quando faltam credenciais.
+O workflow `Quality` inicia um Supabase local efemero e executa `npm run
+test:db` para PRs destinados a `develop` ou `main`. O Playwright completo
+permanece no gate de release; ate o PR 07 ampliar sua automacao, PRs 02 a 06
+devem registrar no corpo do pull request a execucao local de `npm run
+test:e2e:required`. O comando `npm run test:e2e` isolado nao e gate, porque pode
+pular fluxos autenticados quando faltam credenciais.
 
-## 11. Decisoes Pendentes Antes Do PR 02
+## 11. Decisoes Aprovadas Para O PR 02
 
-As seguintes definicoes alteram schema, RLS ou conciliacao e precisam ser
-confirmadas antes da implementacao do banco:
+As definicoes abaixo foram aprovadas em 2 de outubro de 2026 e passam a compor
+o contrato da reestruturacao:
 
-1. Administrador pode abrir caixa e vender como operador ou somente administrar?
-2. Uma sessao aberta pode atravessar a meia-noite? Se puder, ela permanece na
-   data operacional de abertura?
-3. Cancelamento depois do fechamento do caixa altera o resumo historico ou gera
-   um ajuste financeiro separado?
-4. Operadores consultam apenas seus caixas e vendas ou podem visualizar os dos
-   demais vendedores?
-5. Dinheiro e individual por vendedor; Pix e terminais de cartao tambem serao
-   conciliados individualmente ou sao compartilhados pela loja?
-6. A organizacao Supabase atual permite os dois projetos novos sem mudanca de
-   plano? Qual custo ou tamanho esta autorizado?
-7. A URL gratuita `roberto-multimarcas-pdv.vercel.app` e suficiente ou sera
-   usado dominio personalizado?
+1. O administrador pode abrir o proprio caixa e vender, sujeito a mesma regra
+   de apenas um caixa aberto por usuario.
+2. Uma sessao pode atravessar a meia-noite e permanece vinculada a
+   `business_date` calculada no momento da abertura no fuso
+   `America/Sao_Paulo`.
+3. Cancelamento depois do fechamento gera um ajuste financeiro separado e nao
+   reescreve o resumo historico do fechamento.
+4. Operadores consultam apenas os proprios caixas e vendas; administradores
+   podem consultar todos.
+5. Dinheiro, Pix, credito e debito permanecem atribuidos individualmente a
+   venda, ao operador e ao caixa, mesmo quando a conta ou terminal fisico e
+   compartilhado pela loja.
+6. Os projetos Supabase alvo devem usar `sa-east-1` e o menor tamanho
+   disponivel. Nenhum recurso pago pode ser criado sem autorizacao especifica.
+7. A URL inicial sera `roberto-multimarcas-pdv.vercel.app`; um dominio
+   personalizado pode ser associado posteriormente.
 
 ## 12. Criterio De Conclusao Da Reestruturacao
 
