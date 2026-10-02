@@ -1,418 +1,238 @@
-# Plano De Execucao Incremental - Espaco Personalize PDV
+# Plano De Execucao Incremental - Roberto Multimarcas PDV
 
-Este plano quebra o desenvolvimento em entregas menores, coesas e testaveis. Cada etapa deve terminar com algo utilizavel ou validavel, evitando construir muitos modulos pela metade.
+## Estado Atual
+
+O MVP legado esta funcional, mas foi construido para vendas em eventos. A
+execucao ativa agora e a migracao para uma loja fisica com caixas independentes
+por operador.
+
+O detalhamento de tarefas e criterios esta no
+[plano de reestruturacao](plano-reestruturacao-loja-fisica.md). A decisao
+arquitetural esta no
+[ADR 0001](adr/0001-loja-fisica-caixas-por-operador.md).
+
+As entregas antigas permanecem no historico do Git. Este documento substitui a
+ordem anterior para impedir novas implementacoes baseadas em eventos.
 
 ## Principios De Execucao
 
-- Priorizar o MVP antes de melhorias.
-- Entregar em fatias pequenas com criterio de pronto claro.
-- Validar regras criticas no servidor.
-- Usar Supabase com RLS desde o inicio.
-- Manter mobile first em todas as telas.
-- Evitar features fora do escopo inicial.
+- Manter o runtime funcional depois de cada merge.
+- Fazer mudancas de banco aditivas antes de remover o legado.
+- Nao reescrever migrations aplicadas.
+- Separar staging e producao.
+- Testar autorizacao no banco, nao apenas mocks.
+- Testar concorrencia com clientes autenticados independentes.
+- Atualizar documentos operacionais junto da funcionalidade implantada.
+- Nao executar operacoes destrutivas remotas sem confirmacao do ambiente.
+- Promover `develop` para `main` somente com Quality e E2E aprovados.
 
-## Entrega 0 - Preparacao Do Projeto
+## Entrega 1 - Contrato E Arquitetura
 
-Objetivo: deixar o projeto pronto para desenvolvimento.
+Objetivo: eliminar contradicoes antes das alteracoes funcionais.
 
-Tarefas:
+Escopo:
 
-- Criar projeto Next.js com TypeScript.
-- Configurar Tailwind CSS.
-- Criar estrutura inicial de pastas.
-- Configurar variaveis de ambiente.
-- Criar projeto Supabase.
-- Conectar app ao Supabase.
-- Preparar repositorio GitHub privado.
-- Configurar deploy inicial na Vercel.
-
-Criterio de pronto:
-
-- App abre localmente.
-- App abre na Vercel.
-- Tailwind funciona.
-- Variaveis do Supabase estao configuradas sem expor secrets.
-
-## Entrega 1 - Layout Base E Navegacao
-
-Objetivo: criar a estrutura visual minima do sistema.
-
-Tarefas:
-
-- Criar layout autenticado.
-- Criar navegacao principal.
-- Criar tela inicial temporaria.
-- Criar componentes base de botao, input, card simples e feedback.
-- Aplicar paleta `#1e3275`, `#f5c313`, `#ffffff`.
-- Garantir responsividade mobile first.
+- plano de desenvolvimento alvo;
+- plano de reestruturacao por PR;
+- ADR de caixas por operador;
+- instrucoes de agentes;
+- README e referencias oficiais;
+- estrategia de ambientes novos e rollback.
 
 Criterio de pronto:
 
-- Usuario consegue navegar entre rotas principais simuladas.
-- Interface funciona bem em tela pequena.
-- Componentes base estao reutilizaveis.
+- nenhum documento normativo exige evento no modelo alvo;
+- documentos do runtime atual permanecem identificados como transitorios;
+- nenhuma alteracao de aplicacao ou banco;
+- links e formatacao aprovados.
 
-## Entrega 2 - Banco Inicial E Perfis
+## Entrega 2 - Banco Compativel
 
-Objetivo: criar a base de dados para usuarios e permissoes.
+Objetivo: aceitar o modelo novo sem interromper a versao implantada.
 
-Tarefas:
+Escopo:
 
-- Criar tabela `profiles`.
-- Definir enum ou constraint de perfil: `admin`, `operator`.
-- Criar trigger para gerar profile ao criar usuario.
-- Ativar RLS em `profiles`.
-- Criar policies para leitura e atualizacao segura.
-- Criar tipos TypeScript basicos do dominio.
-
-Criterio de pronto:
-
-- Usuario autenticado possui profile.
-- Admin e operador podem ser diferenciados.
-- RLS esta ativa.
-
-## Entrega 3 - Login
-
-Objetivo: permitir acesso privado ao sistema.
-
-Tarefas:
-
-- Criar tela `/login`.
-- Implementar login com e-mail e senha.
-- Implementar logout.
-- Proteger rotas autenticadas.
-- Redirecionar usuario logado para `/dashboard`.
-- Exibir erros de login em portugues.
+- `business_date` em sessoes de caixa;
+- colunas legadas temporariamente opcionais;
+- indices por operador, data e sessao;
+- RPCs novas com identidade e timestamps definidos no servidor;
+- RLS e grants revisados;
+- caminho de migration para banco vazio e banco atualizado.
 
 Criterio de pronto:
 
-- Usuario consegue entrar e sair.
-- Rotas privadas bloqueiam acesso anonimo.
-- Sessao persiste ao recarregar.
+- runtime legado continua funcional;
+- banco bloqueia segunda sessao aberta do mesmo operador;
+- operadores diferentes abrem sessoes simultaneamente;
+- testes reais de RLS, RPC e concorrencia passam.
 
-## Entrega 4 - Categorias
+## Entrega 3 - Relatorios Sem Eventos
 
-Objetivo: permitir organizacao simples dos produtos.
+Objetivo: consultar a operacao por periodo, operador e caixa.
 
-Tarefas:
+Escopo:
 
-- Criar tabela `categories`.
-- Criar migration com campos principais.
-- Ativar RLS.
-- Criar tela `/categories` ou gerenciar categorias em `/settings`.
-- Criar cadastro, edicao e inativacao.
-- Popular categorias iniciais: chaveiros, vasos, decoracao, utilidades, personalizados, brinquedos, brindes, outros.
-
-Criterio de pronto:
-
-- Admin consegue cadastrar e editar categorias.
-- Produtos poderao usar categorias.
-
-## Entrega 5 - Produtos
-
-Objetivo: cadastrar produtos vendaveis.
-
-Tarefas:
-
-- Criar tabela `products`.
-- Criar campos: nome, categoria, SKU, preco, custo, estoque, estoque minimo, foto, ativo.
-- Ativar RLS.
-- Criar tela `/products`.
-- Criar tela `/products/new`.
-- Criar edicao de produto.
-- Criar listagem com busca.
-- Criar indicador de estoque baixo.
+- relatorio por data operacional;
+- consolidado diario;
+- detalhamento por vendedor e sessao;
+- pagamentos, cancelamentos e divergencias;
+- CSV equivalente a interface.
 
 Criterio de pronto:
 
-- Admin cadastra, edita e inativa produtos.
-- Operador visualiza produtos ativos.
-- Produto aparece pronto para venda no PDV.
+- totais permanecem consistentes entre tela, banco e CSV;
+- caixas simultaneos nao misturam valores;
+- consultas usam indices adequados.
 
-## Entrega 6 - Eventos
+## Entrega 4 - Historico De Vendas Sem Eventos
 
-Objetivo: preparar eventos para vincular vendas.
+Objetivo: desacoplar lista, detalhe e cancelamento.
 
-Tarefas:
+Escopo:
 
-- Criar tabela `events`.
-- Criar campos: nome, data, local, status, observacoes.
-- Ativar RLS.
-- Criar tela `/events`.
-- Criar tela `/events/new`.
-- Criar edicao e alteracao de status.
-- Definir evento ativo.
+- contratos de venda sem `eventId`;
+- filtros por data, operador, caixa e status;
+- detalhe auditavel;
+- cancelamento e devolucao de estoque.
 
 Criterio de pronto:
 
-- Admin cadastra eventos.
-- Sistema consegue identificar o evento ativo.
-- Venda futura podera ser vinculada a um evento.
+- nenhuma consulta ativa de vendas precisa carregar `events`;
+- cancelamentos continuam seguros e idempotentes;
+- registros legados continuam legiveis durante a transicao.
 
-## Entrega 7 - Caixa Aberto
+## Entrega 5 - Caixa E PDV Por Operador
 
-Objetivo: controlar inicio de turno/evento antes de vender.
+Objetivo: ativar a operacao diaria da loja.
 
-Tarefas:
+Escopo:
 
-- Criar tabela `cash_sessions`.
-- Criar status: aberto, fechado.
-- Criar rota `/cash/open`.
-- Permitir abrir caixa com evento, operador e valor inicial.
-- Impedir dois caixas abertos conflitantes para o mesmo operador/evento quando necessario.
-- Exibir caixa aberto no dashboard.
-
-Criterio de pronto:
-
-- Operador abre caixa.
-- Sistema sabe qual caixa esta ativo.
-- PDV pode exigir caixa aberto antes da venda.
-
-## Entrega 8 - PDV Basico Com Carrinho
-
-Objetivo: montar venda antes de salvar.
-
-Tarefas:
-
-- Criar tela `/pdv`.
-- Selecionar evento ativo.
-- Verificar caixa aberto.
-- Buscar produtos ativos.
-- Adicionar produto ao carrinho.
-- Alterar quantidade.
-- Remover item.
-- Calcular subtotal.
-- Bloquear quantidade maior que estoque disponivel.
+- abertura sem evento;
+- um caixa aberto por operador;
+- varias sessoes no mesmo dia depois de cada fechamento;
+- PDV usando automaticamente o caixa do usuario;
+- dashboard de caixas abertos;
+- fechamento proprio e administrativo auditado;
+- finalizacao de venda pela nova RPC.
 
 Criterio de pronto:
 
-- Operador monta carrinho completo no celular.
-- Totais sao calculados corretamente.
-- Ainda nao precisa finalizar venda.
+- dois vendedores operam simultaneamente;
+- um vendedor nao usa caixa alheio;
+- fechar um caixa nao interrompe outro;
+- estoque permanece correto sob concorrencia.
 
-## Entrega 9 - Finalizacao De Venda
+## Entrega 6 - Remocao Do Legado De Eventos
 
-Objetivo: registrar venda completa com pagamento.
+Objetivo: eliminar codigo e schema sem uso.
 
-Tarefas:
+Escopo:
 
-- Criar tabelas `sales`, `sale_items` e `payments`.
-- Criar fluxo de finalizacao no servidor.
-- Salvar venda, itens e pagamentos em transacao.
-- Suportar pagamento por Pix, dinheiro, credito, debito, misto e cortesia.
-- Calcular troco para dinheiro.
-- Criar numero de venda.
-- Exibir confirmacao de venda.
-
-Criterio de pronto:
-
-- Venda finalizada aparece em `/sales`.
-- Venda possui itens e pagamento.
-- Troco e total ficam corretos.
-
-## Entrega 10 - Movimentacao De Estoque Por Venda
-
-Objetivo: baixar estoque automaticamente com historico.
-
-Tarefas:
-
-- Criar tabela `stock_movements`.
-- Criar tipos: entrada manual, saida por venda, ajuste, devolucao por cancelamento.
-- Ao finalizar venda, criar movimentacao de saida.
-- Atualizar estoque a partir da movimentacao.
-- Impedir estoque negativo.
-- Registrar operador, produto, venda e evento quando aplicavel.
+- rotas e navegacao;
+- modulo de eventos;
+- campos `event_id`;
+- tabela, policies, indices e RPCs legadas;
+- testes e fixtures antigas;
+- documentos operacionais afetados.
 
 Criterio de pronto:
 
-- Toda venda reduz estoque.
-- Toda reducao tem historico.
-- Produto nao altera estoque diretamente fora do fluxo controlado.
+- nenhuma dependencia de runtime referencia eventos;
+- banco vazio e atualizado resultam no mesmo schema;
+- todas as rotas e fluxos alvo passam.
 
-## Entrega 11 - Lista E Detalhe De Vendas
+## Entrega 7 - QA Multioperador
 
-Objetivo: consultar o que foi vendido.
+Objetivo: provar isolamento, concorrencia e repetibilidade.
 
-Tarefas:
+Escopo:
 
-- Criar tela `/sales`.
-- Criar tela `/sales/[id]`.
-- Listar vendas por data, evento e status.
-- Mostrar itens, pagamentos, operador e caixa.
-- Criar resumo simples de total da venda.
-
-Criterio de pronto:
-
-- Admin e operador consultam vendas.
-- Detalhe da venda permite auditoria basica.
-
-## Entrega 12 - Cancelamento De Venda
-
-Objetivo: cancelar sem apagar historico.
-
-Tarefas:
-
-- Criar acao de cancelamento no servidor.
-- Alterar status da venda para cancelada.
-- Criar movimentacao de devolucao por cancelamento.
-- Devolver estoque.
-- Registrar motivo e operador.
-- Bloquear cancelamento duplicado.
+- seed idempotente com admin e dois operadores;
+- contextos de navegador separados;
+- testes de corrida diretamente contra o banco;
+- traces e relatorios de falha;
+- gate E2E obrigatorio para PRs que alterem banco ou fluxos criticos.
 
 Criterio de pronto:
 
-- Venda cancelada continua visivel.
-- Estoque volta corretamente.
-- Historico de movimentacao fica completo.
+- E2E nao pula silenciosamente por falta de credenciais;
+- testes nao dependem de dados compartilhados anteriores;
+- falhas de concorrencia e autorizacao sao detectadas no CI.
 
-## Entrega 13 - Fechamento De Caixa
+## Entrega 8 - Infraestrutura Roberto Multimarcas
 
-Objetivo: conferir valores do turno/evento.
+Objetivo: provisionar ambientes vazios e exclusivos.
 
-Tarefas:
+Escopo:
 
-- Criar rota `/cash/close`.
-- Calcular totais esperados por forma de pagamento.
-- Permitir informar valores conferidos.
-- Calcular divergencia.
-- Salvar observacoes.
-- Fechar caixa.
-- Bloquear novas vendas em caixa fechado.
-
-Criterio de pronto:
-
-- Operador fecha caixa.
-- Sistema mostra esperado, informado e divergencia.
-- Caixa fechado nao recebe novas vendas.
-
-## Entrega 14 - Estoque Manual
-
-Objetivo: permitir entradas e ajustes controlados.
-
-Tarefas:
-
-- Criar tela `/stock`.
-- Listar produtos e quantidades.
-- Mostrar historico de movimentacoes.
-- Criar entrada manual.
-- Criar ajuste de estoque.
-- Exigir motivo para ajuste.
-- Alertar estoque baixo.
+- Supabase staging e producao;
+- Vercel `roberto-multimarcas-pdv`;
+- URL publica com a nova marca;
+- variaveis por ambiente;
+- bootstrap de admin e vendedores;
+- runbook de validacao e rollback;
+- preservacao temporaria dos projetos legados.
 
 Criterio de pronto:
 
-- Admin ajusta estoque sem editar produto diretamente.
-- Todo ajuste gera movimentacao.
+- quota e eventual custo aprovados;
+- staging novo passa migrations, smoke e E2E;
+- producao permanece desconectada ate a release;
+- nenhuma credencial aparece no repositorio ou em logs.
 
-## Entrega 15 - Dashboard MVP
+## Entrega 9 - Release
 
-Objetivo: mostrar resumo operacional util.
+Objetivo: promover o sistema aprovado para a nova producao.
 
-Tarefas:
+Escopo:
 
-- Criar tela `/dashboard`.
-- Mostrar vendas do dia.
-- Mostrar vendas do evento atual.
-- Mostrar totais por forma de pagamento.
-- Mostrar produtos mais vendidos.
-- Mostrar estoque baixo.
-- Mostrar caixa aberto/fechado.
-
-Criterio de pronto:
-
-- Dashboard ajuda a operar o evento.
-- Dados batem com vendas e caixa.
-
-## Entrega 16 - Relatorio Por Evento
-
-Objetivo: entregar a primeira analise pos-evento.
-
-Tarefas:
-
-- Criar tela `/reports`.
-- Filtrar por evento.
-- Mostrar total vendido.
-- Mostrar total por pagamento.
-- Mostrar produtos vendidos.
-- Mostrar lucro estimado.
-- Exportar CSV do evento.
+- PR de `develop` para `main`;
+- Quality e E2E Release Gate;
+- migrations no projeto novo de producao;
+- usuarios, produtos e estoque inicial;
+- smoke financeiro completo;
+- monitoramento e janela de rollback.
 
 Criterio de pronto:
 
-- Admin gera relatorio de evento.
-- CSV pode ser baixado.
+- venda, cancelamento, fechamento e relatorio conferidos;
+- dois operadores trabalham simultaneamente;
+- URL publica usa a marca Roberto Multimarcas;
+- ambiente legado nao recebe novas escritas.
 
-## Entrega 17 - PWA Basico
+## Gates Por Tipo De Entrega
 
-Objetivo: permitir uso com aparencia de app.
+Todos os PRs:
 
-Tarefas:
-
-- Criar manifest.
-- Criar icones.
-- Configurar nome e tema.
-- Configurar tela inicial.
-- Validar instalacao mobile.
-- Ajustar metadados.
-
-Criterio de pronto:
-
-- Sistema pode ser instalado no celular.
-- Visual mobile fica consistente.
-
-## Entrega 18 - QA Do MVP
-
-Objetivo: validar o fluxo completo antes de uso real.
-
-Tarefas:
-
-- Testar login e logout.
-- Testar cadastro de produto.
-- Testar cadastro de evento.
-- Testar abertura de caixa.
-- Testar venda com Pix.
-- Testar venda com dinheiro e troco.
-- Testar venda mista.
-- Testar baixa de estoque.
-- Testar cancelamento.
-- Testar fechamento de caixa.
-- Testar relatorio por evento.
-- Testar exportacao CSV.
-
-Criterio de pronto:
-
-- Fluxo principal funciona de ponta a ponta.
-- Erros criticos corrigidos.
-- MVP esta pronto para primeiro evento real.
-
-## Ordem Recomendada
-
-1. Entrega 0 - Preparacao Do Projeto.
-2. Entrega 1 - Layout Base E Navegacao.
-3. Entrega 2 - Banco Inicial E Perfis.
-4. Entrega 3 - Login.
-5. Entrega 4 - Categorias.
-6. Entrega 5 - Produtos.
-7. Entrega 6 - Eventos.
-8. Entrega 7 - Caixa Aberto.
-9. Entrega 8 - PDV Basico Com Carrinho.
-10. Entrega 9 - Finalizacao De Venda.
-11. Entrega 10 - Movimentacao De Estoque Por Venda.
-12. Entrega 11 - Lista E Detalhe De Vendas.
-13. Entrega 12 - Cancelamento De Venda.
-14. Entrega 13 - Fechamento De Caixa.
-15. Entrega 14 - Estoque Manual.
-16. Entrega 15 - Dashboard MVP.
-17. Entrega 16 - Relatorio Por Evento.
-18. Entrega 17 - PWA Basico.
-19. Entrega 18 - QA Do MVP.
-
-## Primeiro Marco Real
-
-O primeiro marco deve ser:
-
-```txt
-Login + Produtos + Eventos + Caixa aberto + PDV basico + Venda finalizada + Baixa de estoque
+```text
+npm run format:check
+npm run lint
+npm run type-check
+npm run test
+npm run build
 ```
 
-Com isso, o sistema ja pode ser testado em uma venda simulada de evento.
+PRs com banco ou regras financeiras:
+
+```text
+supabase db reset
+npm run test:e2e:required
+```
+
+Tambem exigem testes reais de RLS/RPC e concorrencia quando aplicavel. Testes
+unitarios com clientes mockados nao substituem essa validacao.
+
+## Primeiro Marco Operacional
+
+```txt
+Login
++ Caixa proprio aberto
++ PDV sem evento
++ Venda transacional
++ Estoque compartilhado
++ Fechamento individual
++ Relatorio por operador e sessao
+```
+
+Esse marco deve ser validado com pelo menos dois operadores antes da remocao
+definitiva do ambiente legado.

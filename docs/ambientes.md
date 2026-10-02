@@ -3,13 +3,29 @@
 O projeto usa ambientes isolados. Banco, autenticacao, chaves e dados nunca
 devem ser compartilhados entre staging e producao.
 
-## Matriz De Ambientes
+## Matriz Atual Durante A Transicao
 
 | Ambiente | Branch      | Vercel                 | Supabase               | Arquivo local opcional  |
 | -------- | ----------- | ---------------------- | ---------------------- | ----------------------- |
 | Local    | `feature/*` | Servidor Next.js local | Supabase CLI local     | `.env.local`            |
 | Staging  | `develop`   | Preview                | `gpywbeoqcovjrfnmbdqx` | `.env.staging.local`    |
 | Producao | `main`      | Production             | `ciixpfquwmlsvzleattv` | `.env.production.local` |
+
+Os refs acima pertencem a operacao legada Espaco Personalize e permanecem em
+uso somente enquanto a reestruturacao nao for promovida. Eles nao devem ser
+renomeados, limpos ou removidos durante os PRs de desenvolvimento.
+
+## Matriz Alvo Roberto Multimarcas
+
+| Ambiente | Branch      | Vercel                    | Supabase                          |
+| -------- | ----------- | ------------------------- | --------------------------------- |
+| Local    | `feature/*` | Servidor Next.js local    | Supabase CLI local                |
+| Staging  | `develop`   | Novo projeto/Preview      | `roberto-multimarcas-pdv-staging` |
+| Producao | `main`      | `roberto-multimarcas-pdv` | `roberto-multimarcas-pdv`         |
+
+Os project refs do Supabase alvo serao registrados depois do provisionamento.
+O endpoint Supabase usa um ref aleatorio; a URL publica com a marca sera a da
+aplicacao Vercel.
 
 Os arquivos `*.local` sao ignorados pelo Git. Os arquivos
 `.env.staging.example` e `.env.production.example` documentam somente o
@@ -57,8 +73,21 @@ Migrations devem seguir esta ordem:
 3. executar o gate E2E em staging;
 4. promover a mesma versao para producao mediante release aprovada.
 
-Nunca use `db reset` em staging ou producao. Antes de qualquer migration remota,
-confirme explicitamente o project ref selecionado.
+Nunca use `db reset` em staging ou producao. Projetos remotos novos devem ser
+inicializados pela cadeia normal de migrations. Antes de qualquer operacao
+remota, confirme explicitamente o project ref selecionado.
+
+## Provisionamento E Rollback
+
+- Validar organizacao, quota, regiao, tamanho e eventual custo antes da criacao.
+- Preferir `sa-east-1` para os bancos novos, sujeito a aprovacao.
+- Gerar credenciais novas para a Roberto Multimarcas.
+- Aplicar migrations e E2E primeiro no novo staging.
+- Manter os projetos legados intactos durante a janela de rollback.
+- Fazer backup tecnico antes do corte, mesmo com descarte de dados autorizado.
+- Nao copiar usuarios, dados ou Storage da operacao anterior por padrao.
+- Nao excluir ou desativar projeto remoto sem uma autorizacao especifica.
+- Registrar os novos refs sem incluir chaves ou senhas na documentacao.
 
 ## Fluxo Git E Release
 
