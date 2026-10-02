@@ -57,6 +57,9 @@ runRequiredCommand(npxCommand, [
   "--local",
 ]);
 runRequiredCommand(process.execPath, ["scripts/test-store-database.mjs"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-sales-report-database.mjs",
+]);
 
 console.log("Database gate completed successfully.");
 

@@ -297,20 +297,20 @@ corte operacional.
 
 Tarefas:
 
-- [ ] Criar repositorio e caso de uso de relatorio por periodo.
-- [ ] Adicionar filtros por `business_date`, operador e sessao.
-- [ ] Consolidar pagamentos, produtos, vendas e cancelamentos.
-- [ ] Exibir divergencias por caixa.
-- [ ] Substituir o CSV por exportacao baseada nos novos filtros.
-- [ ] Manter consultas paginadas e indices compativeis.
-- [ ] Remover nomes `SalesByEvent*` do codigo ativo.
+- [x] Criar repositorio e caso de uso de relatorio por periodo.
+- [x] Adicionar filtros por `business_date`, operador e sessao.
+- [x] Consolidar pagamentos, produtos, vendas e cancelamentos.
+- [x] Exibir divergencias por caixa.
+- [x] Substituir o CSV por exportacao baseada nos novos filtros.
+- [x] Manter consultas paginadas e indices compativeis.
+- [x] Remover nomes `SalesByEvent*` do codigo ativo.
 
 Testes e aceite:
 
-- [ ] Totais da tela e CSV sao identicos.
-- [ ] Relatorio diario soma corretamente varios caixas simultaneos.
-- [ ] Relatorio individual nao mistura vendas entre operadores.
-- [ ] Cancelamentos sao exibidos sem inflar receita liquida.
+- [x] Totais da tela e CSV sao identicos.
+- [x] Relatorio diario soma corretamente varios caixas simultaneos.
+- [x] Relatorio individual nao mistura vendas entre operadores.
+- [x] Cancelamentos sao exibidos sem inflar receita liquida.
 
 ### PR 04 - Vendas E Historico Sem Eventos
 
