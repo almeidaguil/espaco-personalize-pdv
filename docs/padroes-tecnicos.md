@@ -183,6 +183,8 @@ Diretriz:
 - Presentation deve usar Testing Library para componentes e Playwright para fluxos essenciais.
 - Regras de RLS e RPC devem ser testadas contra Supabase real local ou ambiente
   isolado; mocks nao substituem esse gate.
+- PRs com migrations devem executar `npm run test:db`, que reinicializa apenas
+  o Supabase local, valida o contrato SQL e testa RLS/RPC com usuarios reais.
 - Corridas criticas devem usar clientes autenticados independentes e operacoes
   simultaneas controladas.
 - E2E autenticado obrigatorio deve falhar quando credenciais estiverem ausentes,
