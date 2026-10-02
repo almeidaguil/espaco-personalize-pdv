@@ -1,18 +1,13 @@
 import type { Metadata } from "next";
 
-import { listEventsUseCase } from "@/modules/events/application/list-events-use-case";
+import { getSalesReportUseCase } from "@/modules/reports/application/get-sales-report-use-case";
+import type { SalesReportFilters } from "@/modules/reports/application/sales-report-repository";
 import {
-  SupabaseEventRepository,
-  type SupabaseEventClient,
-} from "@/modules/events/infra/supabase-event-repository";
-import { getSalesByEventReportUseCase } from "@/modules/reports/application/get-sales-by-event-report-use-case";
-import {
-  SupabaseSalesByEventReportRepository,
-  type SupabaseSalesByEventReportClient,
-} from "@/modules/reports/infra/supabase-sales-by-event-report-repository";
-import { SalesByEventReport } from "@/modules/reports/presentation/sales-by-event-report";
+  SupabaseSalesReportRepository,
+  type SupabaseSalesReportClient,
+} from "@/modules/reports/infra/supabase-sales-report-repository";
+import { SalesReport } from "@/modules/reports/presentation/sales-report";
 import { AppNavigation } from "@/shared/components/app-navigation";
-import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { brand } from "@/shared/config/brand";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
@@ -25,7 +20,12 @@ export const dynamic = "force-dynamic";
 
 type ReportsPageProps = {
   searchParams?: Promise<{
-    eventId?: string;
+    cashSessionId?: string;
+    endDate?: string;
+    itemsPage?: string;
+    operatorId?: string;
+    sessionsPage?: string;
+    startDate?: string;
   }>;
 };
 
@@ -33,56 +33,63 @@ export default async function ReportsPage({
   searchParams,
 }: ReportsPageProps = {}) {
   const resolvedSearchParams = await searchParams;
-
+  const currentBusinessDate = getSaoPauloBusinessDate();
+  const filters: SalesReportFilters = {
+    cashSessionId: resolvedSearchParams?.cashSessionId,
+    endDate: resolvedSearchParams?.endDate ?? currentBusinessDate,
+    itemsPage: Number(resolvedSearchParams?.itemsPage ?? 1),
+    operatorId: resolvedSearchParams?.operatorId,
+    pageSize: 8,
+    sessionsPage: Number(resolvedSearchParams?.sessionsPage ?? 1),
+    startDate: resolvedSearchParams?.startDate ?? currentBusinessDate,
+  };
   const supabaseClient = await createSupabaseServerClient();
-
-  const eventClient = supabaseClient as unknown as SupabaseEventClient;
-
-  const reportClient =
-    supabaseClient as unknown as SupabaseSalesByEventReportClient;
-
-  const eventsResult = await listEventsUseCase({
-    eventRepository: new SupabaseEventRepository(eventClient),
+  const reportResult = await getSalesReportUseCase({
+    filters,
+    salesReportRepository: new SupabaseSalesReportRepository(
+      supabaseClient as unknown as SupabaseSalesReportClient,
+    ),
   });
-
-  const events = eventsResult.success ? eventsResult.events : [];
-
-  const selectedEventId = resolvedSearchParams?.eventId ?? events[0]?.id ?? "";
-
-  const reportResult = selectedEventId
-    ? await getSalesByEventReportUseCase({
-        eventId: selectedEventId,
-        salesByEventReportRepository: new SupabaseSalesByEventReportRepository(
-          reportClient,
-        ),
-      })
-    : null;
 
   return (
     <PageShell maxWidth="xl">
       <AppNavigation title="Relatórios" />
 
       <PageHeader
-        description="Acompanhe vendas, formas de pagamento e produtos vendidos por operação."
+        description="Acompanhe vendas, pagamentos, produtos e divergências por período, vendedor e sessão de caixa."
         eyebrow="Relatórios"
         title="Relatórios"
       />
 
-      {!eventsResult.success ? (
-        <InlineFeedback padding="md" tone="error">
-          {eventsResult.formError ?? "Não foi possível carregar os eventos."}
-        </InlineFeedback>
-      ) : (
-        <SalesByEventReport
-          events={events}
-          report={
-            reportResult?.success && !("formError" in reportResult)
-              ? reportResult.report
-              : null
-          }
-          selectedEventId={selectedEventId}
-        />
-      )}
+      <SalesReport
+        errorMessage={
+          !reportResult.success && "formError" in reportResult
+            ? reportResult.formError
+            : undefined
+        }
+        filters={filters}
+        report={
+          reportResult.success && !("formError" in reportResult)
+            ? reportResult.report
+            : null
+        }
+      />
     </PageShell>
   );
+}
+
+function getSaoPauloBusinessDate(now = new Date()): string {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    day: "2-digit",
+    month: "2-digit",
+    timeZone: "America/Sao_Paulo",
+    year: "numeric",
+  }).formatToParts(now);
+  const values = Object.fromEntries(
+    parts
+      .filter((part) => part.type !== "literal")
+      .map((part) => [part.type, part.value]),
+  );
+
+  return `${values.year}-${values.month}-${values.day}`;
 }

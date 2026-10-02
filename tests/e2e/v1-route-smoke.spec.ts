@@ -55,6 +55,6 @@ test("reports CSV endpoint responds with controlled validation", async ({
 
   expect(response.status()).toBe(400);
   expect(await response.json()).toEqual({
-    error: "Nao foi possivel exportar o relatorio.",
+    error: "Não foi possível exportar o relatório.",
   });
 });

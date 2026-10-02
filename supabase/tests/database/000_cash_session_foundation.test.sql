@@ -421,7 +421,7 @@ select extensions.ok(
     from pg_catalog.pg_policies
     where schemaname = 'public'
       and tablename = 'cash_sessions'
-      and policyname = 'Users can read allowed cash sessions'
+      and policyname = 'Active users can read allowed cash sessions'
   ),
   'cash session reads use the operator/admin policy'
 );
@@ -432,7 +432,7 @@ select extensions.ok(
     from pg_catalog.pg_policies
     where schemaname = 'public'
       and tablename = 'sales'
-      and policyname = 'Users can read allowed sales'
+      and policyname = 'Active users can read allowed sales'
   ),
   'sale reads use the operator/admin policy'
 );
@@ -443,7 +443,7 @@ select extensions.ok(
     from pg_catalog.pg_policies
     where schemaname = 'public'
       and tablename = 'sale_items'
-      and policyname = 'Users can read items from allowed sales'
+      and policyname = 'Active users can read items from allowed sales'
   ),
   'sale item reads follow the parent sale policy'
 );
@@ -454,7 +454,7 @@ select extensions.ok(
     from pg_catalog.pg_policies
     where schemaname = 'public'
       and tablename = 'payments'
-      and policyname = 'Users can read payments from allowed sales'
+      and policyname = 'Active users can read payments from allowed sales'
   ),
   'payment reads follow the parent sale policy'
 );
