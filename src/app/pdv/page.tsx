@@ -232,7 +232,6 @@ function toPdvCartCashSession(
   eventNames: Map<string, string>,
 ): PdvCartCashSession {
   return {
-    eventId: session.eventId,
     eventName: eventNames.get(session.eventId) ?? "Evento sem nome",
     id: session.id,
   };

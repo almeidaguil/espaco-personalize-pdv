@@ -1,15 +1,9 @@
-import type { Payment, SaleItem, SaleStatus } from "../domain/sale";
+import type { Payment, SaleItem } from "../domain/sale";
+import type { SaleSummary } from "./sale-summary-repository";
 
-export type SaleDetail = {
-  cashSessionId: string;
-  completedAt: Date;
-  eventId: string;
-  eventName: string;
-  id: string;
+export type SaleDetail = SaleSummary & {
   items: SaleItem[];
   payment: Payment;
-  status: SaleStatus;
-  totalInReais: number;
 };
 
 export type GetSaleDetailResult =

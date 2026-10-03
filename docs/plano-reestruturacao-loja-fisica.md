@@ -319,18 +319,18 @@ eventos, ainda sem mudar a abertura de caixa no frontend.
 
 Tarefas:
 
-- [ ] Remover `eventId` dos contratos de dominio e aplicacao de vendas.
-- [ ] Alterar repositorios para consultar por data, operador e caixa.
-- [ ] Atualizar lista e detalhe de vendas.
-- [ ] Atualizar cancelamento e reposicao de estoque.
-- [ ] Remover textos e filtros de evento dessas telas.
-- [ ] Manter compatibilidade de leitura com registros criados pelo fluxo antigo.
+- [x] Remover `eventId` dos contratos de dominio e aplicacao de vendas.
+- [x] Alterar repositorios para consultar por data, operador e caixa.
+- [x] Atualizar lista e detalhe de vendas.
+- [x] Atualizar cancelamento e reposicao de estoque.
+- [x] Remover textos e filtros de evento dessas telas.
+- [x] Manter compatibilidade de leitura com registros criados pelo fluxo antigo.
 
 Testes e aceite:
 
-- [ ] Lista e detalhe funcionam sem carregar `events`.
-- [ ] Cancelamento continua exigindo autorizacao e devolvendo estoque.
-- [ ] Venda permanece rastreavel ate operador e sessao de caixa.
+- [x] Lista e detalhe funcionam sem carregar `events`.
+- [x] Cancelamento continua exigindo autorizacao e devolvendo estoque.
+- [x] Venda permanece rastreavel ate operador e sessao de caixa.
 
 ### PR 05 - Corte Operacional Do Caixa E PDV
 

@@ -28,6 +28,8 @@ import type { SaleRepository, SaveSaleResult } from "./sale-repository";
 import type { Sale } from "../domain/sale";
 
 class FakeCashSessionRepository implements CashSessionRepository {
+  public findInput?: { cashSessionId: string; operatorId: string };
+
   constructor(
     private readonly findResult: FindOpenCashSessionResult = {
       session: createCashSession(),
@@ -35,7 +37,12 @@ class FakeCashSessionRepository implements CashSessionRepository {
     },
   ) {}
 
-  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
+  async findOpenByIdAndOperator(input: {
+    cashSessionId: string;
+    operatorId: string;
+  }): Promise<FindOpenCashSessionResult> {
+    this.findInput = input;
+
     return this.findResult;
   }
 
@@ -143,12 +150,13 @@ class FakeSaleRepository implements SaleRepository {
 describe("createSaleUseCase", () => {
   it("creates a sale using trusted product data and available stock", async () => {
     const saleRepository = new FakeSaleRepository();
+    const cashSessionRepository = new FakeCashSessionRepository();
     const stockMovementRepository = new FakeStockMovementRepository([
       createStockMovement(3),
     ]);
 
     const result = await createSaleUseCase(createInput(), {
-      cashSessionRepository: new FakeCashSessionRepository(),
+      cashSessionRepository,
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
@@ -158,9 +166,12 @@ describe("createSaleUseCase", () => {
     });
 
     expect(result.success).toBe(true);
+    expect(cashSessionRepository.findInput).toEqual({
+      cashSessionId: "cash-session-1",
+      operatorId: "operator-1",
+    });
     expect(saleRepository.savedSale).toMatchObject({
       cashSessionId: "cash-session-1",
-      eventId: "event-1",
       id: "sale-1",
       items: [
         {
@@ -205,7 +216,8 @@ describe("createSaleUseCase", () => {
     });
   });
 
-  it("rejects sales when the cash session belongs to another event", async () => {
+  it("creates the sale without requiring the cash session event", async () => {
+    const saleRepository = new FakeSaleRepository();
     const result = await createSaleUseCase(createInput(), {
       cashSessionRepository: new FakeCashSessionRepository({
         session: {
@@ -218,16 +230,14 @@ describe("createSaleUseCase", () => {
       generateSaleId: () => "sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository(),
-      saleRepository: new FakeSaleRepository(),
+      saleRepository,
       stockMovementRepository: new FakeStockMovementRepository([
         createStockMovement(3),
       ]),
     });
 
-    expect(result).toEqual({
-      formError: "O caixa aberto nao pertence ao evento informado.",
-      success: false,
-    });
+    expect(result.success).toBe(true);
+    expect(saleRepository.savedSale).not.toHaveProperty("eventId");
   });
 
   it("rejects inactive products", async () => {
@@ -335,7 +345,6 @@ describe("createSaleUseCase", () => {
 function createInput() {
   return {
     cashSessionId: "cash-session-1",
-    eventId: "event-1",
     items: [
       {
         productId: "product-1",

@@ -315,7 +315,7 @@ describe("PdvCart", () => {
 
     expect(formData.get("cashSessionId")).toBe("cash-session-1");
 
-    expect(formData.get("eventId")).toBe("event-1");
+    expect(formData.has("eventId")).toBe(false);
 
     expect(formData.get("amountReceivedInReais")).toBe("20,00");
 
@@ -513,7 +513,6 @@ function createAction() {
 function createCashSessions() {
   return [
     {
-      eventId: "event-1",
       eventName: "Evento Julho",
       id: "cash-session-1",
     },

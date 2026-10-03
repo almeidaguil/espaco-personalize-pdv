@@ -14,7 +14,16 @@ type FakeSupabaseResponse = {
   } | null;
 };
 
+type FakeCashSessionResponse = {
+  data: { event_id: string | null } | null;
+  error: {
+    code?: string;
+    message?: string;
+  } | null;
+};
+
 class FakeSupabaseSaleClient implements SupabaseSaleClient {
+  public cashSessionId?: string;
   public functionName?: string;
   public rpcArgs?: unknown;
 
@@ -23,7 +32,32 @@ class FakeSupabaseSaleClient implements SupabaseSaleClient {
       data: "sale-1",
       error: null,
     },
+    private readonly cashSessionResponse: FakeCashSessionResponse = {
+      data: { event_id: "event-from-session" },
+      error: null,
+    },
   ) {}
+
+  from(table: "cash_sessions") {
+    expect(table).toBe("cash_sessions");
+
+    return {
+      select: (columns: "event_id") => {
+        expect(columns).toBe("event_id");
+
+        return {
+          eq: (column: "id", value: string) => {
+            expect(column).toBe("id");
+            this.cashSessionId = value;
+
+            return {
+              maybeSingle: async () => this.cashSessionResponse,
+            };
+          },
+        };
+      },
+    };
+  }
 
   async rpc(functionName: "finalize_sale", args: unknown) {
     this.functionName = functionName;
@@ -45,10 +79,11 @@ describe("SupabaseSaleRepository", () => {
     });
 
     expect(supabaseClient.functionName).toBe("finalize_sale");
+    expect(supabaseClient.cashSessionId).toBe("cash-session-1");
     expect(supabaseClient.rpcArgs).toEqual({
       p_cash_session_id: "cash-session-1",
       p_completed_at: "2026-07-10T12:00:00.000Z",
-      p_event_id: "event-1",
+      p_event_id: "event-from-session",
       p_items: [
         {
           product_id: "product-1",
@@ -119,7 +154,7 @@ describe("SupabaseSaleRepository", () => {
     expect(supabaseClient.rpcArgs).toEqual({
       p_cash_session_id: "cash-session-1",
       p_completed_at: "2026-07-10T12:00:00.000Z",
-      p_event_id: "event-1",
+      p_event_id: "event-from-session",
       p_items: [
         {
           product_id: "product-1",
@@ -135,13 +170,57 @@ describe("SupabaseSaleRepository", () => {
       p_total_in_cents: 3000,
     });
   });
+
+  it("does not finalize when the selected cash session cannot be loaded", async () => {
+    const supabaseClient = new FakeSupabaseSaleClient(
+      { data: "sale-1", error: null },
+      { data: null, error: null },
+    );
+    const repository = new SupabaseSaleRepository(supabaseClient);
+
+    await expect(repository.save(createSale())).resolves.toEqual({
+      error: "unknown",
+      success: false,
+    });
+    expect(supabaseClient.functionName).toBeUndefined();
+  });
+
+  it("does not finalize when the selected cash session has no legacy event", async () => {
+    const supabaseClient = new FakeSupabaseSaleClient(
+      { data: "sale-1", error: null },
+      { data: { event_id: null }, error: null },
+    );
+    const repository = new SupabaseSaleRepository(supabaseClient);
+
+    await expect(repository.save(createSale())).resolves.toEqual({
+      error: "unknown",
+      success: false,
+    });
+    expect(supabaseClient.functionName).toBeUndefined();
+  });
+
+  it("does not finalize when loading the selected cash session fails", async () => {
+    const supabaseClient = new FakeSupabaseSaleClient(
+      { data: "sale-1", error: null },
+      {
+        data: null,
+        error: { code: "PGRST000", message: "Unexpected error" },
+      },
+    );
+    const repository = new SupabaseSaleRepository(supabaseClient);
+
+    await expect(repository.save(createSale())).resolves.toEqual({
+      error: "unknown",
+      success: false,
+    });
+    expect(supabaseClient.functionName).toBeUndefined();
+  });
 });
 
 function createSale(): Sale {
   return {
     cashSessionId: "cash-session-1",
     completedAt: new Date("2026-07-10T12:00:00.000Z"),
-    eventId: "event-1",
     id: "sale-1",
     items: [
       {

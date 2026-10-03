@@ -10,8 +10,10 @@ describe("SaleDetailCard", () => {
         sale={{
           cashSessionId: "cash-session-1",
           completedAt: new Date("2026-07-10T12:00:00.000Z"),
-          eventId: "event-1",
-          eventName: "Evento Julho",
+          operatorId: "operator-1",
+          operatorName: "Ana",
+          businessDate: "2026-07-10",
+          cashSessionOpenedAt: new Date("2026-07-10T11:00:00Z"),
           id: "sale-1",
           items: [
             {
@@ -33,7 +35,9 @@ describe("SaleDetailCard", () => {
       />,
     );
 
-    expect(screen.getByText("Evento Julho")).toBeInTheDocument();
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(screen.getByText("operator-1")).toBeInTheDocument();
+    expect(screen.getByText("cash-session-1")).toBeInTheDocument();
 
     expect(screen.getAllByText("R$ 30,00")).toHaveLength(2);
 

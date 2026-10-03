@@ -6,7 +6,7 @@ describe("parseCreateSaleFormData", () => {
   it("parses sale form data", () => {
     const formData = new FormData();
     formData.set("cashSessionId", "cash-session-1");
-    formData.set("eventId", "event-1");
+    formData.set("eventId", "forged-legacy-event");
     formData.set("paymentMethod", "cash");
     formData.set(
       "itemsJson",
@@ -21,7 +21,6 @@ describe("parseCreateSaleFormData", () => {
 
     expect(parseCreateSaleFormData(formData)).toEqual({
       cashSessionId: "cash-session-1",
-      eventId: "event-1",
       items: [
         {
           productId: "product-1",
