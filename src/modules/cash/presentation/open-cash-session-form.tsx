@@ -9,66 +9,20 @@ import type { CashSessionActionState } from "./cash-session-action-state";
 
 const initialState: CashSessionActionState = {};
 
-export type OpenCashSessionEventOption = {
-  id: string;
-  label: string;
-};
-
 type OpenCashSessionFormProps = {
   action: (
     previousState: CashSessionActionState,
     formData: FormData,
   ) => Promise<CashSessionActionState>;
-  events: OpenCashSessionEventOption[];
 };
 
-export function OpenCashSessionForm({
-  action,
-  events,
-}: OpenCashSessionFormProps) {
+export function OpenCashSessionForm({ action }: OpenCashSessionFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
 
   const errors = state.fieldErrors;
 
   return (
     <form action={formAction} className="grid gap-5" noValidate>
-      {/* Evento */}
-      <div className="grid gap-2">
-        <label
-          className="text-sm font-semibold text-[var(--brand-foreground)]"
-          htmlFor="eventId"
-        >
-          Evento
-        </label>
-
-        <select
-          aria-describedby={errors?.eventId ? "eventId-error" : undefined}
-          aria-invalid={errors?.eventId ? true : undefined}
-          className={
-            errors?.eventId
-              ? "h-12 w-full rounded-xl border border-red-300 bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition focus:border-red-400 focus:ring-2 focus:ring-red-100"
-              : "h-12 w-full rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
-          }
-          defaultValue=""
-          id="eventId"
-          name="eventId"
-        >
-          <option disabled value="">
-            Selecione um evento
-          </option>
-
-          {events.map((event) => (
-            <option key={event.id} value={event.id}>
-              {event.label}
-            </option>
-          ))}
-        </select>
-
-        {errors?.eventId ? (
-          <FieldError id="eventId-error">{errors.eventId}</FieldError>
-        ) : null}
-      </div>
-
       {/* Valor inicial */}
       <div className="grid gap-2">
         <label
@@ -111,8 +65,8 @@ export function OpenCashSessionForm({
       {/* Aviso */}
       <div className="rounded-xl border border-[var(--brand-accent)]/25 bg-[var(--brand-accent)]/[0.06] px-4 py-3">
         <p className="text-sm leading-6 text-[var(--brand-muted)]">
-          Após a abertura, este caixa ficará disponível no PDV para registrar as
-          vendas vinculadas ao evento selecionado.
+          Após a abertura, este caixa ficará disponível no PDV para registrar
+          vendas.
         </p>
       </div>
 

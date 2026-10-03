@@ -42,12 +42,9 @@ export type CashSessionRepository = {
     cashSessionId: string;
     operatorId: string;
   }): Promise<FindOpenCashSessionResult>;
-  findOpenByEventAndOperator(input: {
-    eventId: string;
-    operatorId: string;
-  }): Promise<FindOpenCashSessionResult>;
+  findOpenByOperator(operatorId: string): Promise<FindOpenCashSessionResult>;
   listOpenByOperator(operatorId: string): Promise<ListOpenCashSessionsResult>;
-  save(session: CashSession): Promise<SaveCashSessionResult>;
+  open(input: { openingAmountInReais: number }): Promise<SaveCashSessionResult>;
   update(
     session: CashSession,
     options?: CloseCashSessionPersistenceOptions,

@@ -4,7 +4,6 @@ export function parseOpenCashSessionFormData(
   formData: FormData,
 ): OpenCashSessionUseCaseInput {
   return {
-    eventId: getTrimmedString(formData, "eventId"),
     openingAmountInReais: parseBrlCurrencyInput(
       getTrimmedString(formData, "openingAmountInReais"),
     ),

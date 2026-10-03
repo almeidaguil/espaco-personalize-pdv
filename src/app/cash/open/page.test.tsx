@@ -3,16 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import OpenCashPage from "./page";
 
-vi.mock("@/shared/lib/supabase/server-client", () => ({
-  createSupabaseServerClient: vi.fn(async () => ({})),
-}));
-
 vi.mock("@/shared/components/app-navigation", () => ({
   AppNavigation: () => null,
-}));
-
-vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
-  SupabaseEventRepository: vi.fn(),
 }));
 
 vi.mock("@/modules/cash/presentation/open-cash-session-action", () => ({
@@ -20,29 +12,11 @@ vi.mock("@/modules/cash/presentation/open-cash-session-action", () => ({
 }));
 
 vi.mock("@/modules/cash/presentation/open-cash-session-form", () => ({
-  OpenCashSessionForm: () => <form aria-label="Formulário de abertura" />,
-}));
-
-const listActiveEventsUseCaseMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@/modules/events/application/list-active-events-use-case", () => ({
-  listActiveEventsUseCase: listActiveEventsUseCaseMock,
+  OpenCashSessionForm: () => <form aria-label="Formulario de abertura" />,
 }));
 
 describe("OpenCashPage", () => {
-  it("renders the cash opening page when active events exist", async () => {
-    listActiveEventsUseCaseMock.mockResolvedValueOnce({
-      events: [
-        {
-          id: "event-1",
-          isActive: true,
-          name: "Evento Julho",
-          startsAt: new Date("2026-07-10T12:00:00.000Z"),
-        },
-      ],
-      success: true,
-    });
-
+  it("renders the event-free cash opening page", async () => {
     render(await OpenCashPage());
 
     expect(
@@ -51,40 +25,16 @@ describe("OpenCashPage", () => {
         name: "Abrir caixa",
       }),
     ).toBeInTheDocument();
-
     expect(
       screen.getByRole("link", {
         name: "Voltar para o PDV",
       }),
     ).toHaveAttribute("href", "/pdv");
-
-    expect(screen.getByLabelText("Formulário de abertura")).toBeInTheDocument();
-  });
-
-  it("renders the empty state when no active events exist", async () => {
-    listActiveEventsUseCaseMock.mockResolvedValueOnce({
-      events: [],
-      success: true,
-    });
-
-    render(await OpenCashPage());
-
-    expect(
-      screen.getByText(
-        "Nenhum evento ativo disponível para abertura de caixa.",
-      ),
-    ).toBeInTheDocument();
-
     expect(
       screen.getByRole("link", {
-        name: "Criar evento",
+        name: "Fechar caixa",
       }),
-    ).toHaveAttribute("href", "/events/new");
-
-    expect(
-      screen.getByRole("link", {
-        name: "Ver eventos",
-      }),
-    ).toHaveAttribute("href", "/events");
+    ).toHaveAttribute("href", "/cash/close");
+    expect(screen.getByLabelText("Formulario de abertura")).toBeInTheDocument();
   });
 });
