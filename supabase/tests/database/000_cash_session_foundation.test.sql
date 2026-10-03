@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(54);
+select extensions.plan(61);
 
 select extensions.has_column(
   'public',
@@ -154,12 +154,12 @@ select extensions.ok(
 );
 
 select extensions.ok(
-  to_regprocedure('public.open_cash_session_v2(integer,uuid)') is not null,
-  'the event-optional cash opening RPC exists'
+  to_regprocedure('public.open_cash_session_v3(integer)') is not null,
+  'the event-free cash opening RPC exists'
 );
 
 select extensions.ok(
-  to_regprocedure('public.finalize_sale_v2(uuid,jsonb,jsonb)') is not null,
+  to_regprocedure('public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)') is not null,
   'the event-free sale RPC exists'
 );
 
@@ -182,10 +182,10 @@ select extensions.is(
     select procedures.prosecdef
     from pg_catalog.pg_proc as procedures
     where procedures.oid =
-      'public.open_cash_session_v2(integer,uuid)'::regprocedure
+      'public.open_cash_session_v3(integer)'::regprocedure
   ),
   true,
-  'open_cash_session_v2 is security definer'
+  'open_cash_session_v3 is security definer'
 );
 
 select extensions.is(
@@ -193,10 +193,10 @@ select extensions.is(
     select procedures.prosecdef
     from pg_catalog.pg_proc as procedures
     where procedures.oid =
-      'public.finalize_sale_v2(uuid,jsonb,jsonb)'::regprocedure
+      'public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)'::regprocedure
   ),
   true,
-  'finalize_sale_v2 is security definer'
+  'finalize_sale_v3 is security definer'
 );
 
 select extensions.is(
@@ -204,10 +204,10 @@ select extensions.is(
     select array_to_string(procedures.proconfig, ',')
     from pg_catalog.pg_proc as procedures
     where procedures.oid =
-      'public.open_cash_session_v2(integer,uuid)'::regprocedure
+      'public.open_cash_session_v3(integer)'::regprocedure
   ),
   'search_path=pg_catalog, public, pg_temp',
-  'open_cash_session_v2 has a controlled search_path'
+  'open_cash_session_v3 has a controlled search_path'
 );
 
 select extensions.is(
@@ -215,31 +215,31 @@ select extensions.is(
     select array_to_string(procedures.proconfig, ',')
     from pg_catalog.pg_proc as procedures
     where procedures.oid =
-      'public.finalize_sale_v2(uuid,jsonb,jsonb)'::regprocedure
+      'public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)'::regprocedure
   ),
   'search_path=pg_catalog, public, pg_temp',
-  'finalize_sale_v2 has a controlled search_path'
+  'finalize_sale_v3 has a controlled search_path'
 );
 
 select extensions.ok(
   pg_get_function_arguments(
-    'public.open_cash_session_v2(integer,uuid)'::regprocedure
+    'public.open_cash_session_v3(integer)'::regprocedure
   ) not like '%operator%',
   'the opening RPC does not accept an operator identity'
 );
 
 select extensions.is(
   pg_get_function_arguments(
-    'public.finalize_sale_v2(uuid,jsonb,jsonb)'::regprocedure
+    'public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)'::regprocedure
   ),
-  'p_sale_id uuid, p_items jsonb, p_payment jsonb',
-  'the sale RPC accepts only an idempotency id and sale contents'
+  'p_sale_id uuid, p_cash_session_id uuid, p_items jsonb, p_payment jsonb',
+  'the sale RPC accepts the exact trusted session and sale contents'
 );
 
 select extensions.ok(
   has_function_privilege(
     'authenticated',
-    'public.open_cash_session_v2(integer,uuid)',
+    'public.open_cash_session_v3(integer)',
     'EXECUTE'
   ),
   'authenticated users can execute the opening RPC'
@@ -248,7 +248,7 @@ select extensions.ok(
 select extensions.ok(
   not has_function_privilege(
     'anon',
-    'public.open_cash_session_v2(integer,uuid)',
+    'public.open_cash_session_v3(integer)',
     'EXECUTE'
   ),
   'anonymous users cannot execute the opening RPC'
@@ -257,7 +257,7 @@ select extensions.ok(
 select extensions.ok(
   has_function_privilege(
     'authenticated',
-    'public.finalize_sale_v2(uuid,jsonb,jsonb)',
+    'public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)',
     'EXECUTE'
   ),
   'authenticated users can execute the sale RPC'
@@ -266,7 +266,7 @@ select extensions.ok(
 select extensions.ok(
   not has_function_privilege(
     'anon',
-    'public.finalize_sale_v2(uuid,jsonb,jsonb)',
+    'public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)',
     'EXECUTE'
   ),
   'anonymous users cannot execute the sale RPC'
@@ -282,12 +282,12 @@ select extensions.ok(
 );
 
 select extensions.ok(
-  has_table_privilege(
+  not has_table_privilege(
     'authenticated',
     'public.cash_sessions',
     'INSERT'
   ),
-  'legacy authenticated inserts remain temporarily available'
+  'authenticated users cannot insert cash sessions directly'
 );
 
 select extensions.ok(
@@ -344,12 +344,12 @@ select extensions.is(
 );
 
 select extensions.ok(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
     'public.finalize_sale(uuid,uuid,uuid,timestamp with time zone,jsonb,jsonb,integer)',
     'EXECUTE'
   ),
-  'authenticated users keep legacy finalize_sale access'
+  'authenticated users cannot execute legacy finalize_sale'
 );
 
 select extensions.ok(
@@ -479,6 +479,50 @@ select extensions.ok(
       and not tgisinternal
   ),
   'legacy sale inserts are hardened by a server-side trigger'
+);
+
+select extensions.is(
+  pg_get_function_arguments('public.open_cash_session_v3(integer)'::regprocedure),
+  'p_opening_amount_in_cents integer',
+  'opening accepts only the opening amount'
+);
+
+select extensions.is(
+  pg_get_function_result('public.open_cash_session_v3(integer)'::regprocedure),
+  'cash_sessions',
+  'opening returns the complete persisted cash session'
+);
+
+select extensions.is(
+  pg_get_function_result('public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)'::regprocedure),
+  'uuid',
+  'sale finalization returns the sale id'
+);
+
+select extensions.is(
+  (select prosecdef from pg_catalog.pg_proc
+   where oid = 'public.close_cash_session(uuid,integer,timestamp with time zone,text)'::regprocedure),
+  true,
+  'close_cash_session is security definer'
+);
+
+select extensions.ok(
+  not has_function_privilege('authenticated', 'public.open_cash_session_v2(integer,uuid)', 'EXECUTE'),
+  'authenticated users cannot execute V2 opening'
+);
+
+select extensions.ok(
+  not has_function_privilege('authenticated', 'public.finalize_sale_v2(uuid,jsonb,jsonb)', 'EXECUTE'),
+  'authenticated users cannot execute V2 sale finalization'
+);
+
+select extensions.ok(
+  not exists (
+    select 1 from pg_catalog.pg_policies
+    where schemaname = 'public' and tablename = 'cash_sessions'
+      and cmd in ('INSERT', 'ALL')
+  ),
+  'cash sessions have no legacy insert policy'
 );
 
 select * from extensions.finish();
