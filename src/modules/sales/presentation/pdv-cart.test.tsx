@@ -12,7 +12,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -47,7 +46,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -82,7 +80,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -117,7 +114,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -160,7 +156,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -189,7 +184,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -232,7 +226,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={Array.from({ length: 9 }, (_, index) => ({
           id: `product-${index + 1}`,
           name: `Produto ${index + 1}`,
@@ -263,13 +256,7 @@ describe("PdvCart", () => {
   });
 
   it("renders an empty products state", () => {
-    render(
-      <PdvCart
-        action={createAction()}
-        cashSessions={createCashSessions()}
-        products={[]}
-      />,
-    );
+    render(<PdvCart action={createAction()} products={[]} />);
 
     expect(
       screen.getByText("Nenhum produto ativo disponível para venda."),
@@ -283,7 +270,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={action}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -313,9 +299,11 @@ describe("PdvCart", () => {
 
     const formData = action.mock.calls[0]?.[1] as FormData;
 
-    expect(formData.get("cashSessionId")).toBe("cash-session-1");
+    expect(formData.has("cashSessionId")).toBe(false);
 
     expect(formData.has("eventId")).toBe(false);
+
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
 
     expect(formData.get("amountReceivedInReais")).toBe("20,00");
 
@@ -337,7 +325,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -401,7 +388,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -448,7 +434,6 @@ describe("PdvCart", () => {
     render(
       <PdvCart
         action={createAction()}
-        cashSessions={createCashSessions()}
         products={[
           {
             id: "product-1",
@@ -508,13 +493,4 @@ function createAction() {
       };
     },
   );
-}
-
-function createCashSessions() {
-  return [
-    {
-      eventName: "Evento Julho",
-      id: "cash-session-1",
-    },
-  ];
 }

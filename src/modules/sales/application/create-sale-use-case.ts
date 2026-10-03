@@ -22,9 +22,7 @@ export type CreateSaleUseCaseResult =
       success: true;
     }
   | {
-      fieldErrors?: Partial<
-        Record<"cashSessionId" | "items" | "payment", string>
-      >;
+      fieldErrors?: Partial<Record<"items" | "payment", string>>;
       formError?: string;
       success: false;
     };
@@ -63,7 +61,6 @@ export async function createSaleUseCase(
 
     return {
       fieldErrors: {
-        cashSessionId: flattenedErrors.cashSessionId?.[0],
         items: flattenedErrors.items?.[0],
         payment: flattenedErrors.payment?.[0],
       },
@@ -72,10 +69,9 @@ export async function createSaleUseCase(
   }
 
   const openCashSessionResult =
-    await dependencies.cashSessionRepository.findOpenByIdAndOperator({
-      cashSessionId: parsedInput.data.cashSessionId,
-      operatorId: currentProfileResult.profile.id,
-    });
+    await dependencies.cashSessionRepository.findOpenByOperator(
+      currentProfileResult.profile.id,
+    );
 
   if (!openCashSessionResult.success) {
     return {
@@ -138,7 +134,7 @@ export async function createSaleUseCase(
   }
 
   const saleResult = createSale({
-    cashSessionId: parsedInput.data.cashSessionId,
+    cashSessionId: openCashSessionResult.session.id,
     completedAt: dependencies.getCurrentDate(),
     id: dependencies.generateSaleId(),
     items: saleItems,
@@ -156,7 +152,10 @@ export async function createSaleUseCase(
 
   if (!saveResult.success) {
     return {
-      formError: "Nao foi possivel registrar a venda.",
+      formError:
+        saveResult.error === "cash_session_closed"
+          ? "O caixa foi fechado durante a venda. Abra um novo caixa e tente novamente."
+          : "Nao foi possivel registrar a venda.",
       success: false,
     };
   }

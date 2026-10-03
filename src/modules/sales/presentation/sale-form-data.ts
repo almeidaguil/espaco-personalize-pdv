@@ -7,7 +7,6 @@ type SaleItemFormInput = {
 
 export function parseCreateSaleFormData(formData: FormData) {
   return {
-    cashSessionId: formData.get("cashSessionId")?.toString() ?? "",
     items: parseSaleItems(formData.get("itemsJson")?.toString() ?? "[]"),
     payment: {
       amountInReais: parseBrlAmount(

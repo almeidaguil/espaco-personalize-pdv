@@ -14,16 +14,6 @@ import {
   PdvCashStatus,
   type PdvCashStatusItem,
 } from "@/modules/cash/presentation/pdv-cash-status";
-import { listActiveEventsUseCase } from "@/modules/events/application/list-active-events-use-case";
-import type { Event } from "@/modules/events/domain/event";
-import {
-  SupabaseEventRepository,
-  type SupabaseEventClient,
-} from "@/modules/events/infra/supabase-event-repository";
-import {
-  PdvEventSelector,
-  type PdvEventSelectorItem,
-} from "@/modules/events/presentation/pdv-event-selector";
 import { listProductsUseCase } from "@/modules/products/application/list-products-use-case";
 import type { Product } from "@/modules/products/domain/product";
 import {
@@ -32,7 +22,6 @@ import {
 } from "@/modules/products/infra/supabase-product-repository";
 import {
   PdvCart,
-  type PdvCartCashSession,
   type PdvCartProduct,
 } from "@/modules/sales/presentation/pdv-cart";
 import { calculateStockBalance } from "@/modules/stock/domain/stock-balance";
@@ -43,7 +32,7 @@ import {
 import { createSaleAction } from "@/modules/sales/presentation/create-sale-action";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { AppNavigation } from "@/shared/components/app-navigation";
-import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
+import { LoadErrorState } from "@/shared/components/status-state";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
@@ -52,6 +41,11 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
+const moneyFormatter = new Intl.NumberFormat("pt-BR", {
+  currency: "BRL",
+  style: "currency",
+});
+
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "short",
@@ -59,7 +53,6 @@ const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
 
 export default async function PdvPage() {
   const supabaseClient = await createSupabaseServerClient();
-  const eventClient = supabaseClient as unknown as SupabaseEventClient;
   const cashSessionClient =
     supabaseClient as unknown as SupabaseCashSessionClient;
   const currentUserProfileClient =
@@ -67,32 +60,27 @@ export default async function PdvPage() {
   const productClient = supabaseClient as unknown as SupabaseProductClient;
   const stockMovementClient =
     supabaseClient as unknown as SupabaseStockMovementClient;
-  const eventRepository = new SupabaseEventRepository(eventClient);
   const productRepository = new SupabaseProductRepository(productClient);
   const stockMovementRepository = new SupabaseStockMovementRepository(
     stockMovementClient,
   );
-  const [eventsResult, cashSessionsResult, productsResult, stockMovements] =
-    await Promise.all([
-      listActiveEventsUseCase({ eventRepository }),
-      listOpenCashSessionsUseCase({
-        cashSessionRepository: new SupabaseCashSessionRepository(
-          cashSessionClient,
-        ),
-        currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
-          currentUserProfileClient,
-        ),
-      }),
-      listProductsUseCase({
-        productRepository,
-      }),
-      stockMovementRepository.listAll(),
-    ]);
-  const eventNames = new Map(
-    eventsResult.success
-      ? eventsResult.events.map((event) => [event.id, event.name])
-      : [],
-  );
+  const cashSessionsResult = await listOpenCashSessionsUseCase({
+    cashSessionRepository: new SupabaseCashSessionRepository(cashSessionClient),
+    currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
+      currentUserProfileClient,
+    ),
+  });
+  const canRenderPdv =
+    cashSessionsResult.success && cashSessionsResult.sessions.length > 0;
+  const [productsResult, stockMovements] = canRenderPdv
+    ? await Promise.all([
+        listProductsUseCase({
+          productRepository,
+        }),
+        stockMovementRepository.listAll(),
+      ])
+    : [null, []];
+  const products = productsResult?.success ? productsResult.products : [];
   const stockMovementsByProductId = new Map<string, typeof stockMovements>();
 
   for (const movement of stockMovements) {
@@ -103,7 +91,7 @@ export default async function PdvPage() {
   }
 
   const stockQuantitiesByProductId = new Map(
-    (productsResult.success ? productsResult.products : []).map((product) => [
+    products.map((product) => [
       product.id,
       calculateStockBalance(stockMovementsByProductId.get(product.id) ?? []),
     ]),
@@ -118,52 +106,30 @@ export default async function PdvPage() {
         eyebrow="Vendas"
         title="PDV"
       />
-      {!eventsResult.success ? (
+
+      {!cashSessionsResult.success ? (
         <LoadErrorState
           actions={[{ href: "/pdv", label: "Tentar novamente" }]}
           eyebrow="Erro"
           message={
-            eventsResult.formError ??
-            "Verifique sua conexao e tente carregar o evento ativo novamente."
+            cashSessionsResult.formError ??
+            "Verifique sua conexao e tente carregar os caixas abertos novamente."
           }
-          title="Nao foi possivel carregar o evento ativo"
-        />
-      ) : eventsResult.events.length === 0 ? (
-        <EmptyState
-          actions={[
-            { href: "/events/new", label: "Criar evento" },
-            { href: "/events", label: "Ver eventos", variant: "secondary" },
-          ]}
-          eyebrow="Sem evento ativo"
-          message="Ative ou crie um evento antes de iniciar vendas no PDV."
-          title="Nenhum evento ativo disponivel para venda."
+          title="Nao foi possivel carregar os caixas abertos"
         />
       ) : (
         <>
-          {!cashSessionsResult.success ? (
+          <PdvCashStatus
+            sessions={cashSessionsResult.sessions.map(toPdvCashStatusItem)}
+          />
+
+          {cashSessionsResult.sessions.length ===
+          0 ? null : !productsResult?.success ? (
             <LoadErrorState
               actions={[{ href: "/pdv", label: "Tentar novamente" }]}
               eyebrow="Erro"
               message={
-                cashSessionsResult.formError ??
-                "Verifique sua conexao e tente carregar os caixas abertos novamente."
-              }
-              title="Nao foi possivel carregar os caixas abertos"
-            />
-          ) : (
-            <PdvCashStatus
-              sessions={cashSessionsResult.sessions.map((session) =>
-                toPdvCashStatusItem(session, eventNames),
-              )}
-            />
-          )}
-          <PdvEventSelector events={eventsResult.events.map(toPdvEventItem)} />
-          {!productsResult.success ? (
-            <LoadErrorState
-              actions={[{ href: "/pdv", label: "Tentar novamente" }]}
-              eyebrow="Erro"
-              message={
-                productsResult.formError ??
+                productsResult?.formError ??
                 "Verifique sua conexao e tente carregar os produtos novamente."
               }
               title="Nao foi possivel carregar os produtos"
@@ -171,14 +137,7 @@ export default async function PdvPage() {
           ) : (
             <PdvCart
               action={createSaleAction}
-              cashSessions={
-                cashSessionsResult.success
-                  ? cashSessionsResult.sessions.map((session) =>
-                      toPdvCartCashSession(session, eventNames),
-                    )
-                  : []
-              }
-              products={productsResult.products
+              products={products
                 .filter((product) => product.isActive)
                 .map((product) =>
                   toPdvCartProduct(
@@ -194,23 +153,11 @@ export default async function PdvPage() {
   );
 }
 
-function toPdvEventItem(event: Event): PdvEventSelectorItem {
+function toPdvCashStatusItem(session: CashSession): PdvCashStatusItem {
   return {
-    id: event.id,
-    location: event.location ?? null,
-    name: event.name,
-    startsAtLabel: dateFormatter.format(event.startsAt),
-  };
-}
-
-function toPdvCashStatusItem(
-  session: CashSession,
-  eventNames: Map<string, string>,
-): PdvCashStatusItem {
-  return {
-    eventName: eventNames.get(session.eventId) ?? "Evento sem nome",
     id: session.id,
     openedAtLabel: dateFormatter.format(session.openedAt),
+    openingAmountLabel: moneyFormatter.format(session.openingAmountInReais),
   };
 }
 
@@ -224,15 +171,5 @@ function toPdvCartProduct(
     priceInReais: product.price.toReais(),
     quantityOnHand,
     ...(product.sku ? { sku: product.sku } : {}),
-  };
-}
-
-function toPdvCartCashSession(
-  session: CashSession,
-  eventNames: Map<string, string>,
-): PdvCartCashSession {
-  return {
-    eventName: eventNames.get(session.eventId) ?? "Evento sem nome",
-    id: session.id,
   };
 }

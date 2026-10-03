@@ -1,9 +1,9 @@
 import { EmptyState } from "@/shared/components/status-state";
 
 export type PdvCashStatusItem = {
-  eventName: string;
   id: string;
   openedAtLabel: string;
+  openingAmountLabel: string;
 };
 
 type PdvCashStatusProps = {
@@ -40,7 +40,7 @@ export function PdvCashStatus({ sessions }: PdvCashStatusProps) {
           </h2>
 
           <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
-            O PDV está liberado para registrar vendas nos caixas abaixo.
+            O PDV está liberado para registrar vendas.
           </p>
         </div>
 
@@ -57,11 +57,15 @@ export function PdvCashStatus({ sessions }: PdvCashStatusProps) {
             key={session.id}
           >
             <span className="font-semibold text-[var(--brand-foreground)]">
-              {session.eventName}
+              Caixa aberto em {session.openedAtLabel}
             </span>
 
             <span className="mt-1 block text-sm text-[var(--brand-muted)]">
-              Aberto em {session.openedAtLabel}
+              Troco inicial: {session.openingAmountLabel}
+            </span>
+
+            <span className="mt-1 block text-xs text-[var(--brand-muted)]">
+              Sessao #{session.id.slice(0, 8)}
             </span>
           </li>
         ))}
