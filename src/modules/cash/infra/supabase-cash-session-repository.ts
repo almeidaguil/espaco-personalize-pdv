@@ -12,7 +12,6 @@ type SupabaseCashSessionRow = {
   closed_by?: string | null;
   counted_amount_in_cents?: number | null;
   difference_amount_in_cents?: number | null;
-  event_id?: string | null;
   expected_amount_in_cents?: number | null;
   id: string;
   opened_at: string;
@@ -55,7 +54,7 @@ type SupabaseCashSessionListResult = PromiseLike<{
 
 type SupabaseCashSessionFilterBuilder = {
   eq(
-    column: "event_id" | "id" | "operator_id" | "status",
+    column: "id" | "operator_id" | "status",
     value: string,
   ): SupabaseCashSessionFilterBuilder;
   maybeSingle(): SupabaseMaybeSingleCashSessionResult;
@@ -96,7 +95,7 @@ export type SupabaseCashSessionClient = {
 };
 
 const cashSessionColumns =
-  "id,event_id,operator_id,opening_amount_in_cents,status,opened_at,closed_at,counted_amount_in_cents,expected_amount_in_cents,difference_amount_in_cents,closed_by" as const;
+  "id,operator_id,opening_amount_in_cents,status,opened_at,closed_at,counted_amount_in_cents,expected_amount_in_cents,difference_amount_in_cents,closed_by" as const;
 
 export class SupabaseCashSessionRepository implements CashSessionRepository {
   constructor(private readonly supabaseClient: SupabaseCashSessionClient) {}

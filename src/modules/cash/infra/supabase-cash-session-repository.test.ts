@@ -8,7 +8,6 @@ type FakeSupabaseCashSessionRow = {
   closed_by?: string | null;
   counted_amount_in_cents?: number | null;
   difference_amount_in_cents?: number | null;
-  event_id?: string | null;
   expected_amount_in_cents?: number | null;
   id: string;
   opened_at: string;
@@ -165,7 +164,6 @@ describe("SupabaseCashSessionRepository", () => {
           closed_by: null,
           counted_amount_in_cents: null,
           difference_amount_in_cents: null,
-          event_id: null,
           expected_amount_in_cents: null,
           id: "cash-session-1",
           opened_at: "2026-07-10T12:00:00.000Z",
@@ -229,7 +227,6 @@ describe("SupabaseCashSessionRepository", () => {
       {
         data: {
           closed_at: null,
-          event_id: null,
           id: "cash-session-1",
           opened_at: "2026-07-10T12:00:00.000Z",
           opening_amount_in_cents: 15050,
@@ -261,7 +258,6 @@ describe("SupabaseCashSessionRepository", () => {
       {
         data: {
           closed_at: null,
-          event_id: "event-1",
           id: "cash-session-1",
           opened_at: "2026-07-10T12:00:00.000Z",
           opening_amount_in_cents: 15050,
@@ -303,7 +299,6 @@ describe("SupabaseCashSessionRepository", () => {
           closed_by: "operator-1",
           counted_amount_in_cents: 26075,
           difference_amount_in_cents: 1025,
-          event_id: "event-1",
           expected_amount_in_cents: 25050,
           id: "cash-session-1",
           opened_at: "2026-07-10T12:00:00.000Z",
@@ -402,7 +397,6 @@ describe("SupabaseCashSessionRepository", () => {
         data: [
           {
             closed_at: null,
-            event_id: "event-1",
             id: "cash-session-1",
             opened_at: "2026-07-10T12:00:00.000Z",
             opening_amount_in_cents: 15050,
