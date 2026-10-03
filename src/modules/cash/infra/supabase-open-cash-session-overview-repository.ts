@@ -47,7 +47,9 @@ export type SupabaseOpenCashSessionOverviewClient = {
     select(columns: string): SupabaseOpenCashSessionOverviewFilterBuilder;
   };
   from(table: "profiles"): {
-    select(columns: "id,full_name,email"): SupabaseProfileListResult;
+    select(columns: "id,full_name,email"): {
+      in(column: "id", values: string[]): SupabaseProfileListResult;
+    };
   };
 };
 
@@ -71,9 +73,20 @@ export class SupabaseOpenCashSessionOverviewRepository implements OpenCashSessio
       return { error: "unknown", success: false };
     }
 
+    const openCashSessions = cashSessionRows ?? [];
+
+    if (openCashSessions.length === 0) {
+      return { overviews: [], success: true };
+    }
+
+    const operatorIds = [
+      ...new Set(openCashSessions.map((row) => row.operator_id)),
+    ];
+
     const { data: profileRows, error: profileError } = await this.supabaseClient
       .from("profiles")
-      .select("id,full_name,email");
+      .select("id,full_name,email")
+      .in("id", operatorIds);
 
     if (profileError) {
       return { error: "unknown", success: false };
@@ -84,7 +97,7 @@ export class SupabaseOpenCashSessionOverviewRepository implements OpenCashSessio
     );
 
     return {
-      overviews: (cashSessionRows ?? []).map((row) =>
+      overviews: openCashSessions.map((row) =>
         toOpenCashSessionOverview(row, profilesById),
       ),
       success: true,
