@@ -1,11 +1,13 @@
 import type { Metadata } from "next";
 
-import { listSalesUseCase } from "@/modules/sales/application/list-sales-use-case";
+import { listSalesHistoryUseCase } from "@/modules/sales/application/list-sales-history-use-case";
 import {
   SupabaseSaleSummaryRepository,
   type SupabaseSaleSummaryClient,
 } from "@/modules/sales/infra/supabase-sale-summary-repository";
 import { SalesList } from "@/modules/sales/presentation/sales-list";
+import { SalesHistoryFilters } from "@/modules/sales/presentation/sales-history-filters";
+import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { AppNavigation } from "@/shared/components/app-navigation";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { LoadErrorState } from "@/shared/components/status-state";
@@ -18,11 +20,22 @@ export const metadata: Metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function SalesPage() {
+type SalesPageProps = {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+};
+
+export default async function SalesPage({ searchParams }: SalesPageProps = {}) {
+  const query = (await searchParams) ?? {};
+  const filterFields = Object.fromEntries(
+    Object.entries(query).filter(
+      (entry): entry is [string, string] => typeof entry[1] === "string",
+    ),
+  );
   const supabaseClient = await createSupabaseServerClient();
 
-  const result = await listSalesUseCase({
-    saleSummaryRepository: new SupabaseSaleSummaryRepository(
+  const result = await listSalesHistoryUseCase({
+    filters: { ...query, pageSize: 8 },
+    salesHistoryRepository: new SupabaseSaleSummaryRepository(
       supabaseClient as unknown as SupabaseSaleSummaryClient,
     ),
   });
@@ -37,7 +50,18 @@ export default async function SalesPage() {
         title="Vendas"
       />
 
-      {!result.success ? (
+      <SalesHistoryFilters
+        filters={filterFields}
+        options={
+          result.success ? result.options : { operators: [], sessions: [] }
+        }
+      />
+
+      {!result.success && result.error === "invalid_filters" ? (
+        <InlineFeedback padding="md" tone="error">
+          {result.formError}
+        </InlineFeedback>
+      ) : !result.success ? (
         <LoadErrorState
           actions={[
             {
@@ -50,7 +74,11 @@ export default async function SalesPage() {
           title="Não foi possível carregar as vendas"
         />
       ) : (
-        <SalesList sales={result.sales} />
+        <SalesList
+          sales={result.sales}
+          totalCount={result.totalCount}
+          filters={result.filters}
+        />
       )}
     </PageShell>
   );

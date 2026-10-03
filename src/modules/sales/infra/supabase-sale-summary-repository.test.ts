@@ -1,109 +1,175 @@
 import { describe, expect, it } from "vitest";
-
 import { SupabaseSaleSummaryRepository } from "./supabase-sale-summary-repository";
-
-type FakeSaleSummaryRow = {
-  cash_session_id: string;
-  completed_at: string;
-  event_id: string;
-  events: {
-    name: string;
-  } | null;
-  id: string;
-  status: "completed" | "canceled";
-  total_in_cents: number;
-};
-
-type FakeSupabaseResponse = {
-  data: FakeSaleSummaryRow[] | null;
-  error: {
-    code?: string;
-    message?: string;
-  } | null;
-};
-
-class FakeSupabaseSaleSummaryClient {
-  public orderedColumn?: string;
-  public orderOptions?: unknown;
-  public selectedColumns?: string;
-
-  constructor(private readonly response: FakeSupabaseResponse) {}
-
-  from(table: "sales") {
-    expect(table).toBe("sales");
-
-    return {
-      select: (columns: string) => {
-        this.selectedColumns = columns;
-
-        return {
-          order: (column: "completed_at", options: { ascending: false }) => {
-            this.orderedColumn = column;
-            this.orderOptions = options;
-
-            return Promise.resolve(this.response);
-          },
-        };
-      },
-    };
-  }
-}
+import { createSalesReadClient, saleRow } from "../testing/sales-read-client";
 
 describe("SupabaseSaleSummaryRepository", () => {
-  it("lists sale summaries ordered by completion date", async () => {
-    const supabaseClient = new FakeSupabaseSaleSummaryClient({
-      data: [
-        {
-          cash_session_id: "cash-session-1",
-          completed_at: "2026-07-10T12:00:00.000Z",
-          event_id: "event-1",
-          events: {
-            name: "Evento Julho",
-          },
-          id: "sale-1",
-          status: "completed",
-          total_in_cents: 3000,
-        },
-      ],
-      error: null,
+  it("reads legacy and store sales without events and resolves operator names", async () => {
+    const client = createSalesReadClient({
+      sales: [saleRow(), saleRow({ id: "sale-2", event_id: null })],
     });
-    const repository = new SupabaseSaleSummaryRepository(supabaseClient);
-
-    await expect(repository.list()).resolves.toEqual({
+    const result = await new SupabaseSaleSummaryRepository(client).list();
+    expect(result).toMatchObject({
+      success: true,
       sales: [
         {
-          cashSessionId: "cash-session-1",
-          completedAt: new Date("2026-07-10T12:00:00.000Z"),
-          eventId: "event-1",
-          eventName: "Evento Julho",
           id: "sale-1",
-          status: "completed",
+          operatorId: "operator-1",
+          operatorName: "Ana",
+          businessDate: "2026-07-10",
           totalInReais: 30,
         },
+        { id: "sale-2", operatorName: "Ana" },
       ],
-      success: true,
     });
-    expect(supabaseClient.selectedColumns).toBe(
-      "id,event_id,cash_session_id,status,total_in_cents,completed_at,events(name)",
-    );
-    expect(supabaseClient.orderedColumn).toBe("completed_at");
-    expect(supabaseClient.orderOptions).toEqual({ ascending: false });
+    expect(
+      client.calls
+        .filter(([method]) => method === "select")
+        .every(([, columns]) => !String(columns).includes("event")),
+    ).toBe(true);
   });
-
-  it("maps repository errors", async () => {
-    const repository = new SupabaseSaleSummaryRepository(
-      new FakeSupabaseSaleSummaryClient({
-        data: null,
-        error: {
-          code: "PGRST000",
-          message: "Unexpected error",
-        },
-      }),
+  it("keeps dashboard totals complete beyond one database page", async () => {
+    const client = createSalesReadClient({
+      sales: Array.from({ length: 501 }, (_, index) =>
+        saleRow({ id: `sale-${index}` }),
+      ),
+    });
+    const result = await new SupabaseSaleSummaryRepository(client).list();
+    expect(result.success && result.sales).toHaveLength(501);
+    expect(client.calls.filter(([method]) => method === "range")).toHaveLength(
+      2,
     );
-
-    await expect(repository.list()).resolves.toEqual({
-      error: "unknown",
+  });
+  it("preserves identity when profile and cash metadata are unavailable", async () => {
+    const client = createSalesReadClient({
+      sales: [saleRow({ cash_sessions: null })],
+      profiles: [],
+    });
+    expect(
+      await new SupabaseSaleSummaryRepository(client).list(),
+    ).toMatchObject({
+      success: true,
+      sales: [
+        {
+          operatorName: "Operador operator",
+          operatorId: "operator-1",
+          cashSessionId: "cash-session-1",
+          businessDate: null,
+        },
+      ],
+    });
+  });
+  it("filters and paginates history on the server with stable ordering", async () => {
+    const client = createSalesReadClient({ sales: [saleRow()], count: 17 });
+    const result = await new SupabaseSaleSummaryRepository(client).listPage({
+      startDate: "2026-07-01",
+      endDate: "2026-07-31",
+      operatorId: "operator-1",
+      cashSessionId: "cash-session-1",
+      status: "canceled",
+      page: 2,
+      pageSize: 8,
+    });
+    expect(result).toMatchObject({
+      success: true,
+      page: 2,
+      pageSize: 8,
+      totalCount: 17,
+    });
+    expect(client.calls).toEqual(
+      expect.arrayContaining([
+        ["gte", "cash_sessions.business_date", "2026-07-01"],
+        ["lte", "cash_sessions.business_date", "2026-07-31"],
+        ["eq", "operator_id", "operator-1"],
+        ["eq", "cash_session_id", "cash-session-1"],
+        ["eq", "status", "canceled"],
+        ["order", "completed_at", { ascending: false }],
+        ["order", "id", { ascending: false }],
+        ["range", 8, 15],
+      ]),
+    );
+    expect(
+      client.calls.some(
+        ([method, value]) =>
+          method === "select" && String(value).includes("cash_sessions!inner"),
+      ),
+    ).toBe(true);
+  });
+  it("maps errors", async () => {
+    const client = createSalesReadClient({ error: { message: "offline" } });
+    expect(await new SupabaseSaleSummaryRepository(client).list()).toEqual({
       success: false,
+      error: "unknown",
+    });
+  });
+  it("offers all permitted operators and narrows sessions by operator, including historical cash sessions", async () => {
+    const client = createSalesReadClient({
+      sessions: [
+        {
+          id: "cash-1",
+          operator_id: "operator-1",
+          business_date: "2026-07-10",
+          opened_at: "2026-07-10T11:00:00Z",
+        },
+        {
+          id: "cash-2",
+          operator_id: "operator-2",
+          business_date: "2026-07-10",
+          opened_at: "2026-07-10T13:00:00Z",
+        },
+        {
+          id: "cash-3",
+          operator_id: "operator-1",
+          business_date: "2026-07-10",
+          opened_at: "2026-07-10T15:00:00Z",
+        },
+      ],
+    });
+    const result = await new SupabaseSaleSummaryRepository(
+      client,
+    ).listFilterOptions({
+      page: 1,
+      pageSize: 8,
+      startDate: "2026-07-10",
+      operatorId: "operator-1",
+    });
+    expect(result).toMatchObject({
+      success: true,
+      options: {
+        operators: [
+          { id: "operator-1", name: "Ana" },
+          { id: "operator-2", name: "Operador operator" },
+        ],
+        sessions: [{ id: "cash-1" }, { id: "cash-3" }],
+      },
+    });
+    expect(client.calls).toContainEqual(["gte", "business_date", "2026-07-10"]);
+    expect(
+      client.calls.some(
+        ([method, field]) => method === "eq" && field === "status",
+      ),
+    ).toBe(false);
+  });
+  it("does not silently truncate the session selector", async () => {
+    const client = createSalesReadClient({
+      sessions: Array.from({ length: 501 }, (_, index) => ({
+        id: `cash-${index}`,
+        operator_id: "operator-1",
+        business_date: "2026-07-10",
+        opened_at: "2026-07-10T11:00:00Z",
+      })),
+    });
+    const result = await new SupabaseSaleSummaryRepository(
+      client,
+    ).listFilterOptions({ page: 1, pageSize: 8 });
+    expect(result.success && result.options.sessions).toHaveLength(501);
+  });
+  it("rejects malformed sale data", async () => {
+    const client = createSalesReadClient({
+      sales: [saleRow({ total_in_cents: "not-a-number" })],
+    });
+    expect(await new SupabaseSaleSummaryRepository(client).list()).toEqual({
+      success: false,
+      error: "unknown",
     });
   });
 });

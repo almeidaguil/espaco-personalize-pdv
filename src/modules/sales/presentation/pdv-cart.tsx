@@ -23,7 +23,6 @@ export type PdvCartItem = PdvCartProduct & {
 };
 
 export type PdvCartCashSession = {
-  eventId: string;
   eventName: string;
   id: string;
 };
@@ -128,12 +127,6 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
 
   return (
     <Panel action={formAction} as="form" className="grid gap-5">
-      <input
-        name="eventId"
-        type="hidden"
-        value={selectedCashSession?.eventId ?? ""}
-      />
-
       <input
         name="itemsJson"
         type="hidden"

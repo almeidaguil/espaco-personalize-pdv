@@ -15,6 +15,7 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
 const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "short",
+  timeZone: "America/Sao_Paulo",
 });
 
 export function SaleDetailCard({ sale }: SaleDetailCardProps) {
@@ -24,7 +25,7 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
-            {sale.eventName}
+            Venda #{sale.id.slice(0, 8)}
           </p>
 
           <h2 className="mt-2 text-2xl font-bold text-[var(--brand-foreground)]">
@@ -40,6 +41,32 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
           {sale.status === "completed" ? "Concluída" : "Cancelada"}
         </StatusBadge>
       </div>
+
+      <dl className="grid gap-4 rounded-xl border border-[var(--border)] p-4 sm:grid-cols-2">
+        <PaymentItem label="Operador" value={sale.operatorName} />
+        <PaymentItem
+          label="Identificador do operador"
+          value={sale.operatorId}
+        />
+        <PaymentItem label="Sessão de caixa" value={sale.cashSessionId} />
+        <PaymentItem
+          label="Abertura do caixa"
+          value={
+            sale.cashSessionOpenedAt
+              ? dateFormatter.format(sale.cashSessionOpenedAt)
+              : "Não disponível"
+          }
+        />
+        <PaymentItem
+          label="Data operacional"
+          value={
+            sale.businessDate
+              ? sale.businessDate.split("-").reverse().join("/")
+              : "Não disponível"
+          }
+        />
+        <PaymentItem label="Identificador da venda" value={sale.id} />
+      </dl>
 
       {/* Itens */}
       <section className="overflow-hidden rounded-xl border border-[var(--border)]">
@@ -108,7 +135,7 @@ function PaymentItem({ label, value }: { label: string; value: string }) {
         {label}
       </dt>
 
-      <dd className="mt-2 text-base font-bold text-[var(--brand-foreground)]">
+      <dd className="mt-2 break-all text-base font-bold text-[var(--brand-foreground)]">
         {value}
       </dd>
     </div>

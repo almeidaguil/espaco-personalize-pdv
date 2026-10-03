@@ -35,7 +35,24 @@ type SupabaseRpcResult = PromiseLike<{
   error: SupabaseError | null;
 }>;
 
+type CashSessionEventResult = PromiseLike<{
+  data: { event_id: string | null } | null;
+  error: SupabaseError | null;
+}>;
+
+type CashSessionEventQuery = {
+  eq(
+    column: "id",
+    value: string,
+  ): {
+    maybeSingle(): CashSessionEventResult;
+  };
+};
+
 export type SupabaseSaleClient = {
+  from(table: "cash_sessions"): {
+    select(columns: "event_id"): CashSessionEventQuery;
+  };
   rpc(functionName: "finalize_sale", args: FinalizeSaleArgs): SupabaseRpcResult;
 };
 
@@ -43,9 +60,22 @@ export class SupabaseSaleRepository implements SaleRepository {
   constructor(private readonly supabaseClient: SupabaseSaleClient) {}
 
   async save(sale: Sale): Promise<SaveSaleResult> {
+    const cashSessionResult = await this.supabaseClient
+      .from("cash_sessions")
+      .select("event_id")
+      .eq("id", sale.cashSessionId)
+      .maybeSingle();
+
+    if (cashSessionResult.error || !cashSessionResult.data?.event_id) {
+      return {
+        error: "unknown",
+        success: false,
+      };
+    }
+
     const result = await this.supabaseClient.rpc(
       "finalize_sale",
-      toFinalizeSaleArgs(sale),
+      toFinalizeSaleArgs(sale, cashSessionResult.data.event_id),
     );
 
     if (result.error || result.data !== sale.id) {
@@ -62,11 +92,11 @@ export class SupabaseSaleRepository implements SaleRepository {
   }
 }
 
-function toFinalizeSaleArgs(sale: Sale): FinalizeSaleArgs {
+function toFinalizeSaleArgs(sale: Sale, eventId: string): FinalizeSaleArgs {
   return {
     p_cash_session_id: sale.cashSessionId,
     p_completed_at: sale.completedAt.toISOString(),
-    p_event_id: sale.eventId,
+    p_event_id: eventId,
     p_items: sale.items.map((item) => ({
       product_id: item.productId,
       quantity: item.quantity,

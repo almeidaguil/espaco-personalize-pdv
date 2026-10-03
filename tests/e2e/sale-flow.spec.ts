@@ -26,10 +26,10 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
   await createProduct(page, productName, productSku);
   await addInitialStock(page, productName, 3);
   const eventName = await openCashSession(page);
-  await createSale(page, productName, eventName, {
+  const cashSessionId = await createSale(page, productName, eventName, {
     receivedAmount: "20,00",
   });
-  await cancelSale(page, eventName);
+  await cancelSale(page, cashSessionId, productName);
 
   await page.goto("/stock");
   const balanceItem = page
@@ -142,6 +142,8 @@ async function createSale(
 ) {
   await page.goto("/pdv", { waitUntil: "networkidle" });
   await expect(page.getByText(eventName).first()).toBeVisible();
+  const cashSessionId = await page.getByLabel("Caixa da venda").inputValue();
+  expect(cashSessionId).not.toBe("");
 
   await page.getByLabel("Buscar produto").fill(productName);
   await expect(page.getByText("1 produto(s) encontrado(s)")).toBeVisible();
@@ -168,18 +170,27 @@ async function createSale(
   await page.getByRole("button", { name: "Finalizar venda" }).click();
 
   await expect(page.getByText("Venda finalizada com sucesso.")).toBeVisible();
+  return cashSessionId;
 }
 
-async function cancelSale(page: Page, eventName: string) {
-  await page.goto("/sales");
+async function cancelSale(
+  page: Page,
+  cashSessionId: string,
+  productName: string,
+) {
+  await page.goto(`/sales?cashSessionId=${encodeURIComponent(cashSessionId)}`);
 
-  const saleItem = page.locator("li", { hasText: eventName }).first();
+  const saleItem = page
+    .locator("li", { hasText: `Caixa ${cashSessionId.slice(0, 8)}` })
+    .first();
   await saleItem.getByRole("link", { name: "Ver detalhes" }).click();
   await page.waitForLoadState("networkidle");
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Detalhe da venda" }),
   ).toBeVisible();
+  await expect(page.getByText(cashSessionId, { exact: true })).toBeVisible();
+  await expect(page.getByText(productName, { exact: true })).toBeVisible();
   await page
     .getByRole("checkbox", {
       name: /Confirmo que esta venda deve ser cancelada/,

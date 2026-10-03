@@ -1,117 +1,63 @@
 import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
-
 import { SalesList } from "./sales-list";
+import { saleSummaryFixture } from "../testing/sale-summary-fixture";
 
 describe("SalesList", () => {
-  it("renders sale summaries", () => {
+  it("identifies sales by operator and cash session", () => {
     render(
       <SalesList
-        sales={[
-          {
-            cashSessionId: "cash-session-1",
-            completedAt: new Date("2026-07-10T12:00:00.000Z"),
-            eventId: "event-1",
-            eventName: "Evento Julho",
-            id: "sale-1",
-            status: "completed",
-            totalInReais: 30,
-          },
-        ]}
+        sales={[saleSummaryFixture()]}
+        totalCount={1}
+        filters={{ page: 1, pageSize: 8 }}
       />,
     );
-
-    expect(screen.getByText("Evento Julho")).toBeInTheDocument();
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+    expect(screen.getByText(/Caixa cash-ses/)).toBeInTheDocument();
     expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
-    expect(screen.getByText("Concluída")).toBeInTheDocument();
-    expect(screen.getByText("1 venda")).toBeInTheDocument();
-
-    expect(
-      screen.getByRole("link", {
-        name: "Ver detalhes",
-      }),
-    ).toHaveAttribute("href", "/sales/sale-1");
+    expect(screen.getByRole("link", { name: "Ver detalhes" })).toHaveAttribute(
+      "href",
+      "/sales/sale-1",
+    );
   });
-
-  it("renders an empty state", () => {
-    render(<SalesList sales={[]} />);
-
+  it("preserves server filters when navigating pages", () => {
+    render(
+      <SalesList
+        sales={[saleSummaryFixture()]}
+        totalCount={17}
+        filters={{
+          page: 2,
+          pageSize: 8,
+          operatorId: "operator-1",
+          status: "canceled",
+          startDate: "2026-07-01",
+        }}
+      />,
+    );
+    const next = screen
+      .getByRole("link", { name: "Próxima" })
+      .getAttribute("href")!;
+    const parameters = new URL(next, "http://localhost").searchParams;
+    expect(parameters.get("page")).toBe("3");
+    expect(parameters.get("operatorId")).toBe("operator-1");
+    expect(parameters.get("status")).toBe("canceled");
+    expect(parameters.get("startDate")).toBe("2026-07-01");
+    expect(screen.getByText("17 vendas")).toBeInTheDocument();
+  });
+  it("renders empty search results and a way back from an out-of-range page", () => {
+    render(
+      <SalesList
+        sales={[]}
+        totalCount={0}
+        filters={{ page: 3, pageSize: 8 }}
+      />,
+    );
     expect(
-      screen.getByText("Nenhuma venda registrada ainda."),
+      screen.getByText("Nenhuma venda encontrada para estes filtros."),
     ).toBeInTheDocument();
-  });
-
-  it("filters sales by status", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <SalesList
-        sales={[
-          {
-            cashSessionId: "cash-session-1",
-            completedAt: new Date("2026-07-10T12:00:00.000Z"),
-            eventId: "event-1",
-            eventName: "Evento concluido",
-            id: "sale-1",
-            status: "completed",
-            totalInReais: 30,
-          },
-          {
-            cashSessionId: "cash-session-1",
-            completedAt: new Date("2026-07-10T13:00:00.000Z"),
-            eventId: "event-1",
-            eventName: "Evento cancelado",
-            id: "sale-2",
-            status: "canceled",
-            totalInReais: 15,
-          },
-        ]}
-      />,
+    expect(screen.getByRole("link", { name: "Anterior" })).toHaveAttribute(
+      "href",
+      "/sales?page=2",
     );
-
-    await user.selectOptions(screen.getByLabelText("Status"), "canceled");
-
-    expect(screen.getByText("Evento cancelado")).toBeInTheDocument();
-
-    expect(screen.queryByText("Evento concluido")).not.toBeInTheDocument();
-
-    expect(screen.getByText("1 venda")).toBeInTheDocument();
-  });
-
-  it("paginates sales", async () => {
-    const user = userEvent.setup();
-
-    render(
-      <SalesList
-        sales={Array.from({ length: 9 }, (_, index) => ({
-          cashSessionId: "cash-session-1",
-          completedAt: new Date("2026-07-10T12:00:00.000Z"),
-          eventId: "event-1",
-          eventName: `Evento ${index + 1}`,
-          id: `sale-${index + 1}`,
-          status: "completed" as const,
-          totalInReais: index + 1,
-        }))}
-      />,
-    );
-
-    expect(screen.getByText("Mostrando 1-8 de 9 vendas")).toBeInTheDocument();
-
-    expect(screen.getByText("Evento 1")).toBeInTheDocument();
-
-    expect(screen.queryByText("Evento 9")).not.toBeInTheDocument();
-
-    await user.click(
-      screen.getByRole("button", {
-        name: "Proxima",
-      }),
-    );
-
-    expect(screen.getByText("Mostrando 9-9 de 9 vendas")).toBeInTheDocument();
-
-    expect(screen.getByText("Evento 9")).toBeInTheDocument();
-
-    expect(screen.queryByText("Evento 1")).not.toBeInTheDocument();
   });
 });

@@ -200,7 +200,6 @@ describe("createSaleActionService", () => {
     expect(result).toEqual({
       fieldErrors: {
         cashSessionId: "Informe o caixa.",
-        eventId: "Informe o evento.",
         items: "Adicione pelo menos um item.",
         payment: "Invalid input: expected number, received NaN",
       },
@@ -255,7 +254,6 @@ function createStockMovement(): StockMovement {
 function createFormData(): FormData {
   const formData = new FormData();
   formData.set("cashSessionId", "cash-session-1");
-  formData.set("eventId", "event-1");
   formData.set(
     "itemsJson",
     JSON.stringify([
