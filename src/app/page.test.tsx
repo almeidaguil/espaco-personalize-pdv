@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import Home from "./page";
@@ -10,15 +10,8 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/",
 }));
 
-vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
-  SupabaseEventRepository: vi.fn(),
-}));
-
-vi.mock("@/modules/cash/infra/supabase-cash-session-repository", () => ({
-  SupabaseCashSessionRepository: vi.fn(),
-}));
-
 const getCurrentUserProfileMock = vi.hoisted(() => vi.fn());
+const listOpenCashSessionOverviewsUseCaseMock = vi.hoisted(() => vi.fn());
 
 vi.mock(
   "@/modules/auth/infra/supabase-current-user-profile-repository",
@@ -31,179 +24,127 @@ vi.mock(
   }),
 );
 
-vi.mock("@/modules/sales/infra/supabase-sale-summary-repository", () => ({
-  SupabaseSaleSummaryRepository: vi.fn(),
-}));
+vi.mock(
+  "@/modules/cash/infra/supabase-open-cash-session-overview-repository",
+  () => ({
+    SupabaseOpenCashSessionOverviewRepository: vi.fn(),
+  }),
+);
 
-const listActiveEventsUseCaseMock = vi.hoisted(() => vi.fn());
-const listOpenCashSessionsUseCaseMock = vi.hoisted(() => vi.fn());
-const listSalesUseCaseMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@/modules/events/application/list-active-events-use-case", () => ({
-  listActiveEventsUseCase: listActiveEventsUseCaseMock,
-}));
-
-vi.mock("@/modules/cash/application/list-open-cash-sessions-use-case", () => ({
-  listOpenCashSessionsUseCase: listOpenCashSessionsUseCaseMock,
-}));
-
-vi.mock("@/modules/sales/application/list-sales-use-case", () => ({
-  listSalesUseCase: listSalesUseCaseMock,
-}));
+vi.mock(
+  "@/modules/cash/application/list-open-cash-session-overviews-use-case",
+  () => ({
+    listOpenCashSessionOverviewsUseCase:
+      listOpenCashSessionOverviewsUseCaseMock,
+  }),
+);
 
 describe("Home", () => {
-  it("renders the operational dashboard with admin navigation when cash is open", async () => {
-    mockOperationalData("admin");
+  it("shows an operator their open cash with sell and close actions", async () => {
+    mockDashboardData("operator", [createOverview()]);
 
     render(await Home());
 
+    expect(screen.getByText("Meu caixa")).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", {
-        level: 1,
-        name: "Pronto para vender em Evento Julho",
-      }),
+      screen.getByRole("heading", { name: "Caixa aberto" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("img", { name: "Roberto Multimarcas" }),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Operação do dia")).toBeInTheDocument();
-    expect(
-      screen.getByText("Pronto para vender em Evento Julho"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("Evento ativo")).toBeInTheDocument();
-    expect(screen.getAllByText("Evento Julho").length).toBeGreaterThan(0);
-    expect(screen.getByText("Vendas do caixa")).toBeInTheDocument();
-    expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
-    expect(screen.getByText("1 concluídas / 1 canceladas")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ir ao PDV" })).toHaveAttribute(
       "href",
       "/pdv",
     );
     expect(
-      screen.getAllByRole("link", { name: "Fechar caixa" })[0],
-    ).toHaveAttribute("href", "/cash/close");
-    expect(
       screen
-        .getAllByRole("link", { name: /Produtos/ })
-        .some((link) => link.getAttribute("href") === "/products"),
-    ).toBe(true);
-    expect(
-      screen
-        .getAllByRole("link", { name: /Abrir caixa/ })
-        .some((link) => link.getAttribute("href") === "/cash/open"),
-    ).toBe(true);
-    expect(
-      screen
-        .getAllByRole("link", { name: /Fechar caixa/ })
+        .getAllByRole("link", { name: "Fechar caixa" })
         .some((link) => link.getAttribute("href") === "/cash/close"),
     ).toBe(true);
-    expect(screen.getByRole("link", { name: "Vendas" })).toHaveAttribute(
-      "href",
-      "/sales",
-    );
+    expect(screen.queryByText("Caixas abertos")).not.toBeInTheDocument();
+  });
+
+  it("guides an operator without an open cash to open one", async () => {
+    mockDashboardData("operator", []);
+
+    render(await Home());
+
     expect(
-      screen.getByRole("link", {
-        name: "Configurações",
+      screen.getByRole("heading", { name: "Caixa fechado" }),
+    ).toBeInTheDocument();
+    expect(
+      screen
+        .getAllByRole("link", { name: "Abrir caixa" })
+        .some((link) => link.getAttribute("href") === "/cash/open"),
+    ).toBe(true);
+  });
+
+  it("shows an admin their cash and all RLS-visible open cash sessions", async () => {
+    mockDashboardData("admin", [
+      createOverview(),
+      createOverview({
+        id: "cash-session-2",
+        operatorId: "operator-2",
+        operatorName: "Bruno Lima",
       }),
-    ).toHaveAttribute("href", "/settings");
-    expect(screen.getAllByText("Disponível")).toHaveLength(7);
-    expect(screen.getByText("Admin")).toBeInTheDocument();
-  });
-
-  it("does not show settings navigation for operators", async () => {
-    mockOperationalData("operator");
+    ]);
 
     render(await Home());
 
+    expect(screen.getByText("Meu caixa")).toBeInTheDocument();
     expect(
-      screen.queryByRole("link", { name: "Configurações" }),
-    ).not.toBeInTheDocument();
+      screen.getByRole("heading", { name: "Caixa aberto" }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Caixas abertos" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Bruno Lima")).toBeInTheDocument();
   });
 
-  it("guides the operator to create an event when none is active", async () => {
-    getCurrentUserProfileMock.mockResolvedValueOnce({
-      profile: {
-        id: "operator-1",
-        role: "operator",
-      },
-      success: true,
-    });
-    listActiveEventsUseCaseMock.mockResolvedValueOnce({
-      events: [],
-      success: true,
-    });
-    listOpenCashSessionsUseCaseMock.mockResolvedValueOnce({
-      sessions: [],
-      success: true,
-    });
-    listSalesUseCaseMock.mockResolvedValueOnce({
-      sales: [],
-      success: true,
-    });
+  it("does not render event operational content, queries, or links", async () => {
+    mockDashboardData("operator", []);
 
     render(await Home());
 
-    expect(screen.getByText("Crie um evento para começar")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Criar evento" })).toHaveAttribute(
-      "href",
-      "/events/new",
-    );
+    expect(screen.queryByText("Operação do dia")).not.toBeInTheDocument();
+    expect(screen.queryByText("Evento ativo")).not.toBeInTheDocument();
+    const myCashPanel = screen.getByText("Meu caixa").closest("section");
+
+    expect(myCashPanel).not.toBeNull();
+    expect(
+      within(myCashPanel as HTMLElement).queryByRole("link", {
+        name: /Evento/,
+      }),
+    ).not.toBeInTheDocument();
   });
 });
 
-function mockOperationalData(role: "admin" | "operator") {
+function mockDashboardData(
+  role: "admin" | "operator",
+  overviews: ReturnType<typeof createOverview>[],
+) {
   getCurrentUserProfileMock.mockResolvedValueOnce({
-    profile: {
-      id: "operator-1",
-      role,
-    },
+    profile: { id: "operator-1", role },
     success: true,
   });
-  listActiveEventsUseCaseMock.mockResolvedValueOnce({
-    events: [
-      {
-        id: "event-1",
-        isActive: true,
-        name: "Evento Julho",
-        startsAt: new Date("2026-07-10T09:00:00.000Z"),
-      },
-    ],
+  listOpenCashSessionOverviewsUseCaseMock.mockResolvedValueOnce({
+    overviews,
     success: true,
   });
-  listOpenCashSessionsUseCaseMock.mockResolvedValueOnce({
-    sessions: [
-      {
-        eventId: "event-1",
-        id: "cash-session-1",
-        openedAt: new Date("2026-07-10T09:00:00.000Z"),
-        openingAmountInReais: 100,
-        operatorId: "operator-1",
-        status: "open",
-      },
-    ],
-    success: true,
-  });
-  listSalesUseCaseMock.mockResolvedValueOnce({
-    sales: [
-      {
-        cashSessionId: "cash-session-1",
-        completedAt: new Date("2026-07-10T12:00:00.000Z"),
-        eventId: "event-1",
-        eventName: "Evento Julho",
-        id: "sale-1",
-        status: "completed",
-        totalInReais: 30,
-      },
-      {
-        cashSessionId: "cash-session-1",
-        completedAt: new Date("2026-07-10T13:00:00.000Z"),
-        eventId: "event-1",
-        eventName: "Evento Julho",
-        id: "sale-2",
-        status: "canceled",
-        totalInReais: 15,
-      },
-    ],
-    success: true,
-  });
+}
+
+function createOverview(
+  overrides: Partial<{
+    id: string;
+    openedAt: Date;
+    openingAmountInReais: number;
+    operatorId: string;
+    operatorName: string;
+  }> = {},
+) {
+  return {
+    id: "cash-session-1",
+    openedAt: new Date("2026-10-03T09:00:00.000Z"),
+    openingAmountInReais: 100,
+    operatorId: "operator-1",
+    operatorName: "Ana Souza",
+    ...overrides,
+  };
 }
