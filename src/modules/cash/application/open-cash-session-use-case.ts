@@ -4,8 +4,6 @@ import type { CashSession } from "../domain/cash-session";
 import type { CashSessionRepository } from "./cash-session-repository";
 import { openCashSessionSchema } from "./cash-session-validation";
 
-export type CashSessionDateProvider = () => Date;
-
 export type OpenCashSessionUseCaseResult =
   | {
       session: CashSession;

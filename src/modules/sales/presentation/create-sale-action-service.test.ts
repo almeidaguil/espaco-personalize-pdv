@@ -31,11 +31,10 @@ import type { Sale } from "../domain/sale";
 import { createSaleActionService } from "./create-sale-action-service";
 
 class FakeCashSessionRepository implements CashSessionRepository {
-  async findOpenByIdAndOperator(_input: {
-    cashSessionId: string;
-    operatorId: string;
-  }): Promise<FindOpenCashSessionResult> {
-    void _input;
+  async findOpenById(
+    _cashSessionId: string,
+  ): Promise<FindOpenCashSessionResult> {
+    void _cashSessionId;
     return {
       session: null,
       success: true,

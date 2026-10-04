@@ -18,9 +18,12 @@ vi.mock(
   }),
 );
 
-vi.mock("@/modules/cash/infra/supabase-cash-session-repository", () => ({
-  SupabaseCashSessionRepository: vi.fn(),
-}));
+vi.mock(
+  "@/modules/cash/infra/supabase-open-cash-session-overview-repository",
+  () => ({
+    SupabaseOpenCashSessionOverviewRepository: vi.fn(),
+  }),
+);
 
 vi.mock(
   "@/modules/cash/infra/supabase-cash-session-closing-summary-repository",
@@ -29,27 +32,31 @@ vi.mock(
   }),
 );
 
-vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
-  SupabaseEventRepository: vi.fn(),
-}));
-
 vi.mock("@/modules/cash/presentation/close-cash-session-action", () => ({
   closeCashSessionAction: vi.fn(),
 }));
 
 vi.mock("@/modules/cash/presentation/close-cash-session-form", () => ({
-  CloseCashSessionForm: () => <form aria-label="Formulário de fechamento" />,
+  CloseCashSessionForm: ({ sessions }: { sessions: { label: string }[] }) => (
+    <form aria-label="Formulário de fechamento">
+      {sessions.map((session) => (
+        <span key={session.label}>{session.label}</span>
+      ))}
+    </form>
+  ),
 }));
 
-const listOpenCashSessionsUseCaseMock = vi.hoisted(() => vi.fn());
+const listOpenCashSessionOverviewsUseCaseMock = vi.hoisted(() => vi.fn());
 
 const listCashSessionClosingSummariesUseCaseMock = vi.hoisted(() => vi.fn());
 
-const listEventsUseCaseMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@/modules/cash/application/list-open-cash-sessions-use-case", () => ({
-  listOpenCashSessionsUseCase: listOpenCashSessionsUseCaseMock,
-}));
+vi.mock(
+  "@/modules/cash/application/list-open-cash-session-overviews-use-case",
+  () => ({
+    listOpenCashSessionOverviewsUseCase:
+      listOpenCashSessionOverviewsUseCaseMock,
+  }),
+);
 
 vi.mock(
   "@/modules/cash/application/list-cash-session-closing-summaries-use-case",
@@ -59,33 +66,16 @@ vi.mock(
   }),
 );
 
-vi.mock("@/modules/events/application/list-events-use-case", () => ({
-  listEventsUseCase: listEventsUseCaseMock,
-}));
-
 describe("CloseCashPage", () => {
   it("renders the cash closing page when open sessions exist", async () => {
-    listOpenCashSessionsUseCaseMock.mockResolvedValueOnce({
-      sessions: [
+    listOpenCashSessionOverviewsUseCaseMock.mockResolvedValueOnce({
+      overviews: [
         {
-          eventId: "event-1",
           id: "cash-session-1",
           openedAt: new Date("2026-07-10T12:00:00.000Z"),
           openingAmountInReais: 150.5,
           operatorId: "operator-1",
-          status: "open",
-        },
-      ],
-      success: true,
-    });
-
-    listEventsUseCaseMock.mockResolvedValueOnce({
-      events: [
-        {
-          id: "event-1",
-          isActive: true,
-          name: "Evento Julho",
-          startsAt: new Date("2026-07-10T09:00:00.000Z"),
+          operatorName: "Ana Souza",
         },
       ],
       success: true,
@@ -124,16 +114,17 @@ describe("CloseCashPage", () => {
     expect(
       screen.getByLabelText("Formulário de fechamento"),
     ).toBeInTheDocument();
+
+    expect(
+      screen.getByText(
+        "Ana Souza · aberto em 10/07/2026, 09:00 · sessão cash-session-1",
+      ),
+    ).toBeInTheDocument();
   });
 
   it("renders the empty state when no open sessions exist", async () => {
-    listOpenCashSessionsUseCaseMock.mockResolvedValueOnce({
-      sessions: [],
-      success: true,
-    });
-
-    listEventsUseCaseMock.mockResolvedValueOnce({
-      events: [],
+    listOpenCashSessionOverviewsUseCaseMock.mockResolvedValueOnce({
+      overviews: [],
       success: true,
     });
 
@@ -162,14 +153,9 @@ describe("CloseCashPage", () => {
   });
 
   it("renders loading errors", async () => {
-    listOpenCashSessionsUseCaseMock.mockResolvedValueOnce({
+    listOpenCashSessionOverviewsUseCaseMock.mockResolvedValueOnce({
       formError: "Não foi possível carregar os caixas abertos.",
       success: false,
-    });
-
-    listEventsUseCaseMock.mockResolvedValueOnce({
-      events: [],
-      success: true,
     });
 
     render(await CloseCashPage());

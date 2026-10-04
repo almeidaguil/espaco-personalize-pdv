@@ -100,15 +100,13 @@ const cashSessionColumns =
 export class SupabaseCashSessionRepository implements CashSessionRepository {
   constructor(private readonly supabaseClient: SupabaseCashSessionClient) {}
 
-  async findOpenByIdAndOperator(input: {
-    cashSessionId: string;
-    operatorId: string;
-  }): Promise<FindOpenCashSessionResult> {
+  async findOpenById(
+    cashSessionId: string,
+  ): Promise<FindOpenCashSessionResult> {
     const { data, error } = await this.supabaseClient
       .from("cash_sessions")
       .select(cashSessionColumns)
-      .eq("id", input.cashSessionId)
-      .eq("operator_id", input.operatorId)
+      .eq("id", cashSessionId)
       .eq("status", "open")
       .maybeSingle();
 

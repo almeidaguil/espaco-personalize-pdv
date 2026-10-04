@@ -11,7 +11,7 @@ import { closeCashSessionUseCase } from "./close-cash-session-use-case";
 import type { CashSession } from "../domain/cash-session";
 
 class FakeCashSessionRepository implements CashSessionRepository {
-  public findByIdInput?: { cashSessionId: string; operatorId: string };
+  public findById?: string;
   public updateOptions?: { adminPassword?: string };
   public updatedSession?: CashSession;
 
@@ -23,20 +23,12 @@ class FakeCashSessionRepository implements CashSessionRepository {
     private readonly updateResult?: SaveCashSessionResult,
   ) {}
 
-  async findOpenByIdAndOperator(input: {
-    cashSessionId: string;
-    operatorId: string;
-  }): Promise<FindOpenCashSessionResult> {
-    this.findByIdInput = input;
+  async findOpenById(
+    cashSessionId: string,
+  ): Promise<FindOpenCashSessionResult> {
+    this.findById = cashSessionId;
 
     return this.findResult;
-  }
-
-  async findOpenByEventAndOperator(): Promise<FindOpenCashSessionResult> {
-    return {
-      session: null,
-      success: true,
-    };
   }
 
   async listOpenByOperator() {
@@ -46,9 +38,17 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async save(session: CashSession): Promise<SaveCashSessionResult> {
+  async findOpenByOperator(): Promise<FindOpenCashSessionResult> {
+    return { session: null, success: true };
+  }
+
+  async open(input: {
+    openingAmountInReais: number;
+  }): Promise<SaveCashSessionResult> {
     return {
-      session,
+      session: createCashSession({
+        openingAmountInReais: input.openingAmountInReais,
+      }),
       success: true,
     };
   }
@@ -87,14 +87,10 @@ describe("closeCashSessionUseCase", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(cashSessionRepository.findByIdInput).toEqual({
-      cashSessionId: "cash-session-1",
-      operatorId: "operator-1",
-    });
+    expect(cashSessionRepository.findById).toBe("cash-session-1");
     expect(cashSessionRepository.updatedSession).toEqual({
       closedAt: new Date("2026-07-10T18:00:00.000Z"),
       countedAmountInReais: 260.75,
-      eventId: "event-1",
       id: "cash-session-1",
       openedAt: new Date("2026-07-10T12:00:00.000Z"),
       openingAmountInReais: 150.5,
@@ -103,6 +99,61 @@ describe("closeCashSessionUseCase", () => {
     });
     expect(cashSessionRepository.updateOptions).toEqual({
       adminPassword: "admin-password-test",
+    });
+  });
+
+  it("rejects an operator who tries to close another operator's open cash session", async () => {
+    const cashSessionRepository = new FakeCashSessionRepository({
+      session: createCashSession({ operatorId: "operator-2" }),
+      success: true,
+    });
+
+    const result = await closeCashSessionUseCase(
+      {
+        cashSessionId: "cash-session-1",
+        countedAmountInReais: 260.75,
+      },
+      {
+        cashSessionRepository,
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
+      },
+    );
+
+    expect(result).toEqual({
+      formError: "Voce nao tem permissao para fechar este caixa.",
+      success: false,
+    });
+    expect(cashSessionRepository.updatedSession).toBeUndefined();
+  });
+
+  it("allows an admin to close another operator's open cash session", async () => {
+    const cashSessionRepository = new FakeCashSessionRepository({
+      session: createCashSession({ operatorId: "operator-2" }),
+      success: true,
+    });
+
+    const result = await closeCashSessionUseCase(
+      {
+        cashSessionId: "cash-session-1",
+        countedAmountInReais: 260.75,
+      },
+      {
+        cashSessionRepository,
+        currentUserProfileRepository: createCurrentUserProfileRepository({
+          id: "admin-1",
+          role: "admin",
+        }),
+        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(cashSessionRepository.findById).toBe("cash-session-1");
+    expect(cashSessionRepository.updatedSession).toMatchObject({
+      id: "cash-session-1",
+      operatorId: "operator-2",
+      status: "closed",
     });
   });
 
@@ -180,6 +231,32 @@ describe("closeCashSessionUseCase", () => {
     expect(cashSessionRepository.updatedSession).toBeUndefined();
   });
 
+  it("does not persist when the selected session is already closed", async () => {
+    const cashSessionRepository = new FakeCashSessionRepository({
+      session: null,
+      success: true,
+    });
+
+    const result = await closeCashSessionUseCase(
+      {
+        cashSessionId: "cash-session-1",
+        countedAmountInReais: 260.75,
+      },
+      {
+        cashSessionRepository,
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
+      },
+    );
+
+    expect(result).toEqual({
+      formError: "Nao ha caixa aberto para fechar.",
+      success: false,
+    });
+    expect(cashSessionRepository.findById).toBe("cash-session-1");
+    expect(cashSessionRepository.updatedSession).toBeUndefined();
+  });
+
   it("maps update failures to a form error", async () => {
     const cashSessionRepository = new FakeCashSessionRepository(
       {
@@ -241,25 +318,27 @@ describe("closeCashSessionUseCase", () => {
   });
 });
 
-function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
+function createCurrentUserProfileRepository(
+  profile: { id: string; role: "admin" | "operator" } = {
+    id: "operator-1",
+    role: "operator",
+  },
+): CurrentUserProfileRepository {
   return {
     getCurrent: async () => ({
-      profile: {
-        id: "operator-1",
-        role: "operator",
-      },
+      profile,
       success: true,
     }),
   };
 }
 
-function createCashSession(): CashSession {
+function createCashSession(overrides: Partial<CashSession> = {}): CashSession {
   return {
-    eventId: "event-1",
     id: "cash-session-1",
     openedAt: new Date("2026-07-10T12:00:00.000Z"),
     openingAmountInReais: 150.5,
     operatorId: "operator-1",
     status: "open",
+    ...overrides,
   };
 }

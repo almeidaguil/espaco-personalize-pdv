@@ -38,10 +38,7 @@ export type CloseCashSessionPersistenceOptions = {
 };
 
 export type CashSessionRepository = {
-  findOpenByIdAndOperator(input: {
-    cashSessionId: string;
-    operatorId: string;
-  }): Promise<FindOpenCashSessionResult>;
+  findOpenById(cashSessionId: string): Promise<FindOpenCashSessionResult>;
   findOpenByOperator(operatorId: string): Promise<FindOpenCashSessionResult>;
   listOpenByOperator(operatorId: string): Promise<ListOpenCashSessionsResult>;
   open(input: { openingAmountInReais: number }): Promise<SaveCashSessionResult>;

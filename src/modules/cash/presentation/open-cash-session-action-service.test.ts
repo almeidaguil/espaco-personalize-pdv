@@ -24,7 +24,7 @@ class FakeCashSessionRepository implements CashSessionRepository {
     return this.findResult;
   }
 
-  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
+  async findOpenById(): Promise<FindOpenCashSessionResult> {
     return {
       session: null,
       success: true,

@@ -252,7 +252,7 @@ describe("SupabaseCashSessionRepository", () => {
     }
   });
 
-  it("finds an open cash session by id and operator", async () => {
+  it("finds a visible open cash session by id", async () => {
     const supabaseClient = new FakeSupabaseCashSessionClient(
       { data: null, error: null },
       {
@@ -269,14 +269,10 @@ describe("SupabaseCashSessionRepository", () => {
     );
     const repository = new SupabaseCashSessionRepository(supabaseClient);
 
-    const result = await repository.findOpenByIdAndOperator({
-      cashSessionId: "cash-session-1",
-      operatorId: "operator-1",
-    });
+    const result = await repository.findOpenById("cash-session-1");
 
     expect(supabaseClient.eqFilters).toEqual([
       { column: "id", value: "cash-session-1" },
-      { column: "operator_id", value: "operator-1" },
       { column: "status", value: "open" },
     ]);
     expect(result.success).toBe(true);

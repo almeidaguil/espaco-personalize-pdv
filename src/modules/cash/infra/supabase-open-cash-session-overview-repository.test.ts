@@ -17,6 +17,14 @@ type FakeProfileRow = {
 
 type FakeError = { message: string } | null;
 
+type FakeCashSessionFilterBuilder = {
+  eq(column: string, value: string): FakeCashSessionFilterBuilder;
+  order(
+    column: string,
+    options: { ascending: boolean },
+  ): Promise<{ data: FakeCashSessionRow[] | null; error: FakeError }>;
+};
+
 class FakeSupabaseClient {
   public cashSessionFilters: Array<{ column: string; value: string }> = [];
   public orderedBy?: { ascending: boolean; column: string };
@@ -36,17 +44,7 @@ class FakeSupabaseClient {
   ) {}
 
   from(table: "cash_sessions"): {
-    select(columns: string): {
-      eq(
-        column: string,
-        value: string,
-      ): {
-        order(
-          column: string,
-          options: { ascending: boolean },
-        ): Promise<{ data: FakeCashSessionRow[] | null; error: FakeError }>;
-      };
-    };
+    select(columns: string): FakeCashSessionFilterBuilder;
   };
   from(table: "profiles"): {
     select(columns: string): {
@@ -80,28 +78,29 @@ class FakeSupabaseClient {
       select: (columns: string) => {
         this.queries.push({ columns, table });
 
-        return {
+        const builder: FakeCashSessionFilterBuilder = {
           eq: (column: string, value: string) => {
             this.cashSessionFilters.push({ column, value });
 
-            return {
-              order: async (
-                orderColumn: string,
-                options: { ascending: boolean },
-              ) => {
-                this.orderedBy = {
-                  ascending: options.ascending,
-                  column: orderColumn,
-                };
+            return builder;
+          },
+          order: async (
+            orderColumn: string,
+            options: { ascending: boolean },
+          ) => {
+            this.orderedBy = {
+              ascending: options.ascending,
+              column: orderColumn,
+            };
 
-                return {
-                  data: this.errors.cashSessions ? null : this.cashSessionRows,
-                  error: this.errors.cashSessions ?? null,
-                };
-              },
+            return {
+              data: this.errors.cashSessions ? null : this.cashSessionRows,
+              error: this.errors.cashSessions ?? null,
             };
           },
         };
+
+        return builder;
       },
     };
   }
