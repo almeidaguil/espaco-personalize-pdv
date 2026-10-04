@@ -3,7 +3,7 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { authenticatePage, hasAuthenticatedE2EConfig } from "./support/auth";
 
 const readOnlyRoutes = [
-  { heading: /Abra o caixa antes de vender|Pronto para vender/, path: "/" },
+  { heading: /Caixa aberto|Caixa fechado/, path: "/" },
   { heading: "Produtos", path: "/products" },
   { heading: "Novo produto", path: "/products/new" },
   { heading: "Eventos", path: "/events" },

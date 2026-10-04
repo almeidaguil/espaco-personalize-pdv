@@ -28,6 +28,7 @@ const identities = [
 ];
 const createdUserIds = [];
 let productId;
+let concurrencyProductId;
 
 try {
   for (const identity of identities) {
@@ -285,6 +286,155 @@ try {
       type: "initial_adjustment",
     });
   assert.equal(stockError, null, "could not create the test stock balance");
+
+  const { data: concurrencyProduct, error: concurrencyProductError } =
+    await serviceClient
+      .from("products")
+      .insert({
+        is_active: true,
+        name: `Concurrent database gate product ${testRunId}`,
+        price_in_cents: 1_000,
+        sku: `DB-CONCURRENT-${testRunId}`,
+      })
+      .select("id")
+      .single();
+  assert.equal(
+    concurrencyProductError,
+    null,
+    "could not create the concurrent test product",
+  );
+  concurrencyProductId = concurrencyProduct.id;
+
+  const { error: concurrencyStockError } = await serviceClient
+    .from("stock_movements")
+    .insert({
+      product_id: concurrencyProductId,
+      quantity_change: 1,
+      type: "initial_adjustment",
+    });
+  assert.equal(
+    concurrencyStockError,
+    null,
+    "could not create the unit stock balance",
+  );
+
+  const {
+    data: operatorBConcurrentCashSession,
+    error: operatorBConcurrentOpenError,
+  } = await operatorBIdentity.client.rpc("open_cash_session_v3", {
+    p_opening_amount_in_cents: 0,
+  });
+  assert.equal(
+    operatorBConcurrentOpenError,
+    null,
+    "operator B must reopen for concurrent sales",
+  );
+
+  const operatorAConcurrentSaleId = randomUUID();
+  const operatorBConcurrentSaleId = randomUUID();
+  const concurrentSalePayload = {
+    p_items: [{ product_id: concurrencyProductId, quantity: 1 }],
+    p_payment: {
+      amount_in_cents: 1_000,
+      change_in_cents: 0,
+      method: "pix",
+    },
+  };
+  const concurrentSaleResults = await Promise.all([
+    operatorAIdentity.client.rpc("finalize_sale_v3", {
+      ...concurrentSalePayload,
+      p_cash_session_id: operatorACashSessionId,
+      p_sale_id: operatorAConcurrentSaleId,
+    }),
+    operatorBIdentity.client.rpc("finalize_sale_v3", {
+      ...concurrentSalePayload,
+      p_cash_session_id: operatorBConcurrentCashSession.id,
+      p_sale_id: operatorBConcurrentSaleId,
+    }),
+  ]);
+  const concurrentSaleSuccesses = concurrentSaleResults.filter(
+    (result) => !result.error,
+  );
+  const concurrentSaleFailures = concurrentSaleResults.filter(
+    (result) => result.error,
+  );
+  assert.equal(
+    concurrentSaleSuccesses.length,
+    1,
+    "exactly one concurrent sale must consume the last stock unit",
+  );
+  assert.equal(
+    concurrentSaleFailures.length,
+    1,
+    "exactly one concurrent sale must fail for insufficient stock",
+  );
+  assert.match(concurrentSaleFailures[0].error.message, /insufficient stock/i);
+
+  const { data: concurrencyStockMovements, error: concurrencyBalanceError } =
+    await serviceClient
+      .from("stock_movements")
+      .select("quantity_change")
+      .eq("product_id", concurrencyProductId);
+  assert.equal(concurrencyBalanceError, null);
+  assert.equal(
+    concurrencyStockMovements.reduce(
+      (balance, movement) => balance + movement.quantity_change,
+      0,
+    ),
+    0,
+    "concurrent sales must never make stock negative",
+  );
+
+  const closeRaceSaleId = randomUUID();
+  const [closeRaceSaleResult, concurrentCloseResult] = await Promise.all([
+    operatorBIdentity.client.rpc("finalize_sale_v3", {
+      p_cash_session_id: operatorBConcurrentCashSession.id,
+      p_items: [{ product_id: productId, quantity: 1 }],
+      p_payment: {
+        amount_in_cents: 1_000,
+        change_in_cents: 0,
+        method: "cash",
+      },
+      p_sale_id: closeRaceSaleId,
+    }),
+    operatorBIdentity.client.rpc("close_cash_session", {
+      p_admin_password: null,
+      p_cash_session_id: operatorBConcurrentCashSession.id,
+      p_closed_at: new Date().toISOString(),
+      p_counted_amount_in_cents: 1_000,
+    }),
+  ]);
+  assert.equal(
+    concurrentCloseResult.error,
+    null,
+    "closing must serialize successfully against a concurrent sale",
+  );
+
+  const { data: closeRaceCashSession, error: closeRaceCashSessionError } =
+    await serviceClient
+      .from("cash_sessions")
+      .select("status,expected_amount_in_cents")
+      .eq("id", operatorBConcurrentCashSession.id)
+      .single();
+  assert.equal(closeRaceCashSessionError, null);
+  assert.equal(closeRaceCashSession.status, "closed");
+
+  const { count: closeRaceSaleCount, error: closeRaceSaleCountError } =
+    await serviceClient
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .eq("id", closeRaceSaleId);
+  assert.equal(closeRaceSaleCountError, null);
+
+  if (closeRaceSaleResult.error) {
+    assert.match(closeRaceSaleResult.error.message, /no open cash session/i);
+    assert.equal(closeRaceSaleCount, 0);
+    assert.equal(closeRaceCashSession.expected_amount_in_cents, 0);
+  } else {
+    assert.equal(closeRaceSaleResult.data, closeRaceSaleId);
+    assert.equal(closeRaceSaleCount, 1);
+    assert.equal(closeRaceCashSession.expected_amount_in_cents, 1_000);
+  }
 
   const saleOperationId = randomUUID();
   const saleStartedAt = new Date();
@@ -778,12 +928,13 @@ function assertPermissionDenied(error, operation) {
 
 async function cleanupTestData() {
   const userIds = createdUserIds.filter(Boolean);
+  const productIds = [productId, concurrencyProductId].filter(Boolean);
 
-  if (productId) {
+  if (productIds.length > 0) {
     await serviceClient
       .from("stock_movements")
       .delete()
-      .eq("product_id", productId);
+      .in("product_id", productIds);
   }
 
   if (userIds.length > 0) {
@@ -794,8 +945,8 @@ async function cleanupTestData() {
       .in("operator_id", userIds);
   }
 
-  if (productId) {
-    await serviceClient.from("products").delete().eq("id", productId);
+  if (productIds.length > 0) {
+    await serviceClient.from("products").delete().in("id", productIds);
   }
 
   for (const userId of createdUserIds.reverse()) {

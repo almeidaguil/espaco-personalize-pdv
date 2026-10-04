@@ -16,21 +16,40 @@ test.skip(
   "E2E auth and Supabase public env vars are required for authenticated E2E tests.",
 );
 
-test("admin opens a cash session for the active event", async ({ page }) => {
+test("admin opens one cash session without an event and the PDV uses it", async ({
+  page,
+}) => {
   await authenticatePage(page);
   await closeAllOpenCashSessions(page);
 
+  await page.goto("/pdv");
+  await expect(
+    page.getByRole("heading", { name: "Abra o caixa antes de vender" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Finalizar venda" }),
+  ).toHaveCount(0);
+
   await page.goto("/cash/open");
-
-  const activeEvent = await getFirstSelectableOption(page, "eventId");
-
-  expect(activeEvent).not.toBeNull();
-
-  await page.getByLabel("Evento").selectOption(activeEvent?.value ?? "");
+  await expect(page.getByLabel("Evento")).toHaveCount(0);
   await page.getByLabel("Valor inicial").fill("150,50");
   await page.getByRole("button", { name: "Abrir caixa" }).click();
 
   await expect(page.getByText("Caixa aberto com sucesso.")).toBeVisible();
+
+  await page.goto("/pdv");
+  await expect(
+    page.getByRole("heading", { name: "Caixa aberto para venda" }),
+  ).toBeVisible();
+  await expect(page.getByText("Sessao #")).toBeVisible();
+  await expect(page.getByLabel("Caixa da venda")).toHaveCount(0);
+
+  await page.goto("/cash/open");
+  await page.getByLabel("Valor inicial").fill("10,00");
+  await page.getByRole("button", { name: "Abrir caixa" }).click();
+  await expect(
+    page.getByText("Ja existe um caixa aberto para este operador."),
+  ).toBeVisible();
 
   await closeAllOpenCashSessions(page);
 });
@@ -103,19 +122,6 @@ function readEnvFile(path: string): Record<string, string | undefined> {
   } catch {
     return {};
   }
-}
-
-async function getFirstSelectableOption(page: Page, selectId: string) {
-  return page.locator(`select#${selectId} option`).evaluateAll((options) => {
-    const option = options.find(
-      (candidate): candidate is HTMLOptionElement =>
-        candidate instanceof HTMLOptionElement && candidate.value !== "",
-    );
-
-    return option
-      ? { label: option.textContent ?? "", value: option.value }
-      : null;
-  });
 }
 
 async function closeAllOpenCashSessions(page: Page) {
