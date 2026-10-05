@@ -10,7 +10,7 @@ describe("OpenCashSessionsPanel", () => {
         sessions={[
           {
             id: "a1b2c3d4-e5f6",
-            openedAt: new Date("2026-10-03T09:00:00.000Z"),
+            openedAt: new Date("2026-10-04T01:30:00.000Z"),
             openingAmountInReais: 100,
             operatorId: "operator-1",
             operatorName: "Ana Souza",
@@ -30,6 +30,6 @@ describe("OpenCashSessionsPanel", () => {
           element.textContent?.includes("a1b2c3d4") === true,
       ),
     ).toBeInTheDocument();
-    expect(screen.getByText(/03\/10\/2026/)).toBeInTheDocument();
+    expect(screen.getByText(/03\/10\/2026, 22:30/)).toBeInTheDocument();
   });
 });
