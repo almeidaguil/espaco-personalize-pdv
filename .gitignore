@@ -33,6 +33,7 @@ test-results/
 
 # Agent execution workspace
 .superpowers/
+.worktrees/
 
 # Vercel
 .vercel/
