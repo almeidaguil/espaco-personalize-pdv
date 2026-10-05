@@ -8,7 +8,6 @@ type FakeSupabaseCashSessionRow = {
   closed_by?: string | null;
   counted_amount_in_cents?: number | null;
   difference_amount_in_cents?: number | null;
-  event_id: string;
   expected_amount_in_cents?: number | null;
   id: string;
   opened_at: string;
@@ -55,7 +54,7 @@ class FakeSupabaseCashSessionClient {
       error: null,
     },
     private readonly rpcResponse: {
-      data: string | null;
+      data: FakeSupabaseCashSessionRow | string | null;
       error: { code?: string; message?: string } | null;
     } = {
       data: "cash-session-1",
@@ -107,7 +106,24 @@ class FakeSupabaseCashSessionClient {
     };
   }
 
-  async rpc(functionName: "close_cash_session", args: unknown) {
+  rpc(
+    functionName: "close_cash_session",
+    args: unknown,
+  ): Promise<{
+    data: string | null;
+    error: { code?: string; message?: string } | null;
+  }>;
+  rpc(
+    functionName: "open_cash_session_v3",
+    args: unknown,
+  ): Promise<{
+    data: FakeSupabaseCashSessionRow | null;
+    error: { code?: string; message?: string } | null;
+  }>;
+  async rpc(
+    functionName: "close_cash_session" | "open_cash_session_v3",
+    args: unknown,
+  ) {
     this.rpcFunctionName = functionName;
     this.rpcArgs = args;
 
@@ -137,79 +153,18 @@ class FakeSupabaseCashSessionClient {
 }
 
 describe("SupabaseCashSessionRepository", () => {
-  it("saves a cash session mapping BRL amount to persisted cents", async () => {
-    const supabaseClient = new FakeSupabaseCashSessionClient({
-      data: {
-        closed_at: null,
-        event_id: "event-1",
-        id: "cash-session-1",
-        opened_at: "2026-07-10T12:00:00.000Z",
-        opening_amount_in_cents: 15050,
-        operator_id: "operator-1",
-        status: "open",
-      },
-      error: null,
-    });
-    const repository = new SupabaseCashSessionRepository(supabaseClient);
-
-    const result = await repository.save({
-      eventId: "event-1",
-      id: "cash-session-1",
-      openedAt: new Date("2026-07-10T12:00:00.000Z"),
-      openingAmountInReais: 150.5,
-      operatorId: "operator-1",
-      status: "open",
-    });
-
-    expect(supabaseClient.insertedPayload).toEqual({
-      closed_at: null,
-      event_id: "event-1",
-      id: "cash-session-1",
-      opened_at: "2026-07-10T12:00:00.000Z",
-      opening_amount_in_cents: 15050,
-      operator_id: "operator-1",
-      status: "open",
-    });
-    expect(result.success).toBe(true);
-
-    if (result.success) {
-      expect(result.session.openingAmountInReais).toBe(150.5);
-    }
-  });
-
-  it("maps open session unique violations", async () => {
-    const supabaseClient = new FakeSupabaseCashSessionClient({
-      data: null,
-      error: {
-        code: "23505",
-        message:
-          'duplicate key value violates unique constraint "cash_sessions_one_open_per_event_operator_idx"',
-      },
-    });
-    const repository = new SupabaseCashSessionRepository(supabaseClient);
-
-    await expect(
-      repository.save({
-        eventId: "event-1",
-        id: "cash-session-1",
-        openedAt: new Date("2026-07-10T12:00:00.000Z"),
-        openingAmountInReais: 150.5,
-        operatorId: "operator-1",
-        status: "open",
-      }),
-    ).resolves.toEqual({
-      error: "open_session_already_exists",
-      success: false,
-    });
-  });
-
-  it("finds an open cash session by event and operator", async () => {
+  it("opens a cash session through V3 and maps its complete returned row", async () => {
     const supabaseClient = new FakeSupabaseCashSessionClient(
       { data: null, error: null },
+      { data: null, error: null },
+      { data: [], error: null },
       {
         data: {
           closed_at: null,
-          event_id: "event-1",
+          closed_by: null,
+          counted_amount_in_cents: null,
+          difference_amount_in_cents: null,
+          expected_amount_in_cents: null,
           id: "cash-session-1",
           opened_at: "2026-07-10T12:00:00.000Z",
           opening_amount_in_cents: 15050,
@@ -221,13 +176,71 @@ describe("SupabaseCashSessionRepository", () => {
     );
     const repository = new SupabaseCashSessionRepository(supabaseClient);
 
-    const result = await repository.findOpenByEventAndOperator({
-      eventId: "event-1",
-      operatorId: "operator-1",
+    const result = await repository.open({
+      openingAmountInReais: 150.5,
     });
 
+    expect(supabaseClient.rpcFunctionName).toBe("open_cash_session_v3");
+    expect(supabaseClient.rpcArgs).toEqual({
+      p_opening_amount_in_cents: 15050,
+    });
+    expect(supabaseClient.eqFilters).toEqual([]);
+    expect(result).toEqual({
+      session: {
+        id: "cash-session-1",
+        openedAt: new Date("2026-07-10T12:00:00.000Z"),
+        openingAmountInReais: 150.5,
+        operatorId: "operator-1",
+        status: "open",
+      },
+      success: true,
+    });
+  });
+
+  it("maps open session unique violations", async () => {
+    const supabaseClient = new FakeSupabaseCashSessionClient(
+      { data: null, error: null },
+      { data: null, error: null },
+      { data: [], error: null },
+      {
+        data: null,
+        error: {
+          code: "23505",
+        },
+      },
+    );
+    const repository = new SupabaseCashSessionRepository(supabaseClient);
+
+    await expect(
+      repository.open({
+        openingAmountInReais: 150.5,
+      }),
+    ).resolves.toEqual({
+      error: "open_session_already_exists",
+      success: false,
+    });
+  });
+
+  it("finds an open cash session by operator", async () => {
+    const supabaseClient = new FakeSupabaseCashSessionClient(
+      { data: null, error: null },
+      {
+        data: {
+          closed_at: null,
+          id: "cash-session-1",
+          opened_at: "2026-07-10T12:00:00.000Z",
+          opening_amount_in_cents: 15050,
+          operator_id: "operator-1",
+          status: "open",
+        },
+        error: null,
+      },
+    );
+    const repository = new SupabaseCashSessionRepository(supabaseClient);
+
+    const result = await repository.findOpenByOperator("operator-1");
+
     expect(supabaseClient.eqFilters).toEqual([
-      { column: "event_id", value: "event-1" },
       { column: "operator_id", value: "operator-1" },
       { column: "status", value: "open" },
     ]);
@@ -239,13 +252,12 @@ describe("SupabaseCashSessionRepository", () => {
     }
   });
 
-  it("finds an open cash session by id and operator", async () => {
+  it("finds a visible open cash session by id", async () => {
     const supabaseClient = new FakeSupabaseCashSessionClient(
       { data: null, error: null },
       {
         data: {
           closed_at: null,
-          event_id: "event-1",
           id: "cash-session-1",
           opened_at: "2026-07-10T12:00:00.000Z",
           opening_amount_in_cents: 15050,
@@ -257,14 +269,10 @@ describe("SupabaseCashSessionRepository", () => {
     );
     const repository = new SupabaseCashSessionRepository(supabaseClient);
 
-    const result = await repository.findOpenByIdAndOperator({
-      cashSessionId: "cash-session-1",
-      operatorId: "operator-1",
-    });
+    const result = await repository.findOpenById("cash-session-1");
 
     expect(supabaseClient.eqFilters).toEqual([
       { column: "id", value: "cash-session-1" },
-      { column: "operator_id", value: "operator-1" },
       { column: "status", value: "open" },
     ]);
     expect(result.success).toBe(true);
@@ -287,7 +295,6 @@ describe("SupabaseCashSessionRepository", () => {
           closed_by: "operator-1",
           counted_amount_in_cents: 26075,
           difference_amount_in_cents: 1025,
-          event_id: "event-1",
           expected_amount_in_cents: 25050,
           id: "cash-session-1",
           opened_at: "2026-07-10T12:00:00.000Z",
@@ -304,7 +311,6 @@ describe("SupabaseCashSessionRepository", () => {
       {
         closedAt: new Date("2026-07-10T18:00:00.000Z"),
         countedAmountInReais: 260.75,
-        eventId: "event-1",
         id: "cash-session-1",
         openedAt: new Date("2026-07-10T12:00:00.000Z"),
         openingAmountInReais: 150.5,
@@ -366,7 +372,6 @@ describe("SupabaseCashSessionRepository", () => {
     const result = await repository.update({
       closedAt: new Date("2026-07-10T18:00:00.000Z"),
       countedAmountInReais: 200,
-      eventId: "event-1",
       id: "cash-session-1",
       openedAt: new Date("2026-07-10T12:00:00.000Z"),
       openingAmountInReais: 150.5,
@@ -388,7 +393,6 @@ describe("SupabaseCashSessionRepository", () => {
         data: [
           {
             closed_at: null,
-            event_id: "event-1",
             id: "cash-session-1",
             opened_at: "2026-07-10T12:00:00.000Z",
             opening_amount_in_cents: 15050,
@@ -426,12 +430,7 @@ describe("SupabaseCashSessionRepository", () => {
     );
     const repository = new SupabaseCashSessionRepository(supabaseClient);
 
-    await expect(
-      repository.findOpenByEventAndOperator({
-        eventId: "event-1",
-        operatorId: "operator-1",
-      }),
-    ).resolves.toEqual({
+    await expect(repository.findOpenByOperator("operator-1")).resolves.toEqual({
       session: null,
       success: true,
     });

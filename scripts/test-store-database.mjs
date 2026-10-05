@@ -27,9 +27,8 @@ const identities = [
   createIdentity("operator-b"),
 ];
 const createdUserIds = [];
-let eventId;
-let inactiveEventId;
 let productId;
+let concurrencyProductId;
 
 try {
   for (const identity of identities) {
@@ -69,40 +68,16 @@ try {
     createAuthenticatedClient(operatorAIdentity),
   ]);
 
-  const { data: event, error: eventError } = await serviceClient
-    .from("events")
-    .insert({
-      is_active: true,
-      name: `Legacy compatibility ${testRunId}`,
-      starts_at: new Date().toISOString(),
-    })
-    .select("id")
-    .single();
-  assert.equal(eventError, null, "could not create the compatibility event");
-  eventId = event.id;
-
-  const { data: inactiveEvent, error: inactiveEventError } = await serviceClient
-    .from("events")
-    .insert({
-      is_active: false,
-      name: `Inactive event ${testRunId}`,
-      starts_at: new Date(Date.now() - 86_400_000).toISOString(),
-    })
-    .select("id")
-    .single();
-  assert.equal(inactiveEventError, null, "could not create the inactive event");
-  inactiveEventId = inactiveEvent.id;
-
   const openedAfter = new Date();
   const [operatorAFirstOpen, operatorASecondOpen, operatorBOpen] =
     await Promise.all([
-      operatorAConcurrentClients[0].rpc("open_cash_session_v2", {
+      operatorAConcurrentClients[0].rpc("open_cash_session_v3", {
         p_opening_amount_in_cents: 1_000,
       }),
-      operatorAConcurrentClients[1].rpc("open_cash_session_v2", {
+      operatorAConcurrentClients[1].rpc("open_cash_session_v3", {
         p_opening_amount_in_cents: 1_000,
       }),
-      operatorBIdentity.client.rpc("open_cash_session_v2", {
+      operatorBIdentity.client.rpc("open_cash_session_v3", {
         p_opening_amount_in_cents: 2_000,
       }),
     ]);
@@ -132,8 +107,8 @@ try {
     "a different operator must open a cash session concurrently",
   );
 
-  const operatorACashSessionId = operatorASuccesses[0].data;
-  const operatorBCashSessionId = operatorBOpen.data;
+  const operatorACashSessionId = operatorASuccesses[0].data.id;
+  const operatorBCashSessionId = operatorBOpen.data.id;
   const { count: operatorAOpenCount, error: operatorAOpenCountError } =
     await serviceClient
       .from("cash_sessions")
@@ -149,15 +124,18 @@ try {
   const { data: operatorACashSession, error: operatorACashSessionError } =
     await operatorAIdentity.client
       .from("cash_sessions")
-      .select(
-        "id,event_id,operator_id,opened_at,business_date,opening_amount_in_cents,status",
-      )
+      .select("*")
       .eq("id", operatorACashSessionId)
       .single();
   assert.equal(
     operatorACashSessionError,
     null,
     "operator A must read its own cash session",
+  );
+  assert.deepEqual(
+    operatorASuccesses[0].data,
+    operatorACashSession,
+    "opening must return the complete persisted session row",
   );
   assert.equal(operatorACashSession.operator_id, operatorAIdentity.userId);
   assert.equal(operatorACashSession.event_id, null);
@@ -237,48 +215,20 @@ try {
   assert.equal(administrativelyClosedCash.status, "closed");
   assert.equal(administrativelyClosedCash.closed_by, adminIdentity.userId);
 
-  const { error: inactiveEventOpenError } = await operatorBIdentity.client
+  const { error: directCashInsertError } = await adminIdentity.client
     .from("cash_sessions")
     .insert({
-      event_id: inactiveEventId,
-      id: randomUUID(),
-      opened_at: new Date().toISOString(),
       opening_amount_in_cents: 0,
-      operator_id: operatorBIdentity.userId,
+      operator_id: adminIdentity.userId,
       status: "open",
     });
-  assert.match(
-    inactiveEventOpenError?.message ?? "",
-    /active event/i,
-    "the legacy insert must reject inactive events",
-  );
+  assertPermissionDenied(directCashInsertError, "direct cash insert");
 
-  const forgedOpenedAt = "2000-01-01T00:00:00.000Z";
-  const legacyCashSessionId = randomUUID();
-  const { data: legacyCashSession, error: legacyCashSessionError } =
-    await adminIdentity.client
-      .from("cash_sessions")
-      .insert({
-        closed_at: "2000-01-01T01:00:00.000Z",
-        event_id: eventId,
-        id: legacyCashSessionId,
-        opened_at: forgedOpenedAt,
-        opening_amount_in_cents: 500,
-        operator_id: operatorBIdentity.userId,
-        status: "closed",
-      })
-      .select("id,event_id,operator_id,opened_at,status,closed_at")
-      .single();
-  assert.equal(
-    legacyCashSessionError,
-    null,
-    "the hardened legacy insert must remain compatible",
+  const { error: legacyOpenError } = await operatorAIdentity.client.rpc(
+    "open_cash_session_v2",
+    { p_opening_amount_in_cents: 0 },
   );
-  assert.equal(legacyCashSession.operator_id, adminIdentity.userId);
-  assert.equal(legacyCashSession.event_id, eventId);
-  assert.equal(legacyCashSession.status, "open");
-  assert.equal(legacyCashSession.closed_at, null);
-  assert.notEqual(legacyCashSession.opened_at, forgedOpenedAt);
+  assertPermissionDenied(legacyOpenError, "legacy V2 opening");
 
   const timezoneCashSessionId = randomUUID();
   const { data: timezoneCashSession, error: timezoneCashSessionError } =
@@ -337,10 +287,159 @@ try {
     });
   assert.equal(stockError, null, "could not create the test stock balance");
 
+  const { data: concurrencyProduct, error: concurrencyProductError } =
+    await serviceClient
+      .from("products")
+      .insert({
+        is_active: true,
+        name: `Concurrent database gate product ${testRunId}`,
+        price_in_cents: 1_000,
+        sku: `DB-CONCURRENT-${testRunId}`,
+      })
+      .select("id")
+      .single();
+  assert.equal(
+    concurrencyProductError,
+    null,
+    "could not create the concurrent test product",
+  );
+  concurrencyProductId = concurrencyProduct.id;
+
+  const { error: concurrencyStockError } = await serviceClient
+    .from("stock_movements")
+    .insert({
+      product_id: concurrencyProductId,
+      quantity_change: 1,
+      type: "initial_adjustment",
+    });
+  assert.equal(
+    concurrencyStockError,
+    null,
+    "could not create the unit stock balance",
+  );
+
+  const {
+    data: operatorBConcurrentCashSession,
+    error: operatorBConcurrentOpenError,
+  } = await operatorBIdentity.client.rpc("open_cash_session_v3", {
+    p_opening_amount_in_cents: 0,
+  });
+  assert.equal(
+    operatorBConcurrentOpenError,
+    null,
+    "operator B must reopen for concurrent sales",
+  );
+
+  const operatorAConcurrentSaleId = randomUUID();
+  const operatorBConcurrentSaleId = randomUUID();
+  const concurrentSalePayload = {
+    p_items: [{ product_id: concurrencyProductId, quantity: 1 }],
+    p_payment: {
+      amount_in_cents: 1_000,
+      change_in_cents: 0,
+      method: "pix",
+    },
+  };
+  const concurrentSaleResults = await Promise.all([
+    operatorAIdentity.client.rpc("finalize_sale_v3", {
+      ...concurrentSalePayload,
+      p_cash_session_id: operatorACashSessionId,
+      p_sale_id: operatorAConcurrentSaleId,
+    }),
+    operatorBIdentity.client.rpc("finalize_sale_v3", {
+      ...concurrentSalePayload,
+      p_cash_session_id: operatorBConcurrentCashSession.id,
+      p_sale_id: operatorBConcurrentSaleId,
+    }),
+  ]);
+  const concurrentSaleSuccesses = concurrentSaleResults.filter(
+    (result) => !result.error,
+  );
+  const concurrentSaleFailures = concurrentSaleResults.filter(
+    (result) => result.error,
+  );
+  assert.equal(
+    concurrentSaleSuccesses.length,
+    1,
+    "exactly one concurrent sale must consume the last stock unit",
+  );
+  assert.equal(
+    concurrentSaleFailures.length,
+    1,
+    "exactly one concurrent sale must fail for insufficient stock",
+  );
+  assert.match(concurrentSaleFailures[0].error.message, /insufficient stock/i);
+
+  const { data: concurrencyStockMovements, error: concurrencyBalanceError } =
+    await serviceClient
+      .from("stock_movements")
+      .select("quantity_change")
+      .eq("product_id", concurrencyProductId);
+  assert.equal(concurrencyBalanceError, null);
+  assert.equal(
+    concurrencyStockMovements.reduce(
+      (balance, movement) => balance + movement.quantity_change,
+      0,
+    ),
+    0,
+    "concurrent sales must never make stock negative",
+  );
+
+  const closeRaceSaleId = randomUUID();
+  const [closeRaceSaleResult, concurrentCloseResult] = await Promise.all([
+    operatorBIdentity.client.rpc("finalize_sale_v3", {
+      p_cash_session_id: operatorBConcurrentCashSession.id,
+      p_items: [{ product_id: productId, quantity: 1 }],
+      p_payment: {
+        amount_in_cents: 1_000,
+        change_in_cents: 0,
+        method: "cash",
+      },
+      p_sale_id: closeRaceSaleId,
+    }),
+    operatorBIdentity.client.rpc("close_cash_session", {
+      p_admin_password: null,
+      p_cash_session_id: operatorBConcurrentCashSession.id,
+      p_closed_at: new Date().toISOString(),
+      p_counted_amount_in_cents: 1_000,
+    }),
+  ]);
+  assert.equal(
+    concurrentCloseResult.error,
+    null,
+    "closing must serialize successfully against a concurrent sale",
+  );
+
+  const { data: closeRaceCashSession, error: closeRaceCashSessionError } =
+    await serviceClient
+      .from("cash_sessions")
+      .select("status,expected_amount_in_cents")
+      .eq("id", operatorBConcurrentCashSession.id)
+      .single();
+  assert.equal(closeRaceCashSessionError, null);
+  assert.equal(closeRaceCashSession.status, "closed");
+
+  const { count: closeRaceSaleCount, error: closeRaceSaleCountError } =
+    await serviceClient
+      .from("sales")
+      .select("id", { count: "exact", head: true })
+      .eq("id", closeRaceSaleId);
+  assert.equal(closeRaceSaleCountError, null);
+
+  if (closeRaceSaleResult.error) {
+    assert.match(closeRaceSaleResult.error.message, /no open cash session/i);
+    assert.equal(closeRaceSaleCount, 0);
+    assert.equal(closeRaceCashSession.expected_amount_in_cents, 0);
+  } else {
+    assert.equal(closeRaceSaleResult.data, closeRaceSaleId);
+    assert.equal(closeRaceSaleCount, 1);
+    assert.equal(closeRaceCashSession.expected_amount_in_cents, 1_000);
+  }
+
   const saleOperationId = randomUUID();
   const saleStartedAt = new Date();
   const { data: saleId, error: saleError } = await operatorAIdentity.client.rpc(
-    "finalize_sale_v2",
+    "finalize_sale_v3",
     {
       p_items: [{ product_id: productId, quantity: 2 }],
       p_payment: {
@@ -348,6 +447,7 @@ try {
         change_in_cents: 500,
         method: "cash",
       },
+      p_cash_session_id: operatorACashSessionId,
       p_sale_id: saleOperationId,
     },
   );
@@ -356,20 +456,21 @@ try {
   assert.equal(saleId, saleOperationId);
 
   const { data: retriedSaleId, error: retrySaleError } =
-    await operatorAIdentity.client.rpc("finalize_sale_v2", {
+    await operatorAIdentity.client.rpc("finalize_sale_v3", {
       p_items: [{ product_id: productId, quantity: 2 }],
       p_payment: {
         amount_in_cents: 2_500,
         change_in_cents: 500,
         method: "cash",
       },
+      p_cash_session_id: operatorACashSessionId,
       p_sale_id: saleOperationId,
     });
   assert.equal(retrySaleError, null, "an identical sale retry must succeed");
   assert.equal(retriedSaleId, saleOperationId);
 
   const { error: divergentRetryError } = await operatorAIdentity.client.rpc(
-    "finalize_sale_v2",
+    "finalize_sale_v3",
     {
       p_items: [{ product_id: productId, quantity: 1 }],
       p_payment: {
@@ -377,6 +478,7 @@ try {
         change_in_cents: 0,
         method: "pix",
       },
+      p_cash_session_id: operatorACashSessionId,
       p_sale_id: saleOperationId,
     },
   );
@@ -479,37 +581,54 @@ try {
   assert.equal(adminPaymentsError, null);
   assert.equal(adminPayments.length, 1);
 
-  const legacySaleId = randomUUID();
-  const forgedCompletedAt = "2000-01-01T00:00:00.000Z";
-  const { data: finalizedLegacySaleId, error: legacySaleError } =
-    await adminIdentity.client.rpc("finalize_sale", {
-      p_cash_session_id: legacyCashSessionId,
-      p_completed_at: forgedCompletedAt,
-      p_event_id: eventId,
-      p_items: [{ product_id: productId, quantity: 1 }],
-      p_payment: {
-        amount_in_cents: 1_000,
-        change_in_cents: 0,
-        method: "pix",
+  for (const [rpc, args] of [
+    [
+      "finalize_sale_v2",
+      {
+        p_sale_id: randomUUID(),
+        p_items: [{ product_id: productId, quantity: 1 }],
+        p_payment: {
+          method: "pix",
+          amount_in_cents: 1_000,
+          change_in_cents: 0,
+        },
       },
-      p_sale_id: legacySaleId,
-      p_total_in_cents: 1_000,
-    });
-  assert.equal(legacySaleError, null, "legacy finalize_sale must keep working");
-  assert.equal(finalizedLegacySaleId, legacySaleId);
+    ],
+    [
+      "finalize_sale",
+      {
+        p_sale_id: randomUUID(),
+        p_cash_session_id: operatorACashSessionId,
+        p_event_id: null,
+        p_completed_at: new Date().toISOString(),
+        p_items: [{ product_id: productId, quantity: 1 }],
+        p_payment: {
+          method: "pix",
+          amount_in_cents: 1_000,
+          change_in_cents: 0,
+        },
+        p_total_in_cents: 1_000,
+      },
+    ],
+  ]) {
+    const { error } = await operatorAIdentity.client.rpc(rpc, args);
+    assertPermissionDenied(error, rpc);
+  }
 
-  const { data: legacySale, error: legacySaleReadError } = await serviceClient
-    .from("sales")
-    .select("completed_at,event_id,operator_id")
-    .eq("id", legacySaleId)
-    .single();
-  assert.equal(legacySaleReadError, null);
-  assert.equal(legacySale.event_id, eventId);
-  assert.equal(legacySale.operator_id, adminIdentity.userId);
-  assert.notEqual(
-    legacySale.completed_at,
-    forgedCompletedAt,
-    "the legacy sale row timestamp must be derived by the server",
+  const salePayload = {
+    p_sale_id: randomUUID(),
+    p_cash_session_id: operatorBCashSessionId,
+    p_items: [{ product_id: productId, quantity: 1 }],
+    p_payment: { method: "pix", amount_in_cents: 1_000, change_in_cents: 0 },
+  };
+  const { error: foreignSessionSaleError } = await operatorBIdentity.client.rpc(
+    "finalize_sale_v3",
+    { ...salePayload, p_cash_session_id: operatorACashSessionId },
+  );
+  assert.match(
+    foreignSessionSaleError?.message ?? "",
+    /no open cash session/i,
+    "a sale must reject another operator's session",
   );
 
   const { error: directSaleError } = await operatorAIdentity.client
@@ -556,7 +675,7 @@ try {
 
   const anonymousClient = createSupabaseClient(publishableKey);
   const { error: anonymousRpcError } = await anonymousClient.rpc(
-    "open_cash_session_v2",
+    "open_cash_session_v3",
     { p_opening_amount_in_cents: 0 },
   );
   assert.ok(anonymousRpcError, "anonymous RPC execution must be blocked");
@@ -567,30 +686,59 @@ try {
   );
   assert.equal(banError, null, "could not ban the test operator");
 
-  const { error: bannedV2OpenError } = await operatorBIdentity.client.rpc(
-    "open_cash_session_v2",
+  const { error: bannedOpenError } = await operatorBIdentity.client.rpc(
+    "open_cash_session_v3",
     { p_opening_amount_in_cents: 0 },
   );
   assert.match(
-    bannedV2OpenError?.message ?? "",
+    bannedOpenError?.message ?? "",
     /active user/i,
     "a banned user must not open through the new RPC",
   );
 
-  const { error: bannedLegacyOpenError } = await operatorBIdentity.client
-    .from("cash_sessions")
-    .insert({
-      event_id: eventId,
-      id: randomUUID(),
-      opened_at: new Date().toISOString(),
-      opening_amount_in_cents: 0,
-      operator_id: operatorBIdentity.userId,
-      status: "open",
-    });
+  const { error: bannedSaleError } = await operatorBIdentity.client.rpc(
+    "finalize_sale_v3",
+    salePayload,
+  );
   assert.match(
-    bannedLegacyOpenError?.message ?? "",
+    bannedSaleError?.message ?? "",
     /active user/i,
-    "a banned user must not open through the legacy insert",
+    "a banned user must not finalize a sale",
+  );
+
+  const { error: bannedCloseError } = await operatorBIdentity.client.rpc(
+    "close_cash_session",
+    {
+      p_cash_session_id: operatorBCashSessionId,
+      p_counted_amount_in_cents: 2_000,
+      p_closed_at: new Date().toISOString(),
+      p_admin_password: null,
+    },
+  );
+  assert.match(
+    bannedCloseError?.message ?? "",
+    /active user/i,
+    "a banned user must not close cash",
+  );
+
+  const { error: banAdminError } =
+    await serviceClient.auth.admin.updateUserById(adminIdentity.userId, {
+      ban_duration: "876000h",
+    });
+  assert.equal(banAdminError, null);
+  const { error: bannedAdminCloseError } = await adminIdentity.client.rpc(
+    "close_cash_session",
+    {
+      p_cash_session_id: operatorACashSessionId,
+      p_counted_amount_in_cents: 3_000,
+      p_closed_at: new Date().toISOString(),
+      p_admin_password: null,
+    },
+  );
+  assert.match(
+    bannedAdminCloseError?.message ?? "",
+    /active user/i,
+    "a banned admin must not close another operator's cash",
   );
 
   const originalBusinessDate = operatorACashSession.business_date;
@@ -609,8 +757,8 @@ try {
     "the operator must close its own cash session",
   );
 
-  const { data: reopenedCashSessionId, error: reopenError } =
-    await operatorAIdentity.client.rpc("open_cash_session_v2", {
+  const { data: reopenedCashSessionRow, error: reopenError } =
+    await operatorAIdentity.client.rpc("open_cash_session_v3", {
       p_opening_amount_in_cents: 0,
     });
   assert.equal(
@@ -623,7 +771,7 @@ try {
     await operatorAIdentity.client
       .from("cash_sessions")
       .select("business_date")
-      .eq("id", reopenedCashSessionId)
+      .eq("id", reopenedCashSessionRow.id)
       .single();
   assert.equal(reopenedReadError, null);
   assert.equal(
@@ -632,8 +780,74 @@ try {
     "same-day reopenings must share the business date",
   );
 
+  const { error: staleSessionSaleError } = await operatorAIdentity.client.rpc(
+    "finalize_sale_v3",
+    { ...salePayload, p_cash_session_id: operatorACashSessionId },
+  );
+  assert.match(
+    staleSessionSaleError?.message ?? "",
+    /no open cash session/i,
+    "a stale closed session must not be silently reassigned to the reopened cash",
+  );
+
+  const { error: reassignedRetryError } = await operatorAIdentity.client.rpc(
+    "finalize_sale_v3",
+    {
+      p_sale_id: saleOperationId,
+      p_cash_session_id: reopenedCashSessionRow.id,
+      p_items: [{ product_id: productId, quantity: 2 }],
+      p_payment: {
+        method: "cash",
+        amount_in_cents: 2_500,
+        change_in_cents: 500,
+      },
+    },
+  );
+  assert.match(
+    reassignedRetryError?.message ?? "",
+    /different payload/i,
+    "an idempotent retry must not change its original cash session",
+  );
+
+  const { data: postCloseRetryId, error: postCloseRetryError } =
+    await operatorAIdentity.client.rpc("finalize_sale_v3", {
+      p_sale_id: saleOperationId,
+      p_cash_session_id: operatorACashSessionId,
+      p_items: [{ product_id: productId, quantity: 2 }],
+      p_payment: {
+        method: "cash",
+        amount_in_cents: 2_500,
+        change_in_cents: 500,
+      },
+    });
+  assert.equal(
+    postCloseRetryError,
+    null,
+    "an already committed sale remains idempotent after its cash closes",
+  );
+  assert.equal(postCloseRetryId, saleOperationId);
+
+  const { data: reopenedSaleId, error: reopenedSaleError } =
+    await operatorAIdentity.client.rpc("finalize_sale_v3", {
+      ...salePayload,
+      p_cash_session_id: reopenedCashSessionRow.id,
+    });
+  assert.equal(
+    reopenedSaleError,
+    null,
+    "the reopened exact session can receive sales",
+  );
+  const { data: reopenedSale, error: reopenedSaleReadError } =
+    await serviceClient
+      .from("sales")
+      .select("cash_session_id")
+      .eq("id", reopenedSaleId)
+      .single();
+  assert.equal(reopenedSaleReadError, null);
+  assert.equal(reopenedSale.cash_session_id, reopenedCashSessionRow.id);
+
   console.log(
-    "Database integration passed: concurrency, RLS, RPCs, compatibility, and reopen.",
+    "Database integration passed: concurrency, RLS, V3 RPCs, exact sessions, bans, audited close, and reopen.",
   );
 } finally {
   await cleanupTestData();
@@ -714,12 +928,13 @@ function assertPermissionDenied(error, operation) {
 
 async function cleanupTestData() {
   const userIds = createdUserIds.filter(Boolean);
+  const productIds = [productId, concurrencyProductId].filter(Boolean);
 
-  if (productId) {
+  if (productIds.length > 0) {
     await serviceClient
       .from("stock_movements")
       .delete()
-      .eq("product_id", productId);
+      .in("product_id", productIds);
   }
 
   if (userIds.length > 0) {
@@ -730,16 +945,8 @@ async function cleanupTestData() {
       .in("operator_id", userIds);
   }
 
-  if (productId) {
-    await serviceClient.from("products").delete().eq("id", productId);
-  }
-
-  if (eventId) {
-    await serviceClient.from("events").delete().eq("id", eventId);
-  }
-
-  if (inactiveEventId) {
-    await serviceClient.from("events").delete().eq("id", inactiveEventId);
+  if (productIds.length > 0) {
+    await serviceClient.from("products").delete().in("id", productIds);
   }
 
   for (const userId of createdUserIds.reverse()) {

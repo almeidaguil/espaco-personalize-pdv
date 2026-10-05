@@ -2,8 +2,8 @@ import type { CurrentUserProfileRepository } from "@/modules/auth/application/cu
 
 import { closeCashSession, type CashSession } from "../domain/cash-session";
 import type { CashSessionRepository } from "./cash-session-repository";
+import type { CashSessionDateProvider } from "./cash-session-date-provider";
 import { closeCashSessionSchema } from "./cash-session-validation";
-import type { CashSessionDateProvider } from "./open-cash-session-use-case";
 
 export type CloseCashSessionUseCaseResult =
   | {
@@ -56,10 +56,9 @@ export async function closeCashSessionUseCase(
   }
 
   const openSessionResult =
-    await dependencies.cashSessionRepository.findOpenByIdAndOperator({
-      cashSessionId: parsedInput.data.cashSessionId,
-      operatorId: currentProfileResult.profile.id,
-    });
+    await dependencies.cashSessionRepository.findOpenById(
+      parsedInput.data.cashSessionId,
+    );
 
   if (!openSessionResult.success) {
     return {
@@ -71,6 +70,16 @@ export async function closeCashSessionUseCase(
   if (!openSessionResult.session) {
     return {
       formError: "Nao ha caixa aberto para fechar.",
+      success: false,
+    };
+  }
+
+  const isSessionOperator =
+    openSessionResult.session.operatorId === currentProfileResult.profile.id;
+
+  if (!isSessionOperator && currentProfileResult.profile.role !== "admin") {
+    return {
+      formError: "Voce nao tem permissao para fechar este caixa.",
       success: false,
     };
   }

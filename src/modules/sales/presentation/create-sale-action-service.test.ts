@@ -31,30 +31,42 @@ import type { Sale } from "../domain/sale";
 import { createSaleActionService } from "./create-sale-action-service";
 
 class FakeCashSessionRepository implements CashSessionRepository {
-  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
-    return {
-      session: createCashSession(),
-      success: true,
-    };
-  }
-
-  async findOpenByEventAndOperator(): Promise<FindOpenCashSessionResult> {
+  async findOpenById(
+    _cashSessionId: string,
+  ): Promise<FindOpenCashSessionResult> {
+    void _cashSessionId;
     return {
       session: null,
       success: true,
     };
   }
 
-  async listOpenByOperator(): Promise<ListOpenCashSessionsResult> {
+  async findOpenByOperator(
+    _operatorId: string,
+  ): Promise<FindOpenCashSessionResult> {
+    void _operatorId;
+    return {
+      session: createCashSession(),
+      success: true,
+    };
+  }
+
+  async listOpenByOperator(
+    _operatorId: string,
+  ): Promise<ListOpenCashSessionsResult> {
+    void _operatorId;
     return {
       sessions: [],
       success: true,
     };
   }
 
-  async save(session: CashSession): Promise<SaveCashSessionResult> {
+  async open(_input: {
+    openingAmountInReais: number;
+  }): Promise<SaveCashSessionResult> {
+    void _input;
     return {
-      session,
+      session: createCashSession(),
       success: true,
     };
   }
@@ -199,7 +211,6 @@ describe("createSaleActionService", () => {
 
     expect(result).toEqual({
       fieldErrors: {
-        cashSessionId: "Informe o caixa.",
         items: "Adicione pelo menos um item.",
         payment: "Invalid input: expected number, received NaN",
       },
@@ -222,7 +233,6 @@ function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
 
 function createCashSession(): CashSession {
   return {
-    eventId: "event-1",
     id: "cash-session-1",
     openedAt: new Date("2026-07-10T09:00:00.000Z"),
     openingAmountInReais: 100,
@@ -253,7 +263,6 @@ function createStockMovement(): StockMovement {
 
 function createFormData(): FormData {
   const formData = new FormData();
-  formData.set("cashSessionId", "cash-session-1");
   formData.set(
     "itemsJson",
     JSON.stringify([

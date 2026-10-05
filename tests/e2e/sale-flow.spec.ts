@@ -25,11 +25,11 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
   await closeAllOpenCashSessions(page);
   await createProduct(page, productName, productSku);
   await addInitialStock(page, productName, 3);
-  const eventName = await openCashSession(page);
-  const cashSessionId = await createSale(page, productName, eventName, {
+  await openCashSession(page);
+  await createSale(page, productName, {
     receivedAmount: "20,00",
   });
-  await cancelSale(page, cashSessionId, productName);
+  await cancelLatestSale(page, productName);
 
   await page.goto("/stock");
   const balanceItem = page
@@ -59,17 +59,20 @@ test("admin records non-cash sales and closes cash with reconciliation", async (
   await closeAllOpenCashSessions(page);
   await createProduct(page, productName, productSku);
   await addInitialStock(page, productName, 4);
-  const eventName = await openCashSession(page);
+  await openCashSession(page);
 
-  await createSale(page, productName, eventName, {
+  await createSale(page, productName, {
     paymentMethodLabel: "Pix",
   });
-  await createSale(page, productName, eventName, {
+  await createSale(page, productName, {
     paymentMethodLabel: "Cartão de crédito",
   });
 
   await page.goto("/cash/close");
-  const cashCloseForm = page.locator("form", { hasText: eventName }).first();
+  const cashCloseForm = page
+    .locator("form")
+    .filter({ has: page.getByLabel("Valor contado no caixa") })
+    .first();
 
   await expect(cashCloseForm).toContainText("Concluídas: 2");
   await expect(cashCloseForm).toContainText("R$ 100,00");
@@ -115,18 +118,10 @@ async function addInitialStock(
 
 async function openCashSession(page: Page) {
   await page.goto("/cash/open");
-
-  const activeEvent = await getFirstSelectableOption(page, "eventId");
-
-  expect(activeEvent).not.toBeNull();
-
-  await page.getByLabel("Evento").selectOption(activeEvent?.value ?? "");
   await page.getByLabel("Valor inicial").fill("100,00");
   await page.getByRole("button", { name: "Abrir caixa" }).click();
 
   await expect(page.getByText("Caixa aberto com sucesso.")).toBeVisible();
-
-  return getEventNameFromOption(activeEvent?.label ?? "");
 }
 
 type CreateSaleOptions = {
@@ -137,13 +132,13 @@ type CreateSaleOptions = {
 async function createSale(
   page: Page,
   productName: string,
-  eventName: string,
   options: CreateSaleOptions = {},
 ) {
   await page.goto("/pdv", { waitUntil: "networkidle" });
-  await expect(page.getByText(eventName).first()).toBeVisible();
-  const cashSessionId = await page.getByLabel("Caixa da venda").inputValue();
-  expect(cashSessionId).not.toBe("");
+  await expect(
+    page.getByRole("heading", { name: "Caixa aberto para venda" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Caixa da venda")).toHaveCount(0);
 
   await page.getByLabel("Buscar produto").fill(productName);
   await expect(page.getByText("1 produto(s) encontrado(s)")).toBeVisible();
@@ -170,26 +165,16 @@ async function createSale(
   await page.getByRole("button", { name: "Finalizar venda" }).click();
 
   await expect(page.getByText("Venda finalizada com sucesso.")).toBeVisible();
-  return cashSessionId;
 }
 
-async function cancelSale(
-  page: Page,
-  cashSessionId: string,
-  productName: string,
-) {
-  await page.goto(`/sales?cashSessionId=${encodeURIComponent(cashSessionId)}`);
-
-  const saleItem = page
-    .locator("li", { hasText: `Caixa ${cashSessionId.slice(0, 8)}` })
-    .first();
-  await saleItem.getByRole("link", { name: "Ver detalhes" }).click();
+async function cancelLatestSale(page: Page, productName: string) {
+  await page.goto("/sales");
+  await page.getByRole("link", { name: "Ver detalhes" }).first().click();
   await page.waitForLoadState("networkidle");
 
   await expect(
     page.getByRole("heading", { level: 1, name: "Detalhe da venda" }),
   ).toBeVisible();
-  await expect(page.getByText(cashSessionId, { exact: true })).toBeVisible();
   await expect(page.getByText(productName, { exact: true })).toBeVisible();
   await page
     .getByRole("checkbox", {
@@ -276,23 +261,6 @@ function readEnvFile(path: string): Record<string, string | undefined> {
   } catch {
     return {};
   }
-}
-
-function getEventNameFromOption(label: string) {
-  return label.split(" · ")[0]?.split(" Â· ")[0] ?? label;
-}
-
-async function getFirstSelectableOption(page: Page, selectId: string) {
-  return page.locator(`select#${selectId} option`).evaluateAll((options) => {
-    const option = options.find(
-      (candidate): candidate is HTMLOptionElement =>
-        candidate instanceof HTMLOptionElement && candidate.value !== "",
-    );
-
-    return option
-      ? { label: option.textContent ?? "", value: option.value }
-      : null;
-  });
 }
 
 async function closeAllOpenCashSessions(page: Page) {

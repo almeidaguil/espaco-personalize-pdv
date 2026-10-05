@@ -6,7 +6,7 @@ import {
 
 import { closeCashSessionUseCase } from "../application/close-cash-session-use-case";
 import type { CashSessionRepository } from "../application/cash-session-repository";
-import type { CashSessionDateProvider } from "../application/open-cash-session-use-case";
+import type { CashSessionDateProvider } from "../application/cash-session-date-provider";
 import type { CashSessionActionState } from "./cash-session-action-state";
 import { parseCloseCashSessionFormData } from "./close-cash-session-form-data";
 

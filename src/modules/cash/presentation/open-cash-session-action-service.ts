@@ -1,10 +1,6 @@
 import type { CurrentUserProfileRepository } from "@/modules/auth/application/current-user-profile-repository";
 
-import {
-  openCashSessionUseCase,
-  type CashSessionDateProvider,
-  type CashSessionIdGenerator,
-} from "../application/open-cash-session-use-case";
+import { openCashSessionUseCase } from "../application/open-cash-session-use-case";
 import type { CashSessionRepository } from "../application/cash-session-repository";
 import type { CashSessionActionState } from "./cash-session-action-state";
 import { parseOpenCashSessionFormData } from "./open-cash-session-form-data";
@@ -12,8 +8,6 @@ import { parseOpenCashSessionFormData } from "./open-cash-session-form-data";
 type OpenCashSessionActionServiceDependencies = {
   cashSessionRepository: CashSessionRepository;
   currentUserProfileRepository: CurrentUserProfileRepository;
-  generateCashSessionId: CashSessionIdGenerator;
-  getCurrentDate: CashSessionDateProvider;
 };
 
 export async function openCashSessionActionService(

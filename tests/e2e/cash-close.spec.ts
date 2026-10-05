@@ -16,17 +16,13 @@ test.skip(
   "E2E auth and Supabase public env vars are required for authenticated E2E tests.",
 );
 
-test("admin opens and closes a cash session for an event", async ({ page }) => {
+test("admin closes and reopens a cash session on the same day", async ({
+  page,
+}) => {
   await authenticatePage(page);
   await closeAllOpenCashSessions(page);
 
   await page.goto("/cash/open");
-
-  const activeEvent = await getFirstSelectableOption(page, "eventId");
-
-  expect(activeEvent).not.toBeNull();
-
-  await page.getByLabel("Evento").selectOption(activeEvent?.value ?? "");
   await page.getByLabel("Valor inicial").fill("150,50");
   await page.getByRole("button", { name: "Abrir caixa" }).click();
 
@@ -37,6 +33,14 @@ test("admin opens and closes a cash session for an event", async ({ page }) => {
   await page.getByRole("button", { name: "Fechar caixa" }).click();
 
   await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
+
+  await page.goto("/cash/open");
+  await page.getByLabel("Valor inicial").fill("25,00");
+  await page.getByRole("button", { name: "Abrir caixa" }).click();
+
+  await expect(page.getByText("Caixa aberto com sucesso.")).toBeVisible();
+
+  await closeAllOpenCashSessions(page);
 });
 
 async function authenticatePage(page: Page) {
@@ -107,19 +111,6 @@ function readEnvFile(path: string): Record<string, string | undefined> {
   } catch {
     return {};
   }
-}
-
-async function getFirstSelectableOption(page: Page, selectId: string) {
-  return page.locator(`select#${selectId} option`).evaluateAll((options) => {
-    const option = options.find(
-      (candidate): candidate is HTMLOptionElement =>
-        candidate instanceof HTMLOptionElement && candidate.value !== "",
-    );
-
-    return option
-      ? { label: option.textContent ?? "", value: option.value }
-      : null;
-  });
 }
 
 async function closeAllOpenCashSessions(page: Page) {

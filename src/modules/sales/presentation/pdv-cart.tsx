@@ -22,17 +22,11 @@ export type PdvCartItem = PdvCartProduct & {
   quantity: number;
 };
 
-export type PdvCartCashSession = {
-  eventName: string;
-  id: string;
-};
-
 type PdvCartProps = {
   action: (
     previousState: SaleActionState,
     formData: FormData,
   ) => Promise<SaleActionState>;
-  cashSessions: PdvCartCashSession[];
   products: PdvCartProduct[];
 };
 
@@ -48,7 +42,7 @@ const paymentMethodLabels: Record<PaymentMethod, string> = {
   pix: "Pix",
 };
 
-export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
+export function PdvCart({ action, products }: PdvCartProps) {
   const [items, setItems] = useState<PdvCartItem[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [productPage, setProductPage] = useState(1);
@@ -56,8 +50,6 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
 
   const [receivedAmountInput, setReceivedAmountInput] = useState("");
-
-  const [cashSessionId, setCashSessionId] = useState(cashSessions[0]?.id ?? "");
 
   const submitSale = useCallback(
     async (previousState: SaleActionState, formData: FormData) => {
@@ -77,10 +69,6 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   );
 
   const [state, formAction, isPending] = useActionState(submitSale, {});
-
-  const selectedCashSession = cashSessions.find(
-    (session) => session.id === cashSessionId,
-  );
 
   const totalInReais = useMemo(
     () =>
@@ -116,7 +104,6 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
   const hasValidReceivedAmount = Number.isFinite(receivedAmountInReais);
 
   const canSubmit =
-    Boolean(selectedCashSession) &&
     hasCartItems &&
     hasValidReceivedAmount &&
     hasAvailableStockForItems &&
@@ -169,67 +156,38 @@ export function PdvCart({ action, cashSessions, products }: PdvCartProps) {
       </div>
 
       <section className="sticky bottom-0 z-10 -mx-5 grid gap-5 border-t border-[var(--border)] bg-white/95 p-5 shadow-[0_-12px_35px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:static sm:mx-0 sm:rounded-2xl sm:border sm:bg-[var(--surface-muted)] sm:shadow-none">
-        <div className="grid gap-4 lg:grid-cols-2">
-          <div className="grid gap-2">
-            <label
-              className="text-sm font-semibold text-[var(--brand-foreground)]"
-              htmlFor="cashSessionId"
-            >
-              Caixa da venda
-            </label>
+        <div className="grid gap-2">
+          <p
+            className="text-sm font-semibold text-[var(--brand-foreground)]"
+            id="paymentMethod"
+          >
+            Forma de pagamento
+          </p>
 
-            <select
-              className="h-12 rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
-              id="cashSessionId"
-              name="cashSessionId"
-              onChange={(event) => setCashSessionId(event.target.value)}
-              value={cashSessionId}
-            >
-              {cashSessions.length === 0 ? (
-                <option value="">Nenhum caixa aberto</option>
-              ) : (
-                cashSessions.map((session) => (
-                  <option key={session.id} value={session.id}>
-                    {session.eventName}
-                  </option>
-                ))
-              )}
-            </select>
-          </div>
-
-          <div className="grid gap-2">
-            <p
-              className="text-sm font-semibold text-[var(--brand-foreground)]"
-              id="paymentMethod"
-            >
-              Forma de pagamento
-            </p>
-
-            <div
-              aria-labelledby="paymentMethod"
-              className="grid grid-cols-2 gap-2"
-              role="group"
-            >
-              {(
-                Object.entries(paymentMethodLabels) as Array<
-                  [PaymentMethod, string]
-                >
-              ).map(([value, label]) => (
-                <button
-                  aria-pressed={paymentMethod === value}
-                  className={
-                    paymentMethod === value
-                      ? "min-h-11 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition"
-                      : "min-h-11 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
-                  }
-                  key={value}
-                  onClick={() => setPaymentMethod(value)}
-                  type="button"
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
+          <div
+            aria-labelledby="paymentMethod"
+            className="grid grid-cols-2 gap-2"
+            role="group"
+          >
+            {(
+              Object.entries(paymentMethodLabels) as Array<
+                [PaymentMethod, string]
+              >
+            ).map(([value, label]) => (
+              <button
+                aria-pressed={paymentMethod === value}
+                className={
+                  paymentMethod === value
+                    ? "min-h-11 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition"
+                    : "min-h-11 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
+                }
+                key={value}
+                onClick={() => setPaymentMethod(value)}
+                type="button"
+              >
+                {label}
+              </button>
+            ))}
           </div>
         </div>
 

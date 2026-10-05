@@ -6,7 +6,7 @@ export type SaveSaleResult =
       success: true;
     }
   | {
-      error: "unknown";
+      error: "cash_session_closed" | "unknown";
       success: false;
     };
 

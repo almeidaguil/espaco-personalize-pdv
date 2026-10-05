@@ -32,7 +32,8 @@ describe("CloseCashSessionForm", () => {
             completedSalesTotalInReais: 100,
             expectedAmountInReais: 250.5,
             id: "cash-session-1",
-            label: "Evento Julho - aberto em 10/07/2026, 09:00",
+            label:
+              "Ana Souza · aberto em 10/07/2026, 09:00 · sessão cash-session-1",
             openingAmountInReais: 150.5,
           },
         ]}
@@ -40,7 +41,9 @@ describe("CloseCashSessionForm", () => {
     );
 
     expect(
-      screen.getByText("Evento Julho - aberto em 10/07/2026, 09:00"),
+      screen.getByText(
+        "Ana Souza · aberto em 10/07/2026, 09:00 · sessão cash-session-1",
+      ),
     ).toBeInTheDocument();
 
     expect(screen.getByText("R$ 250,50")).toBeInTheDocument();
@@ -75,7 +78,8 @@ describe("CloseCashSessionForm", () => {
             completedSalesTotalInReais: 100,
             expectedAmountInReais: 250.5,
             id: "cash-session-1",
-            label: "Evento Julho",
+            label:
+              "Ana Souza · aberto em 10/07/2026, 09:00 · sessão cash-session-1",
             openingAmountInReais: 150.5,
           },
         ]}
@@ -113,7 +117,8 @@ describe("CloseCashSessionForm", () => {
             completedSalesTotalInReais: 100,
             expectedAmountInReais: 250.5,
             id: "cash-session-1",
-            label: "Evento Julho",
+            label:
+              "Ana Souza · aberto em 10/07/2026, 09:00 · sessão cash-session-1",
             openingAmountInReais: 150.5,
           },
         ]}
@@ -151,7 +156,8 @@ describe("CloseCashSessionForm", () => {
             completedSalesTotalInReais: 0,
             expectedAmountInReais: 150.5,
             id: "cash-session-1",
-            label: "Evento Julho",
+            label:
+              "Ana Souza · aberto em 10/07/2026, 09:00 · sessão cash-session-1",
             openingAmountInReais: 150.5,
           },
         ]}
@@ -179,6 +185,51 @@ describe("CloseCashSessionForm", () => {
     ).toHaveAttribute("aria-describedby", "cashSessionId-error-cash-session-1");
 
     expect(screen.getByText("Caixa fechado com sucesso.")).toBeInTheDocument();
+  });
+
+  it("keeps action feedback isolated to the submitted cash session", () => {
+    useActionStateMock
+      .mockReturnValueOnce([
+        { successMessage: "Caixa fechado com sucesso." },
+        vi.fn(),
+        false,
+      ])
+      .mockReturnValueOnce([{}, vi.fn(), false]);
+
+    render(
+      <CloseCashSessionForm
+        action={vi.fn()}
+        sessions={[
+          {
+            canceledSalesCount: 0,
+            canceledSalesTotalInReais: 0,
+            completedSalesCount: 1,
+            completedSalesTotalInReais: 50,
+            expectedAmountInReais: 150,
+            id: "cash-session-1",
+            label: "Ana Souza",
+            openingAmountInReais: 100,
+          },
+          {
+            canceledSalesCount: 0,
+            canceledSalesTotalInReais: 0,
+            completedSalesCount: 0,
+            completedSalesTotalInReais: 0,
+            expectedAmountInReais: 200,
+            id: "cash-session-2",
+            label: "Bruno Lima",
+            openingAmountInReais: 200,
+          },
+        ]}
+      />,
+    );
+
+    expect(screen.getAllByText("Caixa fechado com sucesso.")).toHaveLength(1);
+
+    const forms = screen.getAllByRole("button", { name: "Fechar caixa" });
+
+    expect(forms[0]).toBeDisabled();
+    expect(forms[1]).toBeEnabled();
   });
 });
 

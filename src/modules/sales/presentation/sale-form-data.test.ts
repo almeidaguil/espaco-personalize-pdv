@@ -3,10 +3,9 @@ import { describe, expect, it } from "vitest";
 import { parseCreateSaleFormData } from "./sale-form-data";
 
 describe("parseCreateSaleFormData", () => {
-  it("parses sale form data", () => {
+  it("ignores a forged cash session id from sale form data", () => {
     const formData = new FormData();
-    formData.set("cashSessionId", "cash-session-1");
-    formData.set("eventId", "forged-legacy-event");
+    formData.set("cashSessionId", "forged-cash-session");
     formData.set("paymentMethod", "cash");
     formData.set(
       "itemsJson",
@@ -20,7 +19,6 @@ describe("parseCreateSaleFormData", () => {
     formData.set("amountReceivedInReais", "50,00");
 
     expect(parseCreateSaleFormData(formData)).toEqual({
-      cashSessionId: "cash-session-1",
       items: [
         {
           productId: "product-1",

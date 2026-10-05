@@ -1,7 +1,5 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-
 import {
   SupabaseCurrentUserProfileRepository,
   type SupabaseCurrentUserProfileClient,
@@ -30,7 +28,5 @@ export async function openCashSessionAction(
     currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
       currentUserProfileClient,
     ),
-    generateCashSessionId: randomUUID,
-    getCurrentDate: () => new Date(),
   });
 }

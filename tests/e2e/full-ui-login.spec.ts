@@ -31,7 +31,7 @@ test("admin logs in through the UI and traverses main flows", async ({
   await expect(
     page.getByRole("heading", {
       level: 1,
-      name: /Abra o caixa antes de vender|Pronto para vender/,
+      name: /Caixa aberto|Caixa fechado/,
     }),
   ).toBeVisible();
 
@@ -49,11 +49,6 @@ test("admin logs in through the UI and traverses main flows", async ({
   await expect(page.getByText(productName)).toBeVisible();
 
   await page.goto("/cash/open");
-  const activeEvent = await getFirstSelectableOption(page, "eventId");
-
-  expect(activeEvent).not.toBeNull();
-
-  await page.getByLabel("Evento").selectOption(activeEvent?.value ?? "");
   await page.getByLabel("Valor inicial").fill("100,00");
   await page.getByRole("button", { name: "Abrir caixa" }).click();
   await expect(page.getByText("Caixa aberto com sucesso.")).toBeVisible();
@@ -63,7 +58,7 @@ test("admin logs in through the UI and traverses main flows", async ({
     page.getByRole("heading", { level: 1, name: "PDV" }),
   ).toBeVisible();
   await expect(
-    page.getByText(getEventNameFromOption(activeEvent?.label ?? "")).first(),
+    page.getByRole("heading", { name: "Caixa aberto para venda" }),
   ).toBeVisible();
 
   await page.goto("/cash/close");
@@ -108,19 +103,6 @@ async function authenticatePage(page: Page) {
       value,
     })),
   );
-}
-
-async function getFirstSelectableOption(page: Page, selectId: string) {
-  return page.locator(`select#${selectId} option`).evaluateAll((options) => {
-    const option = options.find(
-      (candidate): candidate is HTMLOptionElement =>
-        candidate instanceof HTMLOptionElement && candidate.value !== "",
-    );
-
-    return option
-      ? { label: option.textContent ?? "", value: option.value }
-      : null;
-  });
 }
 
 async function closeAllOpenCashSessions(page: Page) {
@@ -169,8 +151,4 @@ function readEnvFile(path: string): Record<string, string | undefined> {
   } catch {
     return {};
   }
-}
-
-function getEventNameFromOption(label: string) {
-  return label.split(" · ")[0]?.split(" Â· ")[0] ?? label;
 }

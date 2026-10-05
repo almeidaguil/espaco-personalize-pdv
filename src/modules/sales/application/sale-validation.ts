@@ -2,7 +2,6 @@ import { z } from "zod";
 import { paymentMethods } from "../domain/sale";
 
 export const createSaleSchema = z.object({
-  cashSessionId: z.string().trim().min(1, "Informe o caixa."),
   items: z
     .array(
       z.object({

@@ -31,6 +31,9 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 
+# Agent execution workspace
+.superpowers/
+
 # Vercel
 .vercel/
 
