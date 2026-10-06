@@ -106,9 +106,11 @@ na data do cancelamento.
    da sessão.
 3. Revise `Valor inicial`, `Vendas`, `Esperado` e `Cancelado`.
 4. Conte o dinheiro físico e preencha `Valor contado no caixa`.
-5. Confira a diferença exibida e clique em `Fechar caixa`.
-6. Se houver falta, solicite a senha de um admin ativo para autorizar o fechamento.
-7. Aguarde a mensagem de sucesso e confira a sessão no relatório.
+5. Confira a diferença exibida.
+6. Se houver falta, solicite a senha de um admin ativo e preencha
+   `Senha administrativa` para autorizar o fechamento.
+7. Clique em `Fechar caixa`.
+8. Aguarde a mensagem de sucesso e confira a sessão no relatório.
 
 O dinheiro esperado considera o valor inicial e os pagamentos em dinheiro,
 descontando troco e cancelamentos aplicáveis. Pix, crédito e débito ficam na

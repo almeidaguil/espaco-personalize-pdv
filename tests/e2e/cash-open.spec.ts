@@ -1,6 +1,10 @@
 import { expect, type Page, test } from "@playwright/test";
 
-import { authenticatePage, hasAuthenticatedE2EConfig } from "./support/auth";
+import {
+  authenticatePage,
+  createAuthenticatedSupabaseClient,
+  hasAuthenticatedE2EConfig,
+} from "./support/auth";
 
 test.skip(
   !hasAuthenticatedE2EConfig(),
@@ -49,17 +53,43 @@ test("admin opens one cash session and the PDV uses it automatically", async ({
 });
 
 async function closeOwnOpenCashSession(page: Page) {
-  await page.goto("/cash/close");
+  const supabase = await createAuthenticatedSupabaseClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  const closeButton = page.getByRole("button", { name: "Fechar caixa" });
+  expect(userError).toBeNull();
+  expect(user).not.toBeNull();
 
-  if ((await closeButton.count()) === 0) {
+  if (!user) {
+    throw new Error("Authenticated E2E user is required for cash cleanup.");
+  }
+
+  const { data: session, error: sessionError } = await supabase
+    .from("cash_sessions")
+    .select("id")
+    .eq("operator_id", user.id)
+    .eq("status", "open")
+    .maybeSingle<{ id: string }>();
+
+  expect(sessionError).toBeNull();
+
+  if (!session) {
     return;
   }
 
-  await page.getByLabel("Valor contado no caixa").fill("999999,00");
-  await closeButton.click();
-  await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
   await page.goto("/cash/close");
-  await expect(closeButton).toHaveCount(0);
+
+  const sessionForm = page.locator("form").filter({
+    has: page.locator(`input[name="cashSessionId"][value="${session.id}"]`),
+  });
+
+  await sessionForm.getByLabel("Valor contado no caixa").fill("999999,00");
+  await sessionForm.getByRole("button", { name: "Fechar caixa" }).click();
+  await expect(
+    sessionForm.getByText("Caixa fechado com sucesso."),
+  ).toBeVisible();
+  await page.goto("/cash/close");
+  await expect(sessionForm).toHaveCount(0);
 }

@@ -1,9 +1,9 @@
 # Plano De Desenvolvimento - Roberto Multimarcas PDV
 
 > O runtime atual opera como loja fisica, com caixas por operador e sem modulo
-> de eventos. O PR05 esta concluido; o PR06 permanece pendente do gate final
-> da Task 5. As etapas de QA multioperador, ambientes e release continuam no
-> plano de reestruturacao.
+> de eventos. O PR05 esta concluido; o PR06 tem implementacao, gates locais e
+> revisao independente concluidos; integracao pendente. As etapas de QA
+> multioperador, ambientes e release continuam no plano de reestruturacao.
 
 ## 1. Objetivo
 

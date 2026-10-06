@@ -478,8 +478,8 @@ git commit -S -m "docs: align operations with physical store"
 
 ### Task 5: Automatizar O Gate De Residuos E Fechar O PR06
 
-Status: implementacao e gates locais concluidos em 2026-10-06. A revisao
-independente (Step 4) e o handoff (Step 8) permanecem com o controlador.
+Status: implementacao, gates locais e revisao independente (Step 4) concluidos
+em 2026-10-06. O handoff (Step 8) permanece com o controlador.
 Tasks 1-4 foram implementadas e revisadas antes desta verificacao final.
 
 Evidencia nova, executada na ordem abaixo com exit code `0`:
@@ -565,11 +565,19 @@ npm run test:e2e:required
 Expected: todos com exit code `0`. Nao reutilizar resultados anteriores a
 ultima alteracao funcional.
 
-- [ ] **Step 4: Solicitar revisao independente do branch**
+- [x] **Step 4: Solicitar revisao independente do branch**
 
 Usar `superpowers:requesting-code-review` para revisar o diff completo contra
 `origin/develop`, com foco nos cinco itens de **Review Focus**. Corrigir achados
 Critical/Important e repetir os gates afetados.
+
+Revisao final realizada em 2026-10-06: identificado um achado Important no
+helper de limpeza do caixa E2E e tres ajustes documentais Minor. Correcoes:
+consultar somente o caixa aberto do usuario E2E autenticado e limitar os
+locators ao formulario identificado por `cashSessionId`; conferir as RPCs V3
+no checklist; preencher a senha administrativa antes de fechar com falta;
+alinhar o status do plano de desenvolvimento. Re-revisao focal e integracao
+permanecem com o controlador, sem push, PR ou merge nesta etapa.
 
 - [x] **Step 5: Registrar conclusao somente depois dos gates**
 
