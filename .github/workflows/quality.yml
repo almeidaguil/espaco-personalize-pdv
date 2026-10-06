@@ -53,6 +53,9 @@ jobs:
       - name: Test
         run: npm run test
 
+      - name: Verify no event legacy
+        run: npm run test:no-event-legacy
+
       - name: Build
         run: npm run build
         env:

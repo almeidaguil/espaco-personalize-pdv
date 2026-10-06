@@ -3,31 +3,25 @@ name: E2E Release Gate
 on:
   pull_request:
     branches:
+      - develop
       - main
   workflow_dispatch:
-    inputs:
-      base_url:
-        description: "Optional deployed URL. Leave empty to run against the local Next.js server started by Playwright."
-        required: false
-        type: string
+
+permissions:
+  contents: read
 
 concurrency:
-  group: e2e-staging
-  cancel-in-progress: false
+  group: e2e-local-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   e2e:
     name: Playwright E2E
     runs-on: ubuntu-latest
+    timeout-minutes: 30
 
     env:
-      E2E_BASE_URL: ${{ inputs.base_url }}
-      E2E_EXPECTED_SUPABASE_PROJECT_REF: gpywbeoqcovjrfnmbdqx
-      E2E_USER_EMAIL: ${{ secrets.E2E_USER_EMAIL }}
-      E2E_USER_PASSWORD: ${{ secrets.E2E_USER_PASSWORD }}
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY }}
-      NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-      SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      SUPABASE_TELEMETRY_DISABLED: "1"
 
     steps:
       - name: Checkout
@@ -45,5 +39,25 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Start local Supabase
+        # Keep ephemeral CLI keys in memory inside the gate, out of CI logs.
+        run: npx supabase start >/dev/null
+
       - name: Run required E2E suite
-        run: npm run test:e2e:required
+        id: e2e
+        run: npm run test:e2e:local-reset
+
+      - name: Upload Playwright failure artifacts
+        if: failure() && steps.e2e.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 3
+          if-no-files-found: ignore
+
+      - name: Stop local Supabase
+        if: always()
+        run: npx supabase stop --no-backup
