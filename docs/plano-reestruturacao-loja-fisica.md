@@ -1,5 +1,9 @@
 # Plano De Reestruturacao Para Loja Fisica
 
+Estado atual: PR01 a PR05 concluidos. O runtime e o schema final ja operam sem
+o modulo de eventos; o PR06 permanece pendente ate a Task 5 comprovar todos os
+gates. PR07 (QA multioperador), PR08 (ambientes) e PR09 (release) seguem pendentes.
+
 ## 1. Objetivo
 
 Adaptar o Espaco Personalize PDV para a operacao permanente da Roberto
@@ -334,34 +338,39 @@ Testes e aceite:
 
 ### PR 05 - Corte Operacional Do Caixa E PDV
 
+Status: concluido, com todas as tarefas e criterios de aceite atendidos.
+
 Objetivo: ativar o fluxo definitivo da Roberto Multimarcas.
 
 Tarefas:
 
-- [ ] Remover evento do dominio, validacao, formulario e repositorio de caixa.
-- [ ] Abrir caixa apenas com valor inicial.
-- [ ] Aplicar a restricao unica parcial por operador.
-- [ ] Permitir nova abertura depois do fechamento, inclusive no mesmo dia.
-- [ ] Fazer o PDV localizar automaticamente o caixa aberto do usuario.
-- [ ] Bloquear o PDV quando o usuario nao possuir caixa aberto.
-- [ ] Remover seletor de evento e seletor manual de caixa.
-- [ ] Finalizar vendas pela nova RPC sem `event_id`.
-- [ ] Atualizar dashboard com "Meu caixa" e, para admin, "Caixas abertos".
-- [ ] Identificar cada caixa por vendedor, horario de abertura e sessao.
-- [ ] Garantir que o operador nao use nem feche caixa alheio.
-- [ ] Preservar fechamento administrativo auditado.
+- [x] Remover evento do dominio, validacao, formulario e repositorio de caixa.
+- [x] Abrir caixa apenas com valor inicial.
+- [x] Aplicar a restricao unica parcial por operador.
+- [x] Permitir nova abertura depois do fechamento, inclusive no mesmo dia.
+- [x] Fazer o PDV localizar automaticamente o caixa aberto do usuario.
+- [x] Bloquear o PDV quando o usuario nao possuir caixa aberto.
+- [x] Remover seletor de evento e seletor manual de caixa.
+- [x] Finalizar vendas pela nova RPC sem `event_id`.
+- [x] Atualizar dashboard com "Meu caixa" e, para admin, "Caixas abertos".
+- [x] Identificar cada caixa por vendedor, horario de abertura e sessao.
+- [x] Garantir que o operador nao use nem feche caixa alheio.
+- [x] Preservar fechamento administrativo auditado.
 
 Testes e aceite:
 
-- [ ] Mesmo operador nao consegue abrir dois caixas simultaneos.
-- [ ] Mesmo operador fecha e reabre caixa no mesmo dia.
-- [ ] Dois operadores abrem caixas e vendem simultaneamente.
-- [ ] Cada venda fica no caixa correto.
-- [ ] Fechar um caixa nao interrompe o caixa de outro operador.
-- [ ] Tentativas cruzadas retornam erro de autorizacao.
-- [ ] Estoque nao fica negativo em vendas concorrentes.
+- [x] Mesmo operador nao consegue abrir dois caixas simultaneos.
+- [x] Mesmo operador fecha e reabre caixa no mesmo dia.
+- [x] Dois operadores abrem caixas e vendem simultaneamente.
+- [x] Cada venda fica no caixa correto.
+- [x] Fechar um caixa nao interrompe o caixa de outro operador.
+- [x] Tentativas cruzadas retornam erro de autorizacao.
+- [x] Estoque nao fica negativo em vendas concorrentes.
 
 ### PR 06 - Remocao Completa De Eventos
+
+Status: pendente do gate final da Task 5. Os itens abaixo so serao marcados como
+concluidos depois da comprovacao de todos os gates.
 
 Objetivo: eliminar o legado depois que nenhum fluxo depender dele.
 

@@ -2,9 +2,10 @@
 
 ## Estado Atual
 
-O MVP legado esta funcional, mas foi construido para vendas em eventos. A
-execucao ativa agora e a migracao para uma loja fisica com caixas independentes
-por operador.
+O runtime atual opera como loja fisica, com caixas independentes por operador.
+As entregas 1 a 5 estao concluidas. A entrega 6 ja removeu o modulo legado do
+runtime e do schema, mas permanece pendente do gate final da Task 5 do PR06.
+QA multioperador (PR07), ambientes (PR08) e release (PR09) continuam pendentes.
 
 O detalhamento de tarefas e criterios esta no
 [plano de reestruturacao](plano-reestruturacao-loja-fisica.md). A decisao
@@ -103,6 +104,8 @@ Criterio de pronto:
 
 ## Entrega 5 - Caixa E PDV Por Operador
 
+Status: concluida (PR05), incluindo todas as tarefas e criterios de aceite.
+
 Objetivo: ativar a operacao diaria da loja.
 
 Escopo:
@@ -123,6 +126,8 @@ Criterio de pronto:
 - estoque permanece correto sob concorrencia.
 
 ## Entrega 6 - Remocao Do Legado De Eventos
+
+Status: pendente. A conclusao do PR06 depende da Task 5 comprovar todos os gates.
 
 Objetivo: eliminar codigo e schema sem uso.
 

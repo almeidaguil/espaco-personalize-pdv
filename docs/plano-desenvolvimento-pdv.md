@@ -1,8 +1,9 @@
 # Plano De Desenvolvimento - Roberto Multimarcas PDV
 
-> Este documento descreve a arquitetura alvo. Durante a transicao, o runtime
-> ainda possui o fluxo legado de eventos; ele somente sera removido depois que
-> banco, aplicacao e testes estiverem prontos.
+> O runtime atual opera como loja fisica, com caixas por operador e sem modulo
+> de eventos. O PR05 esta concluido; o PR06 permanece pendente do gate final
+> da Task 5. As etapas de QA multioperador, ambientes e release continuam no
+> plano de reestruturacao.
 
 ## 1. Objetivo
 
@@ -303,8 +304,8 @@ created_at
 - `/reports`
 - `/settings`
 
-As rotas `/events` e `/events/new` sao legadas e serao removidas no PR de
-limpeza depois do corte funcional.
+As rotas operacionais legadas foram removidas. As URLs antigas retornam `404`
+controlado; nao fazem parte da navegacao da loja.
 
 ## 10. Estrategia De Evolucao
 

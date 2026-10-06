@@ -8,8 +8,8 @@ Projeto: Roberto Multimarcas PDV.
 
 Objetivo: sistema privado de vendas para uma loja fisica.
 
-O nome do repositorio ainda e legado da operacao Espaco Personalize. O produto
-e a documentacao nova devem usar Roberto Multimarcas.
+O nome do repositorio ainda e legado da operacao anterior. O produto e a
+documentacao nova devem usar Roberto Multimarcas.
 
 Stack fixa:
 
@@ -43,8 +43,8 @@ Modulos principais:
 - Estoque
 - Relatorios
 
-O modulo de eventos esta em processo de remocao e nao deve receber novas
-funcionalidades.
+O modulo da operacao anterior foi removido do runtime e do schema final.
+Nao reintroduzir suas rotas, tabelas ou dependencias operacionais.
 
 Documento de referencia do plano: [docs/plano-desenvolvimento-pdv.md](docs/plano-desenvolvimento-pdv.md).
 
@@ -222,8 +222,8 @@ A primeira versao util deve conter:
 
 - Preservar o funcionamento do runtime atual em cada PR intermediario.
 - Introduzir mudancas de banco de forma aditiva antes do corte funcional.
-- Remover eventos somente depois que caixa, vendas e relatorios nao dependerem
-  mais deles.
+- Preservar o runtime da loja fisica, com caixa, vendas e relatorios
+  independentes do modulo legado removido.
 - Nao reescrever migrations ja aplicadas; criar novas migrations de evolucao.
 - O reset dos bancos esta autorizado para a troca de operacao, mas qualquer
   reset remoto exige confirmacao explicita do ambiente e validacao do project

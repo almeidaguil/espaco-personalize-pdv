@@ -1,62 +1,70 @@
 # Observabilidade
 
-Este documento define a estrategia minima de observabilidade para a V1 do
-Espaco Personalize PDV.
+Estratégia mínima de observabilidade do runtime da loja física Roberto Multimarcas.
 
 ## Objetivo
 
-Detectar falhas reais de producao sem registrar dados sensiveis de usuarios,
-senhas temporarias, tokens, cookies ou chaves Supabase/Vercel.
+Detectar falhas de produção e correlacionar operações sem registrar credenciais,
+dados pessoais ou payloads completos.
 
-## O Que Ja Existe
+## O Que Já Existe
 
-- Logs server-side estruturados em JSON para falhas inesperadas de:
-  - finalizacao de venda;
-  - cancelamento de venda;
-  - fechamento de caixa.
-- Redacao automatica de campos sensiveis pelo logger local.
-- GitHub Actions, Vercel Preview e E2E Release Gate como sinais de qualidade
-  antes de release.
+- Logs do servidor em JSON para falhas inesperadas na finalização e no
+  cancelamento de venda e no fechamento de caixa.
+- Redação de campos sensíveis pelo logger local.
+- GitHub Actions, Vercel Preview, contrato de banco e E2E Release Gate como
+  sinais de qualidade antes da release.
 
-## Eventos Criticos
+Os logs atuais identificam a operação e a falha. Não presumir que todo registro
+já inclua IDs de operador, caixa e venda; usar esses identificadores quando
+disponíveis para a investigação.
 
-Monitorar estes cenarios em producao:
+## Ocorrências Críticas
 
-- `sale.create.failed`
-- `sale.cancel.failed`
-- `cash.close.failed`
-- falhas de login/autenticacao recorrentes;
-- erros de conectividade Supabase;
-- falhas de deploy na Vercel;
-- falhas do workflow E2E antes de release.
+Monitorar:
+
+- `sale.create.failed`;
+- `sale.cancel.failed`;
+- `cash.close.failed`;
+- falhas recorrentes de login/autenticação;
+- erros de conectividade com Supabase;
+- falhas de deploy ou do gate E2E;
+- inconsistências de estoque, associação de venda ao caixa ou reconciliação.
 
 ## Onde Observar
 
-Primeira versao:
+Fontes atuais:
 
 - Vercel Runtime Logs;
 - Supabase Logs;
 - GitHub Actions.
 
-Evolucao recomendada:
+Sentry, centralização de logs e alertas automáticos são possíveis evoluções,
+ainda não entregues por este PR. Até sua definição, o responsável operacional
+acompanha as fontes atuais e registra incidentes.
 
-- Sentry para erros de aplicacao;
-- Logflare ou ferramenta equivalente para centralizar logs Supabase/Vercel;
-- alerta simples para erro recorrente em vendas, cancelamentos e caixa.
+## Registro De Incidente E Segurança
 
-## Regras De Seguranca
+- Registrar horário, operação, mensagem técnica sanitizada e, para identificação
+  das entidades, somente IDs de operador, sessão de caixa e venda disponíveis.
+- Não registrar nomes, e-mails, dados de cliente, credenciais ou dados de pagamento.
+- Nunca registrar senha, token, secret key, cookie, cabeçalho de autorização
+  ou payload completo de formulário.
+- Não copiar chaves locais ou remotas para logs, screenshots, relatórios ou commits.
+- Conferir conteúdo de traces antes de compartilhar; proteger arquivos que
+  contenham sessão autenticada.
+- Revisar e rotacionar segredos expostos antes da produção.
 
-- Nunca registrar senha, token, secret key, cookie, Authorization header ou
-  payload completo de formulario.
-- Nunca registrar dados de pagamento alem de status tecnico da operacao.
-- Preferir IDs tecnicos, nome do evento somente quando necessario e mensagens
-  genericas.
-- Antes de producao, rotacionar segredos expostos durante desenvolvimento.
+O logger redige campos com nomes sensíveis, mas isso não autoriza enviar dados
+sensíveis no texto da mensagem ou em outros campos.
 
-## Checklist Antes Do Go-live
+## Checklist Antes Do Go-Live
 
-- [ ] Confirmar acesso aos logs da Vercel.
-- [ ] Confirmar acesso aos logs do Supabase.
-- [ ] Executar smoke test e verificar se falhas aparecem nos logs.
-- [ ] Definir canal de alerta manual inicial para falhas de venda/caixa.
-- [ ] Decidir se Sentry/Logflare entra na V1 ou na primeira iteracao pos-go-live.
+- [ ] Confirmar acesso aos logs da Vercel e do Supabase.
+- [ ] Executar smoke em ambiente isolado e conferir diagnóstico de falhas.
+- [ ] Definir responsável e canal seguro de acompanhamento de incidentes.
+- [ ] Conferir acesso restrito aos traces e evidências.
+- [ ] Decidir a futura ferramenta de centralização e alertas.
+
+Para resposta operacional, consulte o
+[Runbook operacional](runbook-operacional.md).

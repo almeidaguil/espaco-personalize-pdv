@@ -1,27 +1,23 @@
 # Checklist De Go-Live
 
-Este documento consolida o que precisa ser feito antes de promover o Espaco Personalize PDV para uso real em producao.
-
-## Objetivo
-
-Usar este checklist no momento em que a release sair de `develop` para `main` e depois para producao na Vercel.
+Checklist para liberar a operação da loja física Roberto Multimarcas.
+Documenta o runtime atual; não declara concluídos o QA multioperador (PR07),
+o provisionamento dos novos ambientes (PR08) ou a release (PR09).
 
 ## Regra De Release
 
-O fluxo oficial e:
+1. Concluir a alteração em `feature/*`, com commits assinados.
+2. Integrar em `develop` por PR com checks aprovados.
+3. Executar o gate E2E em ambiente isolado e o smoke do
+   [Runbook operacional](runbook-operacional.md).
+4. Conferir banco, acessos, configuração de ambientes e segredos.
+5. Abrir PR de release de `develop` para `main` e revisar o diff.
+6. Publicar somente após aprovação dos gates e da preparação operacional.
+7. Conferir produção e registrar a release.
 
-1. concluir as features em `feature/*`;
-2. mergear em `develop` com checks verdes;
-3. rodar o gate E2E final;
-4. executar o [Runbook operacional](runbook-operacional.md) em modo smoke test;
-5. revisar limpeza e configuracoes externas;
-6. rotacionar segredos usados durante homologacao;
-7. abrir PR de `develop` para `main`;
-8. publicar a `main` somente quando tudo estiver validado.
+## 1. Qualidade E Banco Local
 
-## 1. Validacao Tecnica Obrigatoria
-
-Antes de qualquer release:
+Na raiz do repositório, com dependências instaladas:
 
 ```powershell
 npm.cmd run test
@@ -31,241 +27,152 @@ npm.cmd run format:check
 npm.cmd run build
 ```
 
-Tambem confirmar:
-
-- `Quality checks` verde no PR final;
-- sem conflitos entre `develop` e `main`;
-- sem TODO critico aberto na release.
-
-## 2. Gate E2E Obrigatorio
-
-Rodar o fluxo documentado em [Gate E2E de release](e2e-release-gate.md).
-
-Comando local esperado, quando as variaveis E2E estiverem configuradas:
+No Supabase local isolado, confirmar o alvo local antes do reset. O comando
+apaga os dados locais de teste e reaplica migrations e seed:
 
 ```powershell
+npx.cmd supabase start
+npx.cmd supabase db reset --local
+npx.cmd supabase db lint --local
+npm.cmd run test:db
+```
+
+Conferir também:
+
+- `Quality checks` e `Database contract` aprovados;
+- ausência de conflitos e pendências críticas;
+- constraints, RLS e grants financeiros validados;
+- RPCs `open_cash_session`, `finalize_sale`, `cancel_sale` e
+  `close_cash_session` disponíveis;
+- operador derivado da sessão autenticada; escritas financeiras diretas bloqueadas.
+
+## 2. Gate E2E E Smoke Funcional
+
+Preparar usuário e configuração seguindo o
+[Gate E2E de release](e2e-release-gate.md) e executar:
+
+```powershell
+npm.cmd run e2e:seed-local
 npm.cmd run test:e2e:required
 ```
 
-Liberar a release somente se:
+A seed é exclusiva de Supabase local e cria/atualiza o admin E2E atual.
+Não cria automaticamente dois operadores. Após reset local, executar a seed
+novamente. A suíte altera dados e pode fechar caixas visíveis à conta E2E:
+usar ambiente e usuários exclusivos de homologação.
 
-- o Playwright passar em ambiente real ou homologacao equivalente;
-- login funcionar;
-- criacao de produto funcionar;
-- criacao de evento funcionar;
-- abertura de caixa funcionar;
-- fluxo de venda funcionar;
-- venda em dinheiro e venda sem dinheiro funcionarem;
-- cancelamento de venda funcionar;
-- fechamento de caixa funcionar.
-- regressao de RLS financeira continuar bloqueando escrita direta indevida.
+Conferir o resultado automatizado e registrar o smoke manual:
 
-## 3. Revisao De Banco E Migrations
+- login, cadastro de produto e saldo inicial;
+- abertura do próprio caixa e associação automática no PDV;
+- recusa de segunda abertura simultânea para o mesmo usuário;
+- venda em dinheiro com troco e venda em Pix ou cartão;
+- baixa de estoque, cancelamento e reposição;
+- fechamento e reabertura no mesmo dia;
+- caixas simultâneos de usuários diferentes, com financeiro separado;
+- fechamento de um caixa preservando a operação do outro;
+- consulta do operador restrita aos próprios dados e contingência pelo admin;
+- relatório por período, vendedor e sessão, com CSV equivalente;
+- divergências e ajustes após fechamento conciliados.
 
-Confirmar que o banco remoto esta alinhado com o repositorio:
+Os cenários multioperador acima são verificações manuais até a ampliação prevista
+no PR07. A execução do E2E atual não comprova sozinha essa cobertura.
 
-```powershell
-npx.cmd supabase migration list
-npx.cmd supabase db push --linked
-```
+## 3. Preparação Do Banco De Entrega
 
-Se houver ambiente local pronto:
+Antes de aplicar migrations remotamente, identificar o ambiente e validar o
+project ref, o backup e a sequência de promoção conforme
+[Ambientes](ambientes.md) e [Supabase CLI](supabase-cli.md).
 
-```powershell
-npx.cmd supabase db reset
-npx.cmd supabase db lint --local
-```
+- Aplicar primeiro em staging e validar o schema e as RPCs.
+- Confirmar banco alinhado às migrations da versão aprovada.
+- Manter RLS nas tabelas operacionais e validar isolamento por operador.
+- Manter migrations históricas imutáveis.
+- Não executar reset remoto como parte do teste local.
 
-Checklist:
+Qualquer reset remoto exige confirmação explícita do ambiente e validação do
+project ref imediatamente antes da execução. O bootstrap dos ambientes novos
+continua no PR08; o corte de produção continua no PR09.
 
-- todas as migrations aplicadas no projeto remoto;
-- sem divergencia entre schema local e remoto;
-- sem erro de lint do banco;
-- RPCs criticas existentes:
-  - `finalize_sale`
-  - `cancel_sale`
-  - `close_cash_session`
-  - `close_event`
+## 4. Acessos E Segredos
 
-## 4. Supabase Antes Da Producao
+Antes de produzir, conferir:
 
-Conferir no painel e no projeto remoto:
+- admin oficial ativo e operadores reais cadastrados;
+- signup público desabilitado conforme a política do projeto;
+- `leaked password protection` habilitada no Supabase Auth;
+- senha administrativa operacional conhecida somente pelos autorizadores;
+- usuários temporários desativados quando não fizerem parte da operação;
+- segredos e senhas expostos durante homologação rotacionados;
+- secrets do GitHub e variáveis da Vercel atualizados após a rotação;
+- arquivos locais com credenciais fora do versionamento.
 
-- RLS ativa nas tabelas operacionais;
-- signup publico desabilitado, se essa continuar sendo a decisao oficial;
-- leaked password protection habilitada no Supabase Auth;
-- secrets privados revisados;
-- usuario admin real existente e validado;
-- nenhum usuario de teste desnecessario mantido ativo.
+A `publishable key` é pública. `SUPABASE_SECRET_KEY`, senha do banco, tokens de
+deploy e senhas operacionais são privados. Não usar valores de homologação como
+segredos definitivos de produção.
 
-Observacao:
+## 5. Dados De Homologação E Dados Reais
 
-- a `publishable key` pode ser publica;
-- `secret key`, senha do banco, tokens de deploy e senhas operacionais nao podem permanecer como as usadas durante homologacao.
+- Executar QA em ambiente isolado; guardar evidências antes do reset local.
+- Não levar produtos, vendas ou caixas de teste para a base de entrega.
+- Preparar somente admin, operadores, produtos e saldo inicial reais no ambiente
+  de produção, conforme o procedimento de bootstrap aprovado.
+- Conferir ausência de caixas de teste abertos e usuários temporários ativos.
+- Se uma operação de teste controlado ocorrer em produção, preservar o histórico
+  e registrar a compensação por cancelamento quando aplicável.
+- Não apagar vendas ou movimentações financeiras para limpar relatórios reais.
 
-## 5. Rotacao De Segredos E Senhas
+## 6. Vercel E Promoção
 
-Antes da producao final, rotacionar:
+Conferir no projeto que receberá a release:
 
-- `SUPABASE_SECRET_KEY`
-- senha do banco remoto usada pela CLI
-- `VERCEL_TOKEN`
-- qualquer token de GitHub ou deploy exposto durante homologacao
-- senhas administrativas ou temporarias usadas durante homologacao
-- senhas temporarias de usuarios de teste
+- projeto, domínio e ambiente identificados;
+- Preview e Production separados;
+- `Production` associada à `main`;
+- variáveis públicas e privadas apontando para o banco correto;
+- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e
+  `SUPABASE_SECRET_KEY` configuradas;
+- PR de `develop` para `main` com `Quality` e `E2E Release Gate` aprovados;
+- deploy sem erros.
 
-Depois da rotacao:
+A criação e o vínculo dos projetos exclusivos da Roberto Multimarcas ainda
+dependem do PR08. Não considerar essa infraestrutura entregue pelo PR06.
 
-- atualizar `.env.local` e `.env.e2e.local` locais;
-- atualizar variaveis de ambiente na Vercel;
-- atualizar secrets do GitHub Actions, se houver mudanca;
-- atualizar `CREDENTIALS.local.md` localmente, sem versionar;
-- validar login e E2E novamente.
+## 7. Smoke Manual Após Deploy
 
-Regra:
+Com o responsável operacional, executar teste controlado e guardar evidências:
 
-- nenhum segredo compartilhado durante homologacao deve ser tratado como segredo
-  definitivo de producao;
-- a senha administrativa operacional definitiva deve ser conhecida apenas por
-  quem pode autorizar cancelamentos e fechamento de caixa com falta.
+1. Fazer login e conferir painel e PWA.
+2. Conferir produto real e saldo.
+3. Abrir o próprio caixa e confirmar sua identificação no PDV.
+4. Realizar uma venda e consultá-la em `/sales`.
+5. Cancelar quando for teste controlado e conferir estoque e financeiro.
+6. Fechar com dinheiro contado e conferir diferença.
+7. Reabrir no mesmo dia para validar nova sessão e fechar novamente.
+8. Conferir `/reports`, filtros e CSV.
+9. Confirmar acesso aos logs de runtime.
 
-## 6. Limpeza Da Base Antes Da Entrega
+Se algum passo falhar, bloquear a liberação operacional, corrigir em
+`feature/*` a partir de `develop` e repetir a validação. O smoke completo e a
+validação com usuários separados estão no
+[Runbook operacional](runbook-operacional.md).
 
-Antes de entregar ao cliente final, remover ou encerrar:
+## 8. Primeiro Dia E Acompanhamento
 
-- eventos de teste;
-- caixas de teste;
-- vendas de homologacao;
-- produtos criados apenas para QA;
-- usuarios de teste que nao farao parte da operacao real.
+- Definir admins, operadores e responsável pela conferência financeira.
+- Entregar acessos por canal seguro e conferir login em celular e desktop.
+- Instalar o PWA nos dispositivos e confirmar internet.
+- Conferir estoque inicial e dinheiro de abertura por operador.
+- Disponibilizar o [Manual do usuário final](manual-usuario-final.md) à equipe.
+- No início do turno, cada operador abre ou continua seu próprio caixa.
+- No encerramento, fechar cada sessão e consolidar o relatório.
+- Monitorar `sale.create.failed`, `sale.cancel.failed` e `cash.close.failed`
+  conforme [Observabilidade](observabilidade.md).
+- Registrar incidentes com horário e IDs técnicos, sem credenciais.
 
-Manter:
+## 9. Critério De Liberação
 
-- o admin oficial;
-- os operadores reais;
-- produtos reais;
-- eventos reais, se a operacao ja for iniciar em seguida.
-
-Checklist funcional:
-
-- nenhum caixa aberto esquecido;
-- nenhum evento de QA ativo;
-- nenhuma venda fake misturada nos relatorios finais.
-- nenhum usuario temporario ativo sem necessidade operacional.
-
-Sequencia recomendada:
-
-1. exportar qualquer evidencia de QA que precise ser guardada;
-2. fechar caixas abertos;
-3. finalizar eventos de teste;
-4. remover ou desativar usuarios temporarios;
-5. manter apenas dados reais de partida.
-
-## 7. Configuracao Da Vercel
-
-Conferir no projeto de producao:
-
-- variaveis publicas e privadas cadastradas no ambiente `Production`;
-- build apontando para a branch `main`;
-- dominio oficial configurado corretamente;
-- deploy da `main` sem erro;
-- preview e production separados conforme esperado.
-
-Ambiente de producao deve ter pelo menos:
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SECRET_KEY`
-
-## 8. Smoke Test Manual De Producao
-
-Depois do deploy da `main`, executar um teste rapido manual:
-
-1. entrar em `/login`;
-2. verificar painel inicial;
-3. criar ou validar um evento real de teste controlado;
-4. abrir caixa;
-5. criar ou usar um produto real de teste;
-6. ajustar estoque;
-7. realizar uma venda;
-8. consultar a venda em `/sales`;
-9. cancelar a venda, se for um teste controlado;
-10. fechar caixa;
-11. abrir `/reports` e validar os numeros.
-12. exportar CSV e abrir o arquivo;
-13. conferir se os logs de runtime estao acessiveis.
-
-Se qualquer passo falhar:
-
-- nao considerar a release pronta;
-- corrigir em `feature/*` a partir de `develop`;
-- repetir o fluxo.
-
-O smoke test detalhado fica em [Runbook operacional](runbook-operacional.md).
-
-## 9. Checklist Operacional Do Primeiro Dia
-
-Antes do primeiro evento real:
-
-- confirmar quem sao os admins;
-- confirmar quem sao os operadores;
-- distribuir logins e senhas temporarias por canal seguro;
-- validar acesso em pelo menos um celular e um desktop;
-- instalar o PWA nos dispositivos que vao operar;
-- confirmar que o evento correto esta ativo;
-- confirmar que o estoque inicial foi lancado;
-- confirmar que a senha administrativa operacional definitiva foi definida e compartilhada apenas com quem precisa.
-
-## 10. Promocao De Develop Para Main
-
-No momento da release:
-
-1. confirmar `develop` verde;
-2. confirmar gate E2E verde;
-3. confirmar checklist de banco, segredos e limpeza;
-4. abrir PR de `develop` para `main`;
-5. revisar diff final;
-6. mergear o PR;
-7. acompanhar o deploy de producao;
-8. rodar o smoke test manual;
-9. registrar a release.
-
-## 11. Pos-Go-Live
-
-Depois da publicacao:
-
-- monitorar login, vendas e fechamento de caixa no primeiro uso;
-- acompanhar `sale.create.failed`, `sale.cancel.failed` e `cash.close.failed`
-  conforme [Observabilidade](observabilidade.md);
-- registrar qualquer incidente encontrado;
-- priorizar hotfixes em branch propria a partir de `develop`;
-- manter `main` sincronizada apenas com releases realmente validadas.
-
-## 12. Pendencias Manuais Conhecidas
-
-Itens que nao dependem apenas de codigo:
-
-- habilitar `leaked password protection` no Supabase Auth antes da producao;
-- definir a senha administrativa operacional definitiva;
-- rotacionar segredos expostos durante homologacao;
-- limpar a base de teste;
-- validar o usuario admin oficial final.
-- confirmar acesso aos logs da Vercel e Supabase;
-- decidir se Sentry/Logflare fica para V1 ou para a primeira iteracao
-  pos-go-live.
-
-## 13. Criterio Para Dizer "Pronto Para Produzir"
-
-Podemos considerar o sistema pronto para uso real quando:
-
-- `develop` estiver estavel;
-- `main` estiver alinhada com `develop`;
-- checks locais e remotos estiverem verdes;
-- gate E2E passar;
-- base estiver limpa;
-- segredos estiverem rotacionados;
-- admin e operadores reais estiverem configurados;
-- smoke test de producao passar;
-- o time operacional tiver em maos o [Manual do usuario final](manual-usuario-final.md);
-- o responsavel pelo evento tiver em maos o [Runbook operacional](runbook-operacional.md);
-- os logs minimos de producao estiverem acessiveis.
+A operação só pode ser liberada após checks e gate E2E aprovados, ambiente correto,
+acessos reais, estoque preparado, segredos revisados, smoke validado e responsável
+operacional orientado. Pendências de ambiente e release precisam ser resolvidas
+nos PRs correspondentes; este checklist não substitui esses gates.
