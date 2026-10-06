@@ -1,20 +1,19 @@
-import { readFileSync } from "node:fs";
-
 import { expect, type Page, test } from "@playwright/test";
-import { createBrowserClient } from "@supabase/ssr";
+import { authenticatePage, getE2EUserCredentials } from "./support/auth";
+import {
+  cashSessionCloseForm,
+  closeCashSessionThroughUi,
+  closeOwnOpenCashSession,
+  openCashSessionThroughUi,
+} from "./support/cash";
 
-const e2eUserEmail = process.env.E2E_USER_EMAIL;
-const e2eUserPassword = process.env.E2E_USER_PASSWORD;
-const e2eBaseUrl = process.env.E2E_BASE_URL?.trim() || "http://localhost:3000";
-const publicEnv = getPublicEnv();
-
-test.skip(
-  !e2eUserEmail ||
-    !e2eUserPassword ||
-    !publicEnv.NEXT_PUBLIC_SUPABASE_URL ||
-    !publicEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-  "E2E auth and Supabase public env vars are required for authenticated E2E tests.",
-);
+test.beforeEach(async () => {
+  getE2EUserCredentials();
+  await closeOwnOpenCashSession();
+});
+test.afterEach(async () => {
+  await closeOwnOpenCashSession();
+});
 
 test("admin creates and cancels a sale restoring stock", async ({ page }) => {
   const uniqueSuffix = crypto.randomUUID();
@@ -22,10 +21,9 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
   const productSku = `VENDA-E2E-${uniqueSuffix.slice(0, 8)}`;
 
   await authenticatePage(page);
-  await closeAllOpenCashSessions(page);
   await createProduct(page, productName, productSku);
   await addInitialStock(page, productName, 3);
-  await openCashSession(page);
+  await openCashSessionThroughUi(page);
   await createSale(page, productName, {
     receivedAmount: "20,00",
   });
@@ -44,8 +42,6 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
       .filter({ hasText: "Cancelamento de venda" })
       .first(),
   ).toBeVisible();
-
-  await closeAllOpenCashSessions(page);
 });
 
 test("admin records non-cash sales and closes cash with reconciliation", async ({
@@ -56,10 +52,9 @@ test("admin records non-cash sales and closes cash with reconciliation", async (
   const productSku = `PAG-E2E-${uniqueSuffix.slice(0, 8)}`;
 
   await authenticatePage(page);
-  await closeAllOpenCashSessions(page);
   await createProduct(page, productName, productSku);
   await addInitialStock(page, productName, 4);
-  await openCashSession(page);
+  const session = await openCashSessionThroughUi(page);
 
   await createSale(page, productName, {
     paymentMethodLabel: "Pix",
@@ -69,19 +64,13 @@ test("admin records non-cash sales and closes cash with reconciliation", async (
   });
 
   await page.goto("/cash/close");
-  const cashCloseForm = page
-    .locator("form")
-    .filter({ has: page.getByLabel("Valor contado no caixa") })
-    .first();
+  const cashCloseForm = cashSessionCloseForm(page, session.id);
 
   await expect(cashCloseForm).toContainText("Concluídas: 2");
   await expect(cashCloseForm).toContainText("R$ 100,00");
   await expect(cashCloseForm.getByLabel("Senha administrativa")).toHaveCount(0);
 
-  await cashCloseForm.getByLabel("Valor contado no caixa").fill("100,00");
-  await cashCloseForm.getByRole("button", { name: "Fechar caixa" }).click();
-
-  await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
+  await closeCashSessionThroughUi(page, session.id);
 });
 
 async function createProduct(page: Page, productName: string, sku: string) {
@@ -114,14 +103,6 @@ async function addInitialStock(
   await page.getByRole("button", { name: "Registrar ajuste" }).click();
 
   await expect(page.getByText("Estoque ajustado com sucesso.")).toBeVisible();
-}
-
-async function openCashSession(page: Page) {
-  await page.goto("/cash/open");
-  await page.getByLabel("Valor inicial").fill("100,00");
-  await page.getByRole("button", { name: "Abrir caixa" }).click();
-
-  await expect(page.getByText("Caixa aberto com sucesso.")).toBeVisible();
 }
 
 type CreateSaleOptions = {
@@ -181,7 +162,9 @@ async function cancelLatestSale(page: Page, productName: string) {
       name: /Confirmo que esta venda deve ser cancelada/,
     })
     .check();
-  await page.getByLabel("Senha administrativa").fill(e2eUserPassword ?? "");
+  await page
+    .getByLabel("Senha administrativa")
+    .fill(getE2EUserCredentials().password);
   await page.getByRole("button", { name: "Cancelar venda" }).click();
 
   await expect(page.getByText("Venda cancelada com sucesso.")).toBeVisible();
@@ -191,90 +174,4 @@ async function cancelLatestSale(page: Page, productName: string) {
     page.getByRole("button", { name: "Venda cancelada" }),
   ).toBeDisabled();
   await expect(page.getByText("Cancelada", { exact: true })).toBeVisible();
-}
-
-async function authenticatePage(page: Page) {
-  const cookieJar = new Map<string, string>();
-  const supabase = createBrowserClient(
-    publicEnv.NEXT_PUBLIC_SUPABASE_URL ?? "",
-    publicEnv.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ?? "",
-    {
-      cookies: {
-        getAll: () =>
-          [...cookieJar.entries()].map(([name, value]) => ({ name, value })),
-        setAll: (cookies) => {
-          cookies.forEach(({ name, value }) => {
-            if (value) {
-              cookieJar.set(name, value);
-            } else {
-              cookieJar.delete(name);
-            }
-          });
-        },
-      },
-    },
-  );
-
-  const { error } = await supabase.auth.signInWithPassword({
-    email: e2eUserEmail ?? "",
-    password: e2eUserPassword ?? "",
-  });
-
-  expect(error).toBeNull();
-
-  await page.context().addCookies(
-    [...cookieJar.entries()].map(([name, value]) => ({
-      name,
-      url: e2eBaseUrl,
-      value,
-    })),
-  );
-}
-
-function getPublicEnv() {
-  const envFile = readEnvFile(".env.local");
-
-  return {
-    NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY:
-      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
-      envFile.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
-    NEXT_PUBLIC_SUPABASE_URL:
-      process.env.NEXT_PUBLIC_SUPABASE_URL ?? envFile.NEXT_PUBLIC_SUPABASE_URL,
-  };
-}
-
-function readEnvFile(path: string): Record<string, string | undefined> {
-  try {
-    return Object.fromEntries(
-      readFileSync(path, "utf8")
-        .split(/\r?\n/)
-        .filter((line) => line && !line.startsWith("#"))
-        .map((line) => {
-          const separatorIndex = line.indexOf("=");
-
-          return [
-            line.slice(0, separatorIndex),
-            line.slice(separatorIndex + 1),
-          ];
-        }),
-    );
-  } catch {
-    return {};
-  }
-}
-
-async function closeAllOpenCashSessions(page: Page) {
-  for (let attempt = 0; attempt < 5; attempt += 1) {
-    await page.goto("/cash/close");
-
-    const closeButton = page.getByRole("button", { name: "Fechar caixa" });
-
-    if ((await closeButton.count()) === 0) {
-      return;
-    }
-
-    await page.getByLabel("Valor contado no caixa").first().fill("999999,00");
-    await closeButton.first().click();
-    await expect(page.getByText("Caixa fechado com sucesso.")).toBeVisible();
-  }
 }
