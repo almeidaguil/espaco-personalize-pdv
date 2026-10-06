@@ -79,7 +79,7 @@ Vitest, Testing Library, Playwright, ESLint e Prettier.
   fornecidos pelo gate ou resolvendo-os por `supabase status -o env`; em ambos
   os casos, deve recusar hostname nao local e nunca imprimir a chave.
 
-- [ ] **Step 1: Escrever o contrato pgTAP final antes da migration**
+- [x] **Step 1: Escrever o contrato pgTAP final antes da migration**
 
 Em `002_remove_events_legacy.test.sql`, adicionar asserts nomeados para:
 
@@ -102,7 +102,7 @@ Em `000_cash_session_foundation.test.sql`, retirar apenas as assercoes de
 transicao que exigem colunas, funcoes ou triggers legados, ajustar
 `extensions.plan(...)` e preservar todo o contrato atual de seguranca e caixa.
 
-- [ ] **Step 2: Confirmar que o contrato falha contra o schema PR05**
+- [x] **Step 2: Confirmar que o contrato falha contra o schema PR05**
 
 Run:
 
@@ -114,7 +114,7 @@ npx.cmd supabase test db supabase/tests/database/002_remove_events_legacy.test.s
 Expected: `FAIL`, informando que `public.events`, `event_id` e os objetos
 legados ainda existem.
 
-- [ ] **Step 3: Criar o fixture executavel de upgrade**
+- [x] **Step 3: Criar o fixture executavel de upgrade**
 
 Implementar `scripts/test-remove-events-upgrade.mjs` com dois modos:
 
@@ -131,13 +131,13 @@ migration PR06. Como o PostgREST recarrega o schema de forma assincrona,
 `verify` deve repetir apenas as consultas de catalogo/API por no maximo 10
 segundos antes de declarar falha.
 
-- [ ] **Step 4: Executar o fixture no schema PR05**
+- [x] **Step 4: Executar o fixture no schema PR05**
 
 Run: `node scripts/test-remove-events-upgrade.mjs seed`
 
 Expected: `PASS`, com caixa e venda legados persistidos no Supabase local.
 
-- [ ] **Step 5: Implementar a migration atomica**
+- [x] **Step 5: Implementar a migration atomica**
 
 Em `20261005143000_remove_events_legacy.sql`:
 
@@ -159,7 +159,7 @@ Em `20261005143000_remove_events_legacy.sql`:
 9. executar `drop table public.events` sem `cascade`;
 10. finalizar com `notify pgrst, 'reload schema'`.
 
-- [ ] **Step 6: Aplicar somente a migration PR06 e provar o upgrade**
+- [x] **Step 6: Aplicar somente a migration PR06 e provar o upgrade**
 
 Run:
 
@@ -172,7 +172,7 @@ node scripts/test-remove-events-upgrade.mjs verify
 Expected: todos os pgTAP `PASS`; caixa e venda preexistentes permanecem; tabela,
 colunas e contratos legados ficam ausentes.
 
-- [ ] **Step 7: Atualizar as integracoes para o schema final**
+- [x] **Step 7: Atualizar as integracoes para o schema final**
 
 Remover `event_id` de inserts, selects e asserts em
 `test-store-database.mjs` e `test-sales-report-database.mjs`. Excluir a chamada
@@ -185,7 +185,7 @@ da RPC `finalize_sale` antiga e manter as provas de:
 - bloqueio de inserts financeiros diretos;
 - cancelamento, conciliacao, relatorios e CSV.
 
-- [ ] **Step 8: Fazer o gate executar os dois caminhos de banco**
+- [x] **Step 8: Fazer o gate executar os dois caminhos de banco**
 
 Alterar `run-database-gate.mjs` para executar, sempre contra hostname local:
 
@@ -201,14 +201,14 @@ pgTAP + integracoes novamente
 Nao aceitar `--linked` nem URL remota; manter a verificacao de hostname antes
 de qualquer reset.
 
-- [ ] **Step 9: Rodar o gate completo do banco**
+- [x] **Step 9: Rodar o gate completo do banco**
 
 Run: `npm run test:db`
 
 Expected: os caminhos `upgrade` e `fresh reset` terminam com
 `Database gate completed successfully.`
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```powershell
 git add supabase/migrations/20261005143000_remove_events_legacy.sql supabase/tests/database/000_cash_session_foundation.test.sql supabase/tests/database/002_remove_events_legacy.test.sql scripts/run-database-gate.mjs scripts/test-remove-events-upgrade.mjs scripts/test-store-database.mjs scripts/test-sales-report-database.mjs
@@ -244,7 +244,7 @@ git commit -S -m "feat(db): remove legacy event schema"
 - Produces: contrato E2E das duas URLs antigas antes que suas rotas sejam
   excluidas.
 
-- [ ] **Step 1: Escrever os testes que falham para navegacao e 404**
+- [x] **Step 1: Escrever os testes que falham para navegacao e 404**
 
 Em `app-header.test.tsx`, adicionar:
 
@@ -268,7 +268,7 @@ autenticado  -> response.status() === 404, heading Página não encontrada e
                 link Voltar ao painel
 ```
 
-- [ ] **Step 2: Confirmar RED**
+- [x] **Step 2: Confirmar RED**
 
 Run:
 
@@ -280,20 +280,20 @@ npx.cmd playwright test tests/e2e/legacy-event-routes.spec.ts
 Expected: `FAIL`; o menu ainda possui Eventos, `not-found.tsx` ainda nao existe
 e as rotas antigas ainda respondem com suas telas.
 
-- [ ] **Step 3: Implementar a apresentacao minima**
+- [x] **Step 3: Implementar a apresentacao minima**
 
 Remover o item de eventos de `navigationItems`. Criar `not-found.tsx` com
 `<main>`, identidade visual Roberto Multimarcas, a explicacao
 `O endereço informado não existe ou não está mais disponível.` e link ao
 painel. Nao criar redirects nas rotas antigas.
 
-- [ ] **Step 4: Excluir o codigo de dominio e as rotas**
+- [x] **Step 4: Excluir o codigo de dominio e as rotas**
 
 Remover integralmente `src/app/events` e `src/modules/events`. Nao mover tipos,
 repositorios ou componentes para outra camada: nenhum fluxo restante os
 consome.
 
-- [ ] **Step 5: Limpar fixtures de compatibilidade no codigo ativo**
+- [x] **Step 5: Limpar fixtures de compatibilidade no codigo ativo**
 
 Remover `event_id` de `saleRow` e simplificar os dois testes de repositorio
 para vendas do schema final. Trocar nomes/asserts textuais `event-free` por
@@ -301,7 +301,7 @@ descricao de caixa por operador. No teste de protecao de rotas, usar um query
 parametro neutro, como `cashSessionId`, preservando a prova de codificacao de
 `next`.
 
-- [ ] **Step 6: Confirmar GREEN e ausencia de imports residuais**
+- [x] **Step 6: Confirmar GREEN e ausencia de imports residuais**
 
 Run:
 
@@ -314,7 +314,7 @@ rg -n "@/modules/events|event_id|/events" src --glob "!*.test.*"
 Expected: testes `PASS`; `rg` sem resultados. Identificadores de eventos do
 navegador, como o parametro de `onChange`, nao devem ser renomeados.
 
-- [ ] **Step 7: Rodar regressao unitaria, lint e tipos**
+- [x] **Step 7: Rodar regressao unitaria, lint e tipos**
 
 Run:
 
@@ -326,7 +326,7 @@ npm run type-check
 
 Expected: todas as suites `PASS` e nenhum erro de lint/TypeScript.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```powershell
 git add src/app src/modules/events src/modules/auth/application/auth-route-protection.test.ts src/modules/sales src/shared/components/app-header.tsx src/shared/components/app-header.test.tsx tests/e2e/legacy-event-routes.spec.ts
@@ -354,28 +354,28 @@ git commit -S -m "refactor: remove event application module"
 - Produces: gate E2E sem criar eventos nem executar setup global, preservando a
   cobertura das URLs antigas criada na Task 2.
 
-- [ ] **Step 1: Reexecutar o contrato E2E das URLs removidas**
+- [x] **Step 1: Reexecutar o contrato E2E das URLs removidas**
 
 Run: `npx.cmd playwright test tests/e2e/legacy-event-routes.spec.ts`
 
 Expected: `PASS` para anonimo e autenticado. O bloco autenticado usa o mesmo
 `test.skip(!hasAuthenticatedE2EConfig(), ...)` das suites privadas.
 
-- [ ] **Step 2: Retirar eventos das suites positivas**
+- [x] **Step 2: Retirar eventos das suites positivas**
 
 Remover `/events` e `/events/new` das listas de smoke, visual e acessibilidade;
 excluir `event-create.spec.ts`; remover asserts/copy de evento em
 `cash-open.spec.ts` sem reduzir a cobertura de abertura e uso automatico do
 caixa.
 
-- [ ] **Step 3: Remover setup global e payloads de banco legados**
+- [x] **Step 3: Remover setup global e payloads de banco legados**
 
 Excluir `global-setup.ts` e a propriedade `globalSetup` de
 `playwright.config.ts`. Retirar `event_id` dos inserts de relatorio e da
 tentativa direta de venda em `financial-security.spec.ts`; a tentativa deve
 continuar falhando por permissao/RLS, e nao por coluna inexistente no payload.
 
-- [ ] **Step 4: Rodar as suites E2E direcionadas**
+- [x] **Step 4: Rodar as suites E2E direcionadas**
 
 Run:
 
@@ -387,13 +387,13 @@ npx.cmd playwright test --config playwright.readonly.config.ts
 Expected: `PASS`, sem skip quando as variaveis E2E obrigatorias estiverem
 presentes; nenhuma suite cria ou consulta eventos.
 
-- [ ] **Step 5: Rodar o gate E2E obrigatorio**
+- [x] **Step 5: Rodar o gate E2E obrigatorio**
 
 Run: `npm run test:e2e:required`
 
 Expected: `PASS` para todos os fluxos configurados, sem `globalSetup`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add playwright.config.ts tests/e2e
@@ -425,7 +425,7 @@ git commit -S -m "test(e2e): cover removed event routes"
 - Produces: instrucoes operacionais exclusivamente da Roberto Multimarcas e
   planos vigentes com PR05 concluido e PR06 ainda aguardando o gate final.
 
-- [ ] **Step 1: Atualizar metadados publicos do PWA**
+- [x] **Step 1: Atualizar metadados publicos do PWA**
 
 Definir a descricao do manifesto como:
 
@@ -435,7 +435,7 @@ Definir a descricao do manifesto como:
 
 Nao alterar os handlers `event` legitimos de `public/sw.js`.
 
-- [ ] **Step 2: Reescrever manual e runbook pelo fluxo diario**
+- [x] **Step 2: Reescrever manual e runbook pelo fluxo diario**
 
 O manual deve orientar login, abertura do proprio caixa, venda, cancelamento,
 fechamento, reabertura no mesmo dia, estoque, usuarios e relatorios. O runbook
@@ -443,21 +443,21 @@ deve usar `inicio do dia/turno`, `durante a operacao` e `encerramento do dia`,
 incluindo caixas simultaneos e contingencia administrativa. Remover criacao,
 selecao e fechamento de evento.
 
-- [ ] **Step 3: Atualizar go-live, E2E e observabilidade**
+- [x] **Step 3: Atualizar go-live, E2E e observabilidade**
 
 No checklist e gate E2E, substituir fixtures/eventos por ambiente isolado,
 sessao do operador e reset local. Em observabilidade, renomear a secao
 ambigua `Eventos Criticos` para `Ocorrencias Criticas` e registrar somente IDs
 de operador, caixa e venda, nunca credenciais.
 
-- [ ] **Step 4: Atualizar documentos normativos e estado dos planos**
+- [x] **Step 4: Atualizar documentos normativos e estado dos planos**
 
 README e AGENTS passam a declarar o modulo removido. O plano de desenvolvimento
 deixa de anunciar rotas legadas. Marcar todas as tarefas e aceites do PR05 como
 concluidos nos planos vigentes. Manter PR06 pendente ate a Task 5 comprovar
 todos os gates.
 
-- [ ] **Step 5: Verificar a documentacao operacional**
+- [x] **Step 5: Verificar a documentacao operacional**
 
 Run:
 
@@ -469,7 +469,7 @@ npm run format:check
 Expected: `rg` sem resultados; Prettier `PASS`. Referencias historicas nos tres
 arquivos preservados e nos planos de transicao nao sao defeitos.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```powershell
 git add README.md AGENTS.md public/manifest.webmanifest docs/manual-usuario-final.md docs/runbook-operacional.md docs/checklist-go-live.md docs/e2e-release-gate.md docs/observabilidade.md docs/plano-desenvolvimento-pdv.md docs/plano-execucao-incremental.md docs/plano-reestruturacao-loja-fisica.md
@@ -477,6 +477,34 @@ git commit -S -m "docs: align operations with physical store"
 ```
 
 ### Task 5: Automatizar O Gate De Residuos E Fechar O PR06
+
+Status: implementacao e gates locais concluidos em 2026-10-06. A revisao
+independente (Step 4) e o handoff (Step 8) permanecem com o controlador.
+Tasks 1-4 foram implementadas e revisadas antes desta verificacao final.
+
+Evidencia nova, executada na ordem abaixo com exit code `0`:
+
+```powershell
+npm.cmd run format:check
+npm.cmd run lint
+npm.cmd run type-check
+npm.cmd test
+npm.cmd run test:no-event-legacy
+npm.cmd run test:db
+npm.cmd run build
+npm.cmd run test:e2e:required
+```
+
+Resultados: 98 suites/369 testes unitarios; 111 asserts pgTAP em cada caminho
+de upgrade e reset completo, com integracoes financeiras aprovadas; build
+aprovado; 42 testes E2E aprovados, sem skips. O usuario E2E local foi preparado
+com `npm.cmd run e2e:seed-local` depois do reset. Nenhum Supabase/Vercel remoto
+foi acessado ou alterado. Credenciais locais foram carregadas somente em
+memoria, com hosts validados antes da execucao.
+
+O gate estatico preserva os planos de transicao e migrations historicas,
+permite somente o fixture de upgrade, o contrato pgTAP final e os literais
+das duas URLs no teste de 404. Ele nao substitui testes comportamentais.
 
 **Files:**
 
@@ -492,7 +520,7 @@ git commit -S -m "docs: align operations with physical store"
 - Produces: `npm run test:no-event-legacy`, com exit code `0` somente quando nao
   houver dependencia operacional do dominio removido.
 
-- [ ] **Step 1: Criar o verificador de residuos ativos**
+- [x] **Step 1: Criar o verificador de residuos ativos**
 
 O script deve falhar com caminho e padrao encontrados quando detectar:
 
@@ -507,7 +535,7 @@ O script deve falhar com caminho e padrao encontrados quando detectar:
 O script nao deve buscar o identificador generico `event`, evitando falsos
 positivos em `onChange`, `dispatchEvent`, `pointer-events` e service workers.
 
-- [ ] **Step 2: Expor e executar o gate**
+- [x] **Step 2: Expor e executar o gate**
 
 Adicionar a `package.json`:
 
@@ -519,7 +547,7 @@ Run: `npm run test:no-event-legacy`
 
 Expected: `PASS` com uma mensagem curta de que nao ha dependencias ativas.
 
-- [ ] **Step 3: Executar todos os gates obrigatorios com evidencia nova**
+- [x] **Step 3: Executar todos os gates obrigatorios com evidencia nova**
 
 Run, nesta ordem:
 
@@ -543,13 +571,13 @@ Usar `superpowers:requesting-code-review` para revisar o diff completo contra
 `origin/develop`, com foco nos cinco itens de **Review Focus**. Corrigir achados
 Critical/Important e repetir os gates afetados.
 
-- [ ] **Step 5: Registrar conclusao somente depois dos gates**
+- [x] **Step 5: Registrar conclusao somente depois dos gates**
 
 Marcar Task 1-5 neste plano, a Entrega 6 no plano incremental e todas as tarefas
 e aceites do PR06 no plano de reestruturacao como concluidos. Registrar a data,
 os comandos executados e que nenhum ambiente remoto foi alterado.
 
-- [ ] **Step 6: Verificar somente a mudanca documental final**
+- [x] **Step 6: Verificar somente a mudanca documental final**
 
 Run:
 
@@ -561,7 +589,7 @@ git diff --check
 
 Expected: todos `PASS` e nenhum erro de whitespace.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```powershell
 git add package.json scripts/verify-no-event-legacy.mjs docs/plano-execucao-incremental.md docs/plano-reestruturacao-loja-fisica.md docs/superpowers/plans/2026-10-05-remove-events-legacy.md

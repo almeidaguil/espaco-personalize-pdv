@@ -1,8 +1,9 @@
 # Plano De Reestruturacao Para Loja Fisica
 
-Estado atual: PR01 a PR05 concluidos. O runtime e o schema final ja operam sem
-o modulo de eventos; o PR06 permanece pendente ate a Task 5 comprovar todos os
-gates. PR07 (QA multioperador), PR08 (ambientes) e PR09 (release) seguem pendentes.
+Estado atual: PR01 a PR06 concluidos em implementacao e gates locais. O runtime
+e o schema final operam sem o modulo de eventos, com evidencia final da Task 5
+em 2026-10-06. A revisao independente e a integracao do PR06 seguem pendentes.
+PR07 (QA multioperador), PR08 (ambientes) e PR09 (release) seguem pendentes.
 
 ## 1. Objetivo
 
@@ -369,28 +370,35 @@ Testes e aceite:
 
 ### PR 06 - Remocao Completa De Eventos
 
-Status: pendente do gate final da Task 5. Os itens abaixo so serao marcados como
-concluidos depois da comprovacao de todos os gates.
+Status: implementacao, tarefas e aceites locais concluidos em 2026-10-06.
+Revisao independente e integracao pendentes com o controlador.
 
 Objetivo: eliminar o legado depois que nenhum fluxo depender dele.
 
 Tarefas:
 
-- [ ] Remover `/events` e `/events/new`.
-- [ ] Remover o modulo `src/modules/events`.
-- [ ] Remover eventos da navegacao, dashboard e mensagens.
-- [ ] Remover testes e fixtures exclusivas de eventos.
-- [ ] Remover `event_id` de `cash_sessions` e `sales`.
-- [ ] Remover FKs, indices, policies, RPCs e tipos legados.
-- [ ] Remover a tabela `events`.
-- [ ] Atualizar documentacao, manual e runbook.
+- [x] Remover `/events` e `/events/new`.
+- [x] Remover o modulo `src/modules/events`.
+- [x] Remover eventos da navegacao, dashboard e mensagens.
+- [x] Remover testes e fixtures exclusivas de eventos.
+- [x] Remover `event_id` de `cash_sessions` e `sales`.
+- [x] Remover FKs, indices, policies, RPCs e tipos legados.
+- [x] Remover a tabela `events`.
+- [x] Atualizar documentacao, manual e runbook.
 
 Testes e aceite:
 
-- [ ] Nenhuma dependencia de runtime referencia evento.
-- [ ] URLs antigas retornam `404` controlado ou redirecionamento documentado.
-- [ ] Banco novo e banco migrado chegam ao mesmo schema final.
-- [ ] Build, testes unitarios e E2E passam sem fixtures de evento.
+- [x] Nenhuma dependencia de runtime referencia evento.
+- [x] URLs antigas retornam `404` controlado ou redirecionamento documentado.
+- [x] Banco novo e banco migrado chegam ao mesmo schema final.
+- [x] Build, testes unitarios e E2E passam sem fixtures de evento.
+
+Evidencia final: `npm.cmd run format:check`, `npm.cmd run lint`,
+`npm.cmd run type-check`, `npm.cmd test`, `npm.cmd run test:no-event-legacy`,
+`npm.cmd run test:db`, `npm.cmd run build` e `npm.cmd run test:e2e:required`,
+nessa ordem, todos com exit code `0`. Foram aprovados 369 testes unitarios,
+111 asserts pgTAP por caminho de upgrade/reset, integracoes financeiras
+e 42 testes E2E sem skips. Nenhum Supabase/Vercel remoto foi acessado ou alterado.
 
 ### PR 07 - E2E Multioperador E Concorrencia
 

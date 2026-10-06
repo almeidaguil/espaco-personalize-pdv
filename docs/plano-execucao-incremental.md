@@ -3,8 +3,9 @@
 ## Estado Atual
 
 O runtime atual opera como loja fisica, com caixas independentes por operador.
-As entregas 1 a 5 estao concluidas. A entrega 6 ja removeu o modulo legado do
-runtime e do schema, mas permanece pendente do gate final da Task 5 do PR06.
+As entregas 1 a 6 estao concluidas em implementacao e gates locais. A entrega 6
+removeu o modulo legado do runtime e do schema, com evidencia final da Task 5
+em 2026-10-06. A revisao independente e a integracao do PR06 seguem pendentes.
 QA multioperador (PR07), ambientes (PR08) e release (PR09) continuam pendentes.
 
 O detalhamento de tarefas e criterios esta no
@@ -127,7 +128,8 @@ Criterio de pronto:
 
 ## Entrega 6 - Remocao Do Legado De Eventos
 
-Status: pendente. A conclusao do PR06 depende da Task 5 comprovar todos os gates.
+Status: concluida em implementacao e gates locais (PR06, 2026-10-06).
+A revisao independente e a integracao permanecem pendentes com o controlador.
 
 Objetivo: eliminar codigo e schema sem uso.
 
@@ -145,6 +147,13 @@ Criterio de pronto:
 - nenhuma dependencia de runtime referencia eventos;
 - banco vazio e atualizado resultam no mesmo schema;
 - todas as rotas e fluxos alvo passam.
+
+Evidencia final: `npm.cmd run format:check`, `npm.cmd run lint`,
+`npm.cmd run type-check`, `npm.cmd test`, `npm.cmd run test:no-event-legacy`,
+`npm.cmd run test:db`, `npm.cmd run build` e `npm.cmd run test:e2e:required`,
+nessa ordem, todos com exit code `0`. Foram aprovados 369 testes unitarios,
+111 asserts pgTAP em cada caminho de upgrade/reset, integracoes financeiras
+e 42 testes E2E sem skips. Nenhum ambiente remoto foi acessado ou alterado.
 
 ## Entrega 7 - QA Multioperador
 
