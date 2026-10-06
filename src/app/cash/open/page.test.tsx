@@ -11,12 +11,8 @@ vi.mock("@/modules/cash/presentation/open-cash-session-action", () => ({
   openCashSessionAction: vi.fn(),
 }));
 
-vi.mock("@/modules/cash/presentation/open-cash-session-form", () => ({
-  OpenCashSessionForm: () => <form aria-label="Formulario de abertura" />,
-}));
-
 describe("OpenCashPage", () => {
-  it("renders the event-free cash opening page", async () => {
+  it("offers the opening amount form for the authenticated operator cash", async () => {
     render(await OpenCashPage());
 
     expect(
@@ -35,6 +31,11 @@ describe("OpenCashPage", () => {
         name: "Fechar caixa",
       }),
     ).toHaveAttribute("href", "/cash/close");
-    expect(screen.getByLabelText("Formulario de abertura")).toBeInTheDocument();
+    expect(
+      screen.getByRole("textbox", { name: "Valor inicial" }),
+    ).toHaveAttribute("name", "openingAmountInReais");
+    expect(
+      screen.getByRole("button", { name: "Abrir caixa" }),
+    ).toBeInTheDocument();
   });
 });

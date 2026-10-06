@@ -98,21 +98,19 @@ describe("Home", () => {
     expect(screen.getByText("Bruno Lima")).toBeInTheDocument();
   });
 
-  it("does not render event operational content, queries, or links", async () => {
+  it("offers cash opening in the current operator panel", async () => {
     mockDashboardData("operator", []);
 
     render(await Home());
 
-    expect(screen.queryByText("Operação do dia")).not.toBeInTheDocument();
-    expect(screen.queryByText("Evento ativo")).not.toBeInTheDocument();
     const myCashPanel = screen.getByText("Meu caixa").closest("section");
 
     expect(myCashPanel).not.toBeNull();
     expect(
-      within(myCashPanel as HTMLElement).queryByRole("link", {
-        name: /Evento/,
+      within(myCashPanel as HTMLElement).getByRole("link", {
+        name: "Abrir caixa",
       }),
-    ).not.toBeInTheDocument();
+    ).toHaveAttribute("href", "/cash/open");
   });
 });
 

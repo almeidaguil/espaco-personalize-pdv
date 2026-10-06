@@ -12,6 +12,14 @@ vi.mock("@/modules/auth/presentation/logout-action", () => ({
 }));
 
 describe("AppHeader", () => {
+  it("does not offer removed event routes in navigation", () => {
+    render(<AppHeader title="PDV" />);
+
+    expect(
+      screen.queryByRole("link", { name: "Eventos" }),
+    ).not.toBeInTheDocument();
+  });
+
   it("renders sales navigation by default", () => {
     render(<AppHeader title="PDV" />);
 

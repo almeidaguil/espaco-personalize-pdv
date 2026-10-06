@@ -3,9 +3,12 @@ import { SupabaseSaleSummaryRepository } from "./supabase-sale-summary-repositor
 import { createSalesReadClient, saleRow } from "../testing/sales-read-client";
 
 describe("SupabaseSaleSummaryRepository", () => {
-  it("reads legacy and store sales without events and resolves operator names", async () => {
+  it("reads sales linked to operator cash sessions and resolves operator names", async () => {
     const client = createSalesReadClient({
-      sales: [saleRow(), saleRow({ id: "sale-2", event_id: null })],
+      sales: [
+        saleRow(),
+        saleRow({ id: "sale-2", cash_session_id: "cash-session-2" }),
+      ],
     });
     const result = await new SupabaseSaleSummaryRepository(client).list();
     expect(result).toMatchObject({
@@ -15,17 +18,13 @@ describe("SupabaseSaleSummaryRepository", () => {
           id: "sale-1",
           operatorId: "operator-1",
           operatorName: "Ana",
+          cashSessionId: "cash-session-1",
           businessDate: "2026-07-10",
           totalInReais: 30,
         },
-        { id: "sale-2", operatorName: "Ana" },
+        { id: "sale-2", operatorName: "Ana", cashSessionId: "cash-session-2" },
       ],
     });
-    expect(
-      client.calls
-        .filter(([method]) => method === "select")
-        .every(([, columns]) => !String(columns).includes("event")),
-    ).toBe(true);
   });
   it("keeps dashboard totals complete beyond one database page", async () => {
     const client = createSalesReadClient({
