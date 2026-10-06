@@ -342,4 +342,3 @@ drop table public.events;
 
 notify pgrst, 'reload schema';
 commit;
-
