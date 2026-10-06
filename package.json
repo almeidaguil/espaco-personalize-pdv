@@ -17,6 +17,7 @@
     "test:db": "node scripts/run-database-gate.mjs",
     "test:no-event-legacy": "node scripts/verify-no-event-legacy.mjs",
     "e2e:seed-local": "node scripts/seed-local-e2e-user.mjs",
+    "e2e:verify-env": "node scripts/verify-e2e-env.mjs",
     "test:e2e": "playwright test",
     "test:e2e:readonly": "playwright test --config playwright.readonly.config.ts",
     "test:e2e:required": "node scripts/verify-e2e-env.mjs && playwright test",
