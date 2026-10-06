@@ -131,7 +131,6 @@ try {
         operatorId: identities.operatorA.userId,
       }),
       {
-        event_id: null,
         id: cashSessionIds.operatorB,
         opened_at: "2026-09-15T14:00:00.000Z",
         opening_amount_in_cents: 0,
@@ -445,7 +444,6 @@ try {
   const { error: rpcSessionError } = await serviceClient
     .from("cash_sessions")
     .insert({
-      event_id: null,
       id: cashSessionIds.rpcTimestamp,
       opened_at: new Date(Date.now() - 60_000).toISOString(),
       opening_amount_in_cents: 0,
@@ -564,7 +562,6 @@ try {
   const { error: concurrentSessionError } = await serviceClient
     .from("cash_sessions")
     .insert({
-      event_id: null,
       id: cashSessionIds.rpcConcurrent,
       opened_at: new Date(Date.now() - 60_000).toISOString(),
       opening_amount_in_cents: 0,
@@ -830,7 +827,6 @@ function closedSession({
     closed_by: operatorId,
     counted_amount_in_cents: counted,
     difference_amount_in_cents: difference,
-    event_id: null,
     expected_amount_in_cents: expected,
     id,
     opened_at: openedAt,
@@ -854,7 +850,6 @@ function saleFixture({
     canceled_at: canceledAt,
     cash_session_id: cashSessionId,
     completed_at: completedAt,
-    event_id: null,
     id: randomUUID(),
     operator_id: operatorId,
     status,
@@ -885,7 +880,7 @@ function requireEnvironmentVariable(name) {
 }
 
 function isLocalHostname(hostname) {
-  return ["127.0.0.1", "::1", "localhost"].includes(hostname);
+  return ["127.0.0.1", "::1", "[::1]", "localhost"].includes(hostname);
 }
 
 async function cleanupTestData() {

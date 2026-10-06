@@ -138,7 +138,6 @@ try {
     "opening must return the complete persisted session row",
   );
   assert.equal(operatorACashSession.operator_id, operatorAIdentity.userId);
-  assert.equal(operatorACashSession.event_id, null);
   assert.equal(operatorACashSession.status, "open");
   assert.equal(operatorACashSession.opening_amount_in_cents, 1_000);
   assertServerTimestamp(
@@ -224,12 +223,6 @@ try {
     });
   assertPermissionDenied(directCashInsertError, "direct cash insert");
 
-  const { error: legacyOpenError } = await operatorAIdentity.client.rpc(
-    "open_cash_session_v2",
-    { p_opening_amount_in_cents: 0 },
-  );
-  assertPermissionDenied(legacyOpenError, "legacy V2 opening");
-
   const timezoneCashSessionId = randomUUID();
   const { data: timezoneCashSession, error: timezoneCashSessionError } =
     await serviceClient
@@ -239,7 +232,6 @@ try {
         closed_by: operatorBIdentity.userId,
         counted_amount_in_cents: 0,
         difference_amount_in_cents: 0,
-        event_id: null,
         expected_amount_in_cents: 0,
         id: timezoneCashSessionId,
         opened_at: "2026-01-02T01:00:00.000Z",
@@ -511,12 +503,11 @@ try {
   const { data: sale, error: saleReadError } = await operatorAIdentity.client
     .from("sales")
     .select(
-      "id,event_id,cash_session_id,operator_id,total_in_cents,completed_at,sale_items(quantity),payments(method,amount_in_cents,change_in_cents)",
+      "id,cash_session_id,operator_id,total_in_cents,completed_at,sale_items(quantity),payments(method,amount_in_cents,change_in_cents)",
     )
     .eq("id", saleId)
     .single();
   assert.equal(saleReadError, null, "operator A must read its own sale");
-  assert.equal(sale.event_id, null);
   assert.equal(sale.cash_session_id, operatorACashSessionId);
   assert.equal(sale.operator_id, operatorAIdentity.userId);
   assert.equal(sale.total_in_cents, 2_000);
@@ -581,40 +572,6 @@ try {
   assert.equal(adminPaymentsError, null);
   assert.equal(adminPayments.length, 1);
 
-  for (const [rpc, args] of [
-    [
-      "finalize_sale_v2",
-      {
-        p_sale_id: randomUUID(),
-        p_items: [{ product_id: productId, quantity: 1 }],
-        p_payment: {
-          method: "pix",
-          amount_in_cents: 1_000,
-          change_in_cents: 0,
-        },
-      },
-    ],
-    [
-      "finalize_sale",
-      {
-        p_sale_id: randomUUID(),
-        p_cash_session_id: operatorACashSessionId,
-        p_event_id: null,
-        p_completed_at: new Date().toISOString(),
-        p_items: [{ product_id: productId, quantity: 1 }],
-        p_payment: {
-          method: "pix",
-          amount_in_cents: 1_000,
-          change_in_cents: 0,
-        },
-        p_total_in_cents: 1_000,
-      },
-    ],
-  ]) {
-    const { error } = await operatorAIdentity.client.rpc(rpc, args);
-    assertPermissionDenied(error, rpc);
-  }
-
   const salePayload = {
     p_sale_id: randomUUID(),
     p_cash_session_id: operatorBCashSessionId,
@@ -635,7 +592,6 @@ try {
     .from("sales")
     .insert({
       cash_session_id: operatorACashSessionId,
-      event_id: null,
       operator_id: operatorAIdentity.userId,
       status: "completed",
       total_in_cents: 0,
@@ -893,7 +849,7 @@ function requireEnvironmentVariable(name) {
 }
 
 function isLocalHostname(hostname) {
-  return ["127.0.0.1", "::1", "localhost"].includes(hostname);
+  return ["127.0.0.1", "::1", "[::1]", "localhost"].includes(hostname);
 }
 
 function formatBusinessDate(date) {
