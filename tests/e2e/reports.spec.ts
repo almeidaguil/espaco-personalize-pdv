@@ -57,7 +57,6 @@ test.describe("relatório por período, vendedor e caixa", () => {
         closed_by: userId,
         counted_amount_in_cents: 3_400,
         difference_amount_in_cents: -100,
-        event_id: null,
         expected_amount_in_cents: 3_500,
         id: cashSessionId,
         opened_at: openedAt.toISOString(),
@@ -71,7 +70,6 @@ test.describe("relatório por período, vendedor e caixa", () => {
       {
         cash_session_id: cashSessionId,
         completed_at: completedAt.toISOString(),
-        event_id: null,
         id: completedSaleId,
         operator_id: userId,
         status: "completed",
@@ -81,7 +79,6 @@ test.describe("relatório por período, vendedor e caixa", () => {
         canceled_at: canceledAt.toISOString(),
         cash_session_id: cashSessionId,
         completed_at: canceledCompletedAt.toISOString(),
-        event_id: null,
         id: canceledSaleId,
         operator_id: userId,
         status: "canceled",
@@ -134,13 +131,23 @@ test.describe("relatório por período, vendedor e caixa", () => {
   test.afterAll(async () => {
     if (!serviceClient) return;
 
-    await serviceClient
+    const { error: salesError } = await serviceClient
       .from("sales")
       .delete()
       .in("id", [completedSaleId, canceledSaleId]);
-    await serviceClient.from("cash_sessions").delete().eq("id", cashSessionId);
-    if (productId)
-      await serviceClient.from("products").delete().eq("id", productId);
+    expect(salesError, "report sales cleanup").toBeNull();
+    const { error: cashSessionError } = await serviceClient
+      .from("cash_sessions")
+      .delete()
+      .eq("id", cashSessionId);
+    expect(cashSessionError, "report cash session cleanup").toBeNull();
+    if (productId) {
+      const { error: productError } = await serviceClient
+        .from("products")
+        .delete()
+        .eq("id", productId);
+      expect(productError, "report product cleanup").toBeNull();
+    }
   });
 
   test("mantém os totais da tela e do CSV consistentes", async ({ page }) => {

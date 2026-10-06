@@ -6,7 +6,6 @@ import { authenticatePage, hasAuthenticatedE2EConfig } from "./support/auth";
 const authenticatedRoutes = [
   "/",
   "/products",
-  "/events",
   "/pdv",
   "/cash/open",
   "/cash/close",
