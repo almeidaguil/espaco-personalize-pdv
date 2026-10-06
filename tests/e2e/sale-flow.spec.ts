@@ -6,6 +6,7 @@ import {
   closeOwnOpenCashSession,
   openCashSessionThroughUi,
 } from "./support/cash";
+import { createTestProductWithStock } from "./support/store";
 
 test.beforeEach(async () => {
   getE2EUserCredentials();
@@ -16,13 +17,8 @@ test.afterEach(async () => {
 });
 
 test("admin creates and cancels a sale restoring stock", async ({ page }) => {
-  const uniqueSuffix = crypto.randomUUID();
-  const productName = `Venda E2E Produto ${uniqueSuffix}`;
-  const productSku = `VENDA-E2E-${uniqueSuffix.slice(0, 8)}`;
-
   await authenticatePage(page);
-  await createProduct(page, productName, productSku);
-  await addInitialStock(page, productName, 3);
+  const { productName } = await createTestProductWithStock(page, 3);
   await openCashSessionThroughUi(page);
   await createSale(page, productName, {
     receivedAmount: "20,00",
@@ -47,13 +43,8 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
 test("admin records non-cash sales and closes cash with reconciliation", async ({
   page,
 }) => {
-  const uniqueSuffix = crypto.randomUUID();
-  const productName = `Pagamento E2E Produto ${uniqueSuffix}`;
-  const productSku = `PAG-E2E-${uniqueSuffix.slice(0, 8)}`;
-
   await authenticatePage(page);
-  await createProduct(page, productName, productSku);
-  await addInitialStock(page, productName, 4);
+  const { productName } = await createTestProductWithStock(page, 4);
   const session = await openCashSessionThroughUi(page);
 
   await createSale(page, productName, {
@@ -72,38 +63,6 @@ test("admin records non-cash sales and closes cash with reconciliation", async (
 
   await closeCashSessionThroughUi(page, session.id);
 });
-
-async function createProduct(page: Page, productName: string, sku: string) {
-  await page.goto("/products/new");
-  await page.getByLabel("Nome do produto").fill(productName);
-  await page.locator("#priceInReais").fill("15,00");
-  await page.getByLabel("SKU").fill(sku);
-  await page.getByRole("button", { name: "Salvar produto" }).click();
-
-  await expect(page.getByText("Produto cadastrado com sucesso.")).toBeVisible();
-}
-
-async function addInitialStock(
-  page: Page,
-  productName: string,
-  quantity: number,
-) {
-  await page.goto("/stock");
-
-  const productOptionValue = await page
-    .locator("select#productId option", { hasText: productName })
-    .getAttribute("value");
-
-  expect(productOptionValue).not.toBeNull();
-
-  await page
-    .getByLabel("Produto", { exact: true })
-    .selectOption(productOptionValue ?? "");
-  await page.getByLabel("Quantidade").fill(String(quantity));
-  await page.getByRole("button", { name: "Registrar ajuste" }).click();
-
-  await expect(page.getByText("Estoque ajustado com sucesso.")).toBeVisible();
-}
 
 type CreateSaleOptions = {
   paymentMethodLabel?: "Cartão de crédito" | "Cartão de débito" | "Pix";
