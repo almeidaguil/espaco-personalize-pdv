@@ -6,8 +6,6 @@ const readOnlyRoutes = [
   { heading: /Caixa aberto|Caixa fechado/, path: "/" },
   { heading: "Produtos", path: "/products" },
   { heading: "Novo produto", path: "/products/new" },
-  { heading: "Eventos", path: "/events" },
-  { heading: "Novo evento", path: "/events/new" },
   { heading: "Estoque", path: "/stock" },
   { heading: "PDV", path: "/pdv" },
   { heading: "Abrir caixa", path: "/cash/open" },

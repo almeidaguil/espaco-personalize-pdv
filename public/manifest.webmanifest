@@ -1,7 +1,7 @@
 {
   "name": "Roberto Multimarcas",
   "short_name": "RM PDV",
-  "description": "Sistema privado para vendas presenciais em eventos.",
+  "description": "Sistema privado de vendas e gestão da loja física Roberto Multimarcas.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

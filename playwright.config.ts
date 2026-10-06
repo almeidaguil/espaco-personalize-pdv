@@ -13,7 +13,6 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: false,
-  globalSetup: "./tests/e2e/global-setup.ts",
   reporter: process.env.CI ? [["github"], ["list"]] : "list",
   testDir: "./tests/e2e",
   timeout: 60_000,

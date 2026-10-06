@@ -19,10 +19,10 @@ describe("getAuthRouteProtectionDecision", () => {
       getAuthRouteProtectionDecision({
         isAuthenticated: false,
         pathname: "/pdv",
-        search: "?eventId=event-1",
+        search: "?cashSessionId=cash-session-1",
       }),
     ).toEqual({
-      destination: "/login?next=%2Fpdv%3FeventId%3Devent-1",
+      destination: "/login?next=%2Fpdv%3FcashSessionId%3Dcash-session-1",
       type: "redirect",
     });
   });

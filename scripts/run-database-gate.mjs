@@ -1,5 +1,14 @@
 import { spawnSync } from "node:child_process";
 
+if (process.argv.length > 2) {
+  throw new Error(
+    "The database gate accepts no arguments, including --linked.",
+  );
+}
+if (process.env.DATABASE_TEST_SUPABASE_URL) {
+  assertLocalUrl(process.env.DATABASE_TEST_SUPABASE_URL);
+}
+
 const npxCommand = process.platform === "win32" ? "npx.cmd" : "npx";
 const statusResult = spawnSync(
   npxCommand,
@@ -35,10 +44,9 @@ if (missingVariables.length > 0) {
 
 const apiUrl = new URL(localEnvironment.API_URL);
 
-if (!isLocalHostname(apiUrl.hostname)) {
-  console.error("Refusing to run the database gate against a remote Supabase.");
-  process.exit(1);
-}
+assertLocalUrl(apiUrl.toString());
+if (localEnvironment.DB_URL) assertLocalUrl(localEnvironment.DB_URL);
+console.log(`Database gate local hostname: ${apiUrl.hostname}`);
 
 const testEnvironment = {
   ...process.env,
@@ -48,18 +56,18 @@ const testEnvironment = {
   SUPABASE_TELEMETRY_DISABLED: "1",
 };
 
-runRequiredCommand(npxCommand, ["supabase", "db", "reset", "--local", "--yes"]);
-runRequiredCommand(npxCommand, [
-  "supabase",
-  "test",
-  "db",
-  "supabase/tests/database",
-  "--local",
-]);
-runRequiredCommand(process.execPath, ["scripts/test-store-database.mjs"]);
+console.log("Database gate: upgrade from PR05.");
+resetLocalDatabase(["--version", "20261003120000"]);
 runRequiredCommand(process.execPath, [
-  "scripts/test-sales-report-database.mjs",
+  "scripts/test-remove-events-upgrade.mjs",
+  "seed",
 ]);
+runRequiredCommand(npxCommand, ["supabase", "migration", "up", "--local"]);
+runDatabaseTests(true);
+
+console.log("Database gate: fresh reset.");
+resetLocalDatabase([]);
+runDatabaseTests(false);
 
 console.log("Database gate completed successfully.");
 
@@ -73,6 +81,47 @@ function runRequiredCommand(command, args) {
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
+  }
+}
+
+function resetLocalDatabase(versionArgs) {
+  assertLocalUrl(testEnvironment.DATABASE_TEST_SUPABASE_URL);
+  if (localEnvironment.DB_URL) assertLocalUrl(localEnvironment.DB_URL);
+  runRequiredCommand(npxCommand, [
+    "supabase",
+    "db",
+    "reset",
+    "--local",
+    "--yes",
+    ...versionArgs,
+  ]);
+}
+
+function runDatabaseTests(verifyUpgrade) {
+  runRequiredCommand(npxCommand, [
+    "supabase",
+    "test",
+    "db",
+    "supabase/tests/database",
+    "--local",
+  ]);
+  if (verifyUpgrade) {
+    runRequiredCommand(process.execPath, [
+      "scripts/test-remove-events-upgrade.mjs",
+      "verify",
+    ]);
+  }
+  runRequiredCommand(process.execPath, ["scripts/test-store-database.mjs"]);
+  runRequiredCommand(process.execPath, [
+    "scripts/test-sales-report-database.mjs",
+  ]);
+}
+
+function assertLocalUrl(value) {
+  if (!isLocalHostname(new URL(value).hostname)) {
+    throw new Error(
+      "Refusing to run the database gate against a remote Supabase.",
+    );
   }
 }
 
@@ -101,5 +150,5 @@ function stripWrappingQuotes(value) {
 }
 
 function isLocalHostname(hostname) {
-  return ["127.0.0.1", "::1", "localhost"].includes(hostname);
+  return ["127.0.0.1", "::1", "[::1]", "localhost"].includes(hostname);
 }

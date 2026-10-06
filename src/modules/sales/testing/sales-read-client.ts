@@ -2,7 +2,6 @@ type Row = Record<string, unknown>;
 export function saleRow(overrides: Row = {}) {
   return {
     id: "sale-1",
-    event_id: "legacy-event",
     cash_session_id: "cash-session-1",
     operator_id: "operator-1",
     completed_at: "2026-07-10T12:00:00.000Z",

@@ -3,8 +3,11 @@
 Sistema privado, mobile first e PWA para vendas, estoque, caixas por operador e
 relatorios de uma loja fisica.
 
-O repositorio esta em transicao do fluxo legado orientado a eventos para a
-operacao permanente da Roberto Multimarcas. Consulte o
+O runtime opera com caixas individuais por operador. O modulo da operacao
+anterior foi removido da aplicacao e do schema final. Cada operador pode manter
+um caixa aberto, operadores diferentes podem trabalhar simultaneamente e uma
+nova sessao pode ser aberta no mesmo dia depois do fechamento. O servidor
+identifica o responsavel pela sessao autenticada. Consulte o
 [plano de reestruturacao](docs/plano-reestruturacao-loja-fisica.md) e o
 [ADR de caixas por operador](docs/adr/0001-loja-fisica-caixas-por-operador.md).
 

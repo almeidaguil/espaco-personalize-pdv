@@ -1,391 +1,203 @@
-# Manual Do Usuario Final
+# Manual Do Usuário Final
 
-Este manual explica como usar o Espaco Personalize PDV no dia a dia. O foco e operacao rapida em eventos presenciais.
+Este manual orienta a operação diária da loja física Roberto Multimarcas.
+O sistema é privado, exige login e pode ser instalado como PWA.
 
-## Perfis Do Sistema
+## Perfis E Responsabilidades
 
-### Admin
+O operador abre o próprio caixa, vende, consulta suas vendas e fecha sua sessão.
+Pode consultar produtos, estoque e relatórios dentro das permissões de acesso.
+Não pode operar nem fechar o caixa de outro vendedor.
 
-Pode:
+O admin gerencia produtos, ajustes de estoque e usuários em `Configurações`,
+consulta todos os caixas e vendas e executa fechamento administrativo em
+contingência. Também pode abrir o próprio caixa e vender, seguindo as mesmas
+regras dos operadores.
 
-- acessar `Configuracoes`;
-- criar usuarios;
-- promover operador para admin;
-- redefinir senha temporaria;
-- ativar e desativar acessos;
-- cadastrar produtos;
-- ajustar estoque;
-- criar e finalizar eventos;
-- acompanhar relatorios;
-- cancelar vendas com senha administrativa;
-- autorizar fechamento de caixa com falta.
+Cada usuário pode manter no máximo um caixa aberto por vez. Operadores
+diferentes podem ter caixas abertos simultaneamente. O estoque é compartilhado
+pela loja; as vendas e os pagamentos ficam vinculados ao operador e ao seu caixa.
 
-### Operador
+## Preparação Do Dia Ou Turno
 
-Pode:
+Antes de começar, confirme:
 
-- entrar no sistema;
-- abrir caixa;
-- vender no PDV;
-- consultar vendas;
-- fechar o proprio caixa;
-- consultar produtos, eventos, estoque e relatorios conforme liberado pela navegacao.
+- acesso ativo do operador e disponibilidade de um admin;
+- internet no dispositivo;
+- produtos ativos cadastrados e saldos corretos em `/stock`;
+- dinheiro inicial disponível para abrir o próprio caixa.
 
-Nao pode:
+O cadastro de produto não acrescenta estoque: o admin registra o saldo por
+movimentação em `/stock`. Vendas, caixa, estoque e relatórios dependem de conexão
+com o servidor nesta versão.
 
-- acessar `Configuracoes` administrativas;
-- criar ou promover usuarios;
-- alterar regras criticas sem validacao do servidor.
+## Login E Instalação Do App
 
-## Antes De Comecar
+1. Acesse `/login` e informe `E-mail` e `Senha`.
+2. Use `Mostrar` se precisar conferir a senha e `Lembrar e-mail` se desejar
+   guardar o e-mail no dispositivo.
+3. Clique em `Entrar` e confira o painel em `/dashboard`.
 
-Antes de iniciar um evento, confirme:
+Se esquecer a senha, solicite a redefinição a um admin em `/settings`.
+Nesta versão não há recuperação autônoma de senha pelo usuário.
 
-- o usuario consegue entrar em `/login`;
-- existe pelo menos um evento ativo;
-- os produtos estao cadastrados;
-- o estoque foi ajustado em `/stock`;
-- o operador que vai vender ja tem acesso criado;
-- o caixa sera aberto para o evento correto;
-- o dispositivo esta com internet.
+Para instalar o PWA, abra o sistema no navegador e use `Instalar app`,
+`Adicionar à tela inicial` ou a opção equivalente. Confirme e abra o app instalado.
+Se aparecer `Sem conexão`, interrompa a operação e reconecte o dispositivo.
 
-Observacoes importantes:
+## Abrir O Próprio Caixa
 
-- o sistema e privado e exige autenticacao;
-- o sistema agora pode ser instalado como PWA;
-- se a conexao cair, o app mostra aviso de `Sem conexao`;
-- nesta versao, vendas, caixa, estoque e relatorios dependem de conexao com o servidor;
-- cadastro de produto nao adiciona estoque sozinho: o saldo deve ser registrado em `/stock`.
+1. Confira `Meu caixa` no painel.
+2. Se ainda não houver caixa aberto, acesse `/cash/open`.
+3. Informe `Valor inicial`, correspondente ao dinheiro físico disponível.
+4. Clique em `Abrir caixa` e aguarde a confirmação.
+5. Abra `/pdv` e confira a identificação da sua sessão.
 
-## Como Entrar No Sistema
+O sistema associa a abertura ao usuário autenticado e calcula a data operacional
+no fuso de São Paulo. Se o seu caixa já estiver aberto, continue nessa sessão.
+Uma segunda abertura simultânea para o mesmo usuário é recusada.
 
-1. Acesse `/login`.
-2. Informe `E-mail`.
-3. Informe `Senha`.
-4. Se quiser, use `Mostrar` para conferir a senha digitada.
-5. Se usar sempre o mesmo dispositivo, marque `Lembrar e-mail`.
-6. Clique em `Entrar`.
+## Realizar Uma Venda
 
-Se esquecer a senha:
+1. Acesse `/pdv` e confira o seu caixa aberto.
+2. Em `Buscar produto`, pesquise por nome ou SKU.
+3. Clique em `Adicionar` e ajuste as quantidades com `+` e `-`.
+4. Confira os itens, o estoque disponível e o total.
+5. Escolha `Dinheiro`, `Pix`, `Cartão de crédito` ou `Cartão de débito`.
+6. Para dinheiro, informe `Valor recebido` e confira o troco. O valor deve cobrir
+   o total. Nos demais meios, `Valor do pagamento` corresponde ao total da venda.
+7. Confirme o recebimento e clique em `Finalizar venda`.
+8. Aguarde a mensagem de sucesso antes de iniciar outra venda.
 
-- o proprio usuario nao redefine a senha sozinho nesta versao;
-- solicite a redefinicao a um admin em `Configuracoes`.
+O PDV usa automaticamente o caixa aberto do usuário autenticado. Sem esse caixa,
+a tela orienta a abertura e bloqueia a finalização. O servidor valida identidade,
+caixa, produtos, preços, estoque e pagamento ao concluir a operação.
 
-## Como Instalar Como App
+A venda registra itens, pagamento e baixa de estoque. Pix e cartão são registrados
+no sistema; a confirmação do recebimento ocorre na conta ou no terminal usado
+pela loja, sem integração automática com esses serviços.
 
-No celular ou computador:
-
-1. Abra o sistema no navegador.
-2. Procure a opcao `Instalar app`, `Adicionar a tela inicial` ou equivalente do navegador.
-3. Confirme a instalacao.
-4. Abra o app instalado normalmente.
-
-Se o dispositivo ficar sem internet:
-
-- o sistema mostra um aviso no topo;
-- ao navegar sem conexao, o app pode exibir uma tela informando que e preciso reconectar para continuar usando o PDV.
-
-## Fluxo Do Operador
-
-## 1. Verificar O Painel
-
-Apos o login, o painel mostra o estado operacional do dia. Use os atalhos principais:
-
-- `Produtos`
-- `Estoque`
-- `Eventos`
-- `PDV`
-- `Caixa`
-- `Relatorios`
-
-Se nao houver evento ativo, o painel orienta a criar um evento antes de vender.
-
-## 2. Abrir Caixa
-
-1. Acesse `/cash/open`.
-2. Escolha o evento.
-3. Informe o valor inicial.
-4. Clique em `Abrir caixa`.
-
-Resultado esperado:
-
-- o caixa passa a ficar disponivel no PDV;
-- o sistema vincula o caixa ao operador e ao evento.
-
-## 3. Realizar Uma Venda
-
-1. Acesse `/pdv`.
-2. Confirme se ha evento ativo.
-3. Confirme se existe caixa aberto.
-4. Em `Buscar produto`, pesquise por nome ou SKU.
-5. Clique em `Adicionar` no produto desejado.
-6. Ajuste a quantidade com `+` e `-`.
-7. Confira o `Total`.
-8. Em `Caixa da venda`, escolha o caixa correto.
-9. Informe o `Valor recebido`.
-10. Confira o troco mostrado na tela.
-11. Clique em `Finalizar venda`.
-
-Comportamentos importantes:
-
-- a lista de produtos no PDV e paginada;
-- o valor recebido deve ser suficiente para a venda;
-- o botao de finalizar fica preso na area inferior no mobile para acelerar a operacao;
-- a venda registra historico financeiro e baixa de estoque automaticamente;
-- nesta versao, o fluxo operacional visivel do PDV esta preparado para venda com valor recebido e troco.
-
-## 4. Consultar Vendas
+## Consultar E Cancelar Vendas
 
 1. Acesse `/sales`.
-2. Abra a lista de vendas registradas.
-3. Entre no detalhe da venda que deseja conferir.
+2. Use os filtros de período operacional, operador, sessão de caixa e status.
+3. Clique em `Filtrar` e abra a venda em `/sales/[id]` para conferir os detalhes.
 
-No detalhe da venda, e possivel:
+Operadores consultam as próprias vendas; admins podem consultar todas.
+O período operacional considera a data de abertura do caixa no fuso de São Paulo.
 
-- revisar os itens vendidos;
-- conferir os valores;
-- cancelar a venda quando houver autorizacao administrativa.
+Para cancelar, solicite autorização administrativa:
 
-## 5. Cancelar Uma Venda
+1. Confira itens e valores no detalhe da venda.
+2. Na seção `Cancelamento da venda`, informe `Senha administrativa` de um admin
+   ativo e autorizado.
+3. Marque a confirmação e clique em `Cancelar venda`.
+4. Aguarde a confirmação e confira o status e a devolução do estoque.
 
-O cancelamento exige validacao administrativa.
+A venda cancelada permanece no histórico. O cancelamento devolve estoque e
+compensa o financeiro. Após o fechamento do caixa, gera ajuste financeiro separado
+e mantém a conferência original do fechamento; o relatório mostra esse ajuste
+na data do cancelamento.
 
-1. Acesse o detalhe da venda em `/sales/[id]`.
-2. Localize a secao `Cancelamento`.
-3. Informe a `Senha administrativa`.
-4. Marque a confirmacao de cancelamento.
-5. Clique em `Cancelar venda`.
+## Fechar E Reabrir Caixa
 
-O que acontece ao cancelar:
+1. Pare novas vendas e aguarde a conclusão das operações em andamento.
+2. Acesse `/cash/close` e confira seu nome, horário de abertura e identificação
+   da sessão.
+3. Revise `Valor inicial`, `Vendas`, `Esperado` e `Cancelado`.
+4. Conte o dinheiro físico e preencha `Valor contado no caixa`.
+5. Confira a diferença exibida.
+6. Se houver falta, solicite a senha de um admin ativo e preencha
+   `Senha administrativa` para autorizar o fechamento.
+7. Clique em `Fechar caixa`.
+8. Aguarde a mensagem de sucesso e confira a sessão no relatório.
 
-- a venda permanece registrada no historico;
-- o status da venda muda para cancelada;
-- o estoque dos itens volta automaticamente.
+O dinheiro esperado considera o valor inicial e os pagamentos em dinheiro,
+descontando troco e cancelamentos aplicáveis. Pix, crédito e débito ficam na
+conciliação, mas não compõem o dinheiro físico esperado.
 
-Importante:
+Depois de fechar, você pode abrir outra sessão em `/cash/open`, inclusive no
+mesmo dia, informando o novo valor inicial. As sessões mantêm históricos separados.
+Fechar seu caixa não interrompe caixas de outros operadores.
 
-- use a senha real de um usuario admin ativo;
-- nao use senhas temporarias de homologacao em producao.
+Em contingência, o admin entra com a própria conta em `/cash/close`, identifica
+o caixa do operador e executa a conferência e o fechamento. O sistema registra
+quem realizou o fechamento. O admin usa o próprio caixa quando precisa vender.
 
-## 6. Fechar Caixa
+## Produtos E Estoque
 
-1. Acesse `/cash/close`.
-2. Localize o caixa aberto correto.
-3. Confira:
-   `Inicial`, `Vendido`, `Esperado`, `Cancelado`
-4. Informe o `Valor contado no caixa`.
-5. Clique em `Fechar caixa`.
+Para cadastrar um produto, o admin acessa `/products`, clica em `Novo produto`,
+preenche os campos do formulário e salva. Para editar, abre a edição do produto
+na lista. A alteração do cadastro não altera o saldo de estoque.
 
-Se o valor contado for menor que o esperado:
+Para registrar saldo ou correção:
 
-- a tela mostra quanto esta faltando;
-- o sistema exige `Senha administrativa`;
-- o fechamento so e concluido com a autorizacao correta.
+1. O admin acessa `/stock` e localiza `Registrar movimentação`.
+2. Escolhe um produto ativo.
+3. Seleciona `Ajuste inicial` para entrada positiva ou `Ajuste manual` para
+   entrada positiva ou saída negativa.
+4. Informa `Quantidade` e clica em `Registrar ajuste`.
+5. Confere o saldo e o histórico na mesma tela.
 
-Use a senha real de um usuario admin ativo.
+Cada ajuste gera uma movimentação. Vendas e cancelamentos também aparecem no
+histórico; o estoque não deve ser corrigido diretamente pelo cadastro de produto.
 
-## Rotina Do Admin
+## Gestão De Usuários
 
-## 1. Cadastrar Produto
+Estas ações estão em `/settings` e são exclusivas do admin:
 
-1. Acesse `/products`.
-2. Clique em `Novo produto`.
-3. Preencha nome, SKU, preco e status.
-4. Salve o cadastro.
+- Em `Criar operador`, informar nome completo, e-mail e senha temporária e
+  clicar em `Criar operador`. A conta é criada com perfil `Operador`.
+- Na lista de usuários, alterar `Perfil` entre `Operador` e `Admin` e clicar
+  em `Salvar` conforme a responsabilidade da pessoa.
+- Em `Nova senha temporária`, informar a nova senha e clicar em `Redefinir`.
+  Entregar a credencial por canal seguro.
+- Usar `Desativar acesso` ou `Ativar acesso` conforme a necessidade operacional.
+  A desativação preserva o histórico.
 
-Lembrete:
+O admin não pode rebaixar o próprio perfil nem desativar o próprio acesso nessa
+tela. Antes de desativar um operador, confira suas pendências e feche o caixa
+em contingência, se necessário. Não compartilhe a senha administrativa entre
+pessoas que não tenham responsabilidade de autorização.
 
-- produto cadastrado ainda nao possui saldo por si so;
-- o estoque precisa ser alimentado depois em `/stock`.
-
-## 2. Ajustar Estoque
-
-1. Acesse `/stock`.
-2. Em `Registrar movimentacao`, escolha o produto.
-3. Informe a quantidade.
-4. Escolha o tipo de movimentacao disponivel.
-5. Informe o motivo quando aplicavel.
-6. Confirme a acao.
-
-Na mesma tela, o admin consegue acompanhar:
-
-- estoque atual;
-- historico de movimentacoes.
-
-## 3. Criar Evento
-
-1. Acesse `/events`.
-2. Clique em `Novo evento`.
-3. Preencha:
-   `Nome do evento`, `Local`, `Inicio`, `Termino`
-4. Mantenha marcado `Evento ativo` quando o evento deve entrar em operacao.
-5. Clique em `Salvar evento`.
-
-Regra atual:
-
-- o sistema trabalha com apenas um evento ativo por vez;
-- um evento pode ter varios caixas abertos;
-- um evento com caixa aberto nao deve ser finalizado antes do fechamento dos caixas.
-
-## 4. Finalizar Evento
-
-1. Acesse `/events`.
-2. Localize o evento ativo.
-3. Use a acao de encerramento disponivel na lista.
-
-Antes de finalizar:
-
-- confirme que nao ha caixa aberto para o evento;
-- confirme que todas as vendas e conferencias do dia ja foram encerradas.
-
-## 5. Criar Novo Usuario Operador
-
-1. Acesse `/settings`.
-2. Na secao `Criar operador`, preencha:
-   `Nome completo`, `E-mail`, `Senha temporaria`
-3. Clique em `Criar operador`.
-
-Resultado esperado:
-
-- o novo usuario nasce como `Operador`;
-- ele ja pode entrar com a senha temporaria informada.
-
-## 6. Promover Operador Para Admin
-
-1. Acesse `/settings`.
-2. Na lista `Usuarios do sistema`, localize o usuario.
-3. No campo `Perfil`, altere de `Operador` para `Admin`.
-4. Clique em `Salvar`.
-
-Use isso apenas quando a pessoa realmente precisar:
-
-- configuracoes;
-- gestao de usuarios;
-- estoque;
-- eventos;
-- relatorios;
-- autorizacoes administrativas.
-
-## 7. Rebaixar Admin Para Operador
-
-1. Acesse `/settings`.
-2. Localize o usuario admin.
-3. No campo `Perfil`, altere para `Operador`.
-4. Clique em `Salvar`.
-
-Observacao:
-
-- um admin nao consegue remover o proprio privilegio de admin pela propria linha quando isso bloquearia a administracao atual.
-
-## 8. Redefinir Senha De Um Usuario
-
-1. Acesse `/settings`.
-2. Localize o usuario.
-3. Na area `Senha temporaria`, informe a nova senha.
-4. Clique em `Redefinir`.
-5. Entregue a senha ao usuario por um canal seguro.
-
-Boa pratica:
-
-- oriente o usuario a trocar a senha temporaria assim que o fluxo oficial de troca estiver disponivel.
-
-## 9. Ativar Ou Desativar Usuario
-
-1. Acesse `/settings`.
-2. Localize o usuario.
-3. Clique em `Desativar` para bloquear o acesso.
-4. Clique em `Ativar` para liberar novamente.
-
-Importante:
-
-- a desativacao nao apaga historico;
-- o usuario apenas perde o acesso operacional.
-
-## 10. Consultar Relatorios
+## Relatórios E Exportação CSV
 
 1. Acesse `/reports`.
-2. Escolha o evento desejado.
-3. Revise os totais e os produtos vendidos.
-4. Use a exportacao CSV quando precisar compartilhar ou auditar os dados fora do sistema.
+2. Informe `Data inicial` e `Data final` do período operacional.
+3. Escolha `Vendedor` e `Sessão de caixa` para detalhar ou mantenha todas as
+   opções permitidas para consolidar.
+4. Clique em `Aplicar filtros`.
+5. Confira receita, vendas canceladas, ajustes após fechamento, pagamentos,
+   sessões, produtos e divergências.
+6. Clique em `Exportar CSV` e confira os dados com os mesmos filtros da tela.
 
-Use os relatorios para:
+O admin pode consolidar os caixas da loja; o operador consulta apenas os dados
+permitidos do próprio usuário. Uma sessão que atravesse a meia-noite mantém a
+data operacional calculada na abertura.
 
-- fechamento do evento;
-- conferencia de vendas;
-- comparacao entre eventos;
-- apoio ao controle de estoque.
+## Checklist Diário
 
-## Checklist Rapido De Operacao
+No início do dia ou turno: validar acesso, internet, produtos e estoque; abrir
+o próprio caixa e conferir a sessão no PDV.
 
-### Inicio Do Evento
+Durante a operação: conferir itens, pagamento e troco; aguardar confirmação;
+solicitar admin para cancelamentos, faltas ou contingência de fechamento.
 
-1. Confirmar evento ativo.
-2. Confirmar produtos cadastrados.
-3. Confirmar estoque ajustado.
-4. Confirmar operadores com acesso.
-5. Abrir caixa.
-6. Testar uma navegacao rapida no PDV.
+No encerramento do dia: conferir vendas, fechar cada caixa, revisar os relatórios
+e guardar o CSV conforme a rotina financeira da loja.
 
-### Durante O Evento
+## Solução De Problemas
 
-1. Vender somente com caixa aberto.
-2. Conferir troco antes de finalizar.
-3. Consultar vendas quando houver duvida.
-4. Chamar admin para cancelamentos e faltas no caixa.
+- Falha de login: confira e-mail e senha; peça ao admin para verificar o acesso
+  e redefinir a senha, se necessário.
+- Produto ausente: limpe a busca e confira cadastro ativo e saldo em `/stock`.
+- Venda bloqueada: confira seu caixa aberto, itens, estoque e valor do pagamento.
+  Se a resposta da finalização for incerta, consulte `/sales` antes de tentar
+  novamente para evitar duplicidade.
+- Sem internet: pare a operação, reconecte e recarregue a página. Confira a
+  última venda antes de retomar.
+- Caixa com falta: reconte o dinheiro, revise as vendas e solicite autorização
+  administrativa se a divergência persistir.
 
-### Encerramento Do Evento
-
-1. Conferir vendas.
-2. Fechar todos os caixas.
-3. Revisar relatorios.
-4. Finalizar o evento.
-
-## Solucao De Problemas
-
-### Nao consigo entrar
-
-Verifique:
-
-- e-mail digitado corretamente;
-- senha correta;
-- se o acesso esta ativo;
-- se um admin pode redefinir sua senha.
-
-### Nao aparece produto no PDV
-
-Verifique:
-
-- se o produto esta ativo;
-- se o produto foi cadastrado corretamente;
-- se a busca por nome ou SKU esta filtrando demais.
-
-### Nao consigo vender
-
-Verifique:
-
-- se existe evento ativo;
-- se existe caixa aberto;
-- se ha itens no carrinho;
-- se o valor recebido foi informado;
-- se o valor recebido cobre o total da venda.
-
-### O sistema ficou sem internet
-
-Com a conexao indisponivel:
-
-- o aviso `Sem conexao` aparece no topo;
-- a operacao do PDV deve ser interrompida;
-- reconecte o dispositivo e recarregue a pagina.
-
-### Preciso cancelar venda ou fechar caixa com falta
-
-Solicite um admin com a senha administrativa operacional.
-
-Use a senha real de um usuario admin ativo.
-
-## Observacoes Finais
-
-- senhas temporarias de homologacao devem ser trocadas antes da producao;
-- o sistema foi desenhado para deixar a regra critica no servidor;
-- cancelamento de venda, fechamento de caixa com falta e ajustes sensiveis sempre dependem de validacao controlada;
-- antes da entrega final ao cliente, vale limpar os dados de homologacao e manter apenas os acessos reais necessarios.
+Para a rotina completa e resposta a incidentes, consulte o
+[Runbook operacional](runbook-operacional.md).

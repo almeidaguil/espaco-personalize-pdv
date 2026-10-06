@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(61);
+select extensions.plan(51);
 
 select extensions.has_column(
   'public',
@@ -44,28 +44,6 @@ select extensions.is(
   ),
   true,
   'business_date is required'
-);
-
-select extensions.is(
-  (
-    select attributes.attnotnull
-    from pg_catalog.pg_attribute as attributes
-    where attributes.attrelid = 'public.cash_sessions'::regclass
-      and attributes.attname = 'event_id'
-  ),
-  false,
-  'cash_sessions.event_id is nullable during the transition'
-);
-
-select extensions.is(
-  (
-    select attributes.attnotnull
-    from pg_catalog.pg_attribute as attributes
-    where attributes.attrelid = 'public.sales'::regclass
-      and attributes.attname = 'event_id'
-  ),
-  false,
-  'sales.event_id is nullable during the transition'
 );
 
 select extensions.has_column(
@@ -161,13 +139,6 @@ select extensions.ok(
 select extensions.ok(
   to_regprocedure('public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)') is not null,
   'the event-free sale RPC exists'
-);
-
-select extensions.ok(
-  to_regprocedure(
-    'public.finalize_sale(uuid,uuid,uuid,timestamp with time zone,jsonb,jsonb,integer)'
-  ) is not null,
-  'the legacy finalize_sale RPC remains available'
 );
 
 select extensions.ok(
@@ -305,17 +276,6 @@ select extensions.is(
     select array_to_string(procedures.proconfig, ',')
     from pg_catalog.pg_proc as procedures
     where procedures.oid =
-      'public.finalize_sale(uuid,uuid,uuid,timestamp with time zone,jsonb,jsonb,integer)'::regprocedure
-  ),
-  'search_path=pg_catalog, public, pg_temp',
-  'legacy finalize_sale has a controlled search_path'
-);
-
-select extensions.is(
-  (
-    select array_to_string(procedures.proconfig, ',')
-    from pg_catalog.pg_proc as procedures
-    where procedures.oid =
       'public.cancel_sale(uuid,timestamp with time zone,text)'::regprocedure
   ),
   'search_path=pg_catalog, public, pg_temp',
@@ -341,24 +301,6 @@ select extensions.is(
   ),
   'search_path=pg_catalog, public, auth, extensions, pg_temp',
   'verify_admin_password has a controlled search_path'
-);
-
-select extensions.ok(
-  not has_function_privilege(
-    'authenticated',
-    'public.finalize_sale(uuid,uuid,uuid,timestamp with time zone,jsonb,jsonb,integer)',
-    'EXECUTE'
-  ),
-  'authenticated users cannot execute legacy finalize_sale'
-);
-
-select extensions.ok(
-  not has_function_privilege(
-    'anon',
-    'public.finalize_sale(uuid,uuid,uuid,timestamp with time zone,jsonb,jsonb,integer)',
-    'EXECUTE'
-  ),
-  'anonymous users cannot execute legacy finalize_sale'
 );
 
 select extensions.ok(
@@ -459,28 +401,6 @@ select extensions.ok(
   'payment reads follow the parent sale policy'
 );
 
-select extensions.ok(
-  exists (
-    select 1
-    from pg_catalog.pg_trigger
-    where tgrelid = 'public.cash_sessions'::regclass
-      and tgname = 'cash_sessions_prepare_legacy_insert'
-      and not tgisinternal
-  ),
-  'legacy inserts are hardened by a server-side trigger'
-);
-
-select extensions.ok(
-  exists (
-    select 1
-    from pg_catalog.pg_trigger
-    where tgrelid = 'public.sales'::regclass
-      and tgname = 'sales_prepare_insert'
-      and not tgisinternal
-  ),
-  'legacy sale inserts are hardened by a server-side trigger'
-);
-
 select extensions.is(
   pg_get_function_arguments('public.open_cash_session_v3(integer)'::regprocedure),
   'p_opening_amount_in_cents integer',
@@ -504,16 +424,6 @@ select extensions.is(
    where oid = 'public.close_cash_session(uuid,integer,timestamp with time zone,text)'::regprocedure),
   true,
   'close_cash_session is security definer'
-);
-
-select extensions.ok(
-  not has_function_privilege('authenticated', 'public.open_cash_session_v2(integer,uuid)', 'EXECUTE'),
-  'authenticated users cannot execute V2 opening'
-);
-
-select extensions.ok(
-  not has_function_privilege('authenticated', 'public.finalize_sale_v2(uuid,jsonb,jsonb)', 'EXECUTE'),
-  'authenticated users cannot execute V2 sale finalization'
 );
 
 select extensions.ok(

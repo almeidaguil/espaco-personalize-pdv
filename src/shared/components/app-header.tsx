@@ -12,7 +12,6 @@ const navigationItems = [
   { href: "/", label: "Painel" },
   { href: "/products", label: "Produtos" },
   { href: "/stock", label: "Estoque" },
-  { href: "/events", label: "Eventos" },
   { href: "/cash/open", label: "Abrir caixa" },
   { href: "/cash/close", label: "Fechar caixa" },
   { href: "/pdv", label: "PDV" },

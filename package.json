@@ -15,6 +15,7 @@
     "type-check": "node scripts/clean-next-dev-cache.mjs && tsc --noEmit",
     "test": "vitest run",
     "test:db": "node scripts/run-database-gate.mjs",
+    "test:no-event-legacy": "node scripts/verify-no-event-legacy.mjs",
     "e2e:seed-local": "node scripts/seed-local-e2e-user.mjs",
     "test:e2e": "playwright test",
     "test:e2e:readonly": "playwright test --config playwright.readonly.config.ts",
