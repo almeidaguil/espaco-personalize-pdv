@@ -22,6 +22,7 @@
     "test:e2e:readonly": "playwright test --config playwright.readonly.config.ts",
     "test:e2e:required": "node scripts/verify-e2e-env.mjs && playwright test",
     "test:e2e:local-reset": "node scripts/run-local-e2e-gate.mjs",
+    "ops:inventory-staging": "node scripts/inventory-supabase-project.mjs",
     "ops:verify-target": "node scripts/verify-remote-target.mjs",
     "test:watch": "vitest",
     "format": "prettier --write .",
