@@ -429,7 +429,8 @@ Testes e aceite:
 - [x] Suite completa passa localmente contra Supabase reinicializado.
 - [ ] Gate remoto passa em ambiente isolado.
 - [x] Testes nao dependem de ordem nem de dados preexistentes.
-- [x] Falhas preservam traces sem registrar credenciais.
+- [x] Falhas preservam traces e relatorios restritos a dados e credenciais
+      efemeros locais, tratados como sensiveis; logs dos subprocessos sao redigidos.
 
 ### PR 08 - Provisionamento E Bootstrap Roberto Multimarcas
 
