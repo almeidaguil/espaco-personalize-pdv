@@ -31,6 +31,10 @@ export function createSupabaseManagementClient({
       request(`/projects/${assertProjectRef(projectRef)}/api-keys`),
     getAuthConfig: (projectRef) =>
       request(`/projects/${assertProjectRef(projectRef)}/config/auth`),
+    getDatabaseOpenApi: (projectRef) =>
+      request(
+        `/projects/${assertProjectRef(projectRef)}/database/openapi?schema=public`,
+      ),
     getProject: (projectRef) =>
       request(`/projects/${assertProjectRef(projectRef)}`),
     listAvailableRegions: () => request("/projects/available-regions"),
@@ -39,6 +43,11 @@ export function createSupabaseManagementClient({
       request(`/projects/${assertProjectRef(projectRef)}/pause`, {
         method: "POST",
       }),
+    runReadOnlyQuery: (projectRef, query) =>
+      request(
+        `/projects/${assertProjectRef(projectRef)}/database/query/read-only`,
+        { body: query, method: "POST" },
+      ),
     updateAuthConfig: (projectRef, configuration) =>
       request(`/projects/${assertProjectRef(projectRef)}/config/auth`, {
         body: configuration,

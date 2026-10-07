@@ -67,7 +67,7 @@ export function parseRemoteEnvironmentManifest(value) {
 }
 
 export function validateRemoteOperation({
-  confirmation,
+  confirmation = /** @type {string | undefined} */ (undefined),
   environment,
   execute,
   manifest,

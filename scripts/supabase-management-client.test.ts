@@ -15,6 +15,12 @@ describe("createSupabaseManagementClient", () => {
     ["listProjects", [], "GET", "/projects"],
     ["listAvailableRegions", [], "GET", "/projects/available-regions"],
     ["getProject", [projectRef], "GET", `/projects/${projectRef}`],
+    [
+      "getDatabaseOpenApi",
+      [projectRef],
+      "GET",
+      `/projects/${projectRef}/database/openapi?schema=public`,
+    ],
     ["pauseProject", [projectRef], "POST", `/projects/${projectRef}/pause`],
     [
       "getAuthConfig",
@@ -107,6 +113,34 @@ describe("createSupabaseManagementClient", () => {
     expect(JSON.parse(init.body)).toEqual({
       disable_signup: true,
       site_url: "https://roberto-multimarcas-pdv.netlify.app",
+    });
+  });
+
+  test("runs only the explicit read-only database query endpoint", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse([{ allowed: false }], 201));
+    const client = createSupabaseManagementClient({
+      accessToken,
+      baseUrl,
+      fetch,
+    });
+
+    await client.runReadOnlyQuery(projectRef, {
+      parameters: ["authenticated"],
+      query:
+        "select has_table_privilege($1, 'public.sales', 'insert') as allowed",
+    });
+
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe(
+      `${baseUrl}/projects/${projectRef}/database/query/read-only`,
+    );
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body)).toEqual({
+      parameters: ["authenticated"],
+      query:
+        "select has_table_privilege($1, 'public.sales', 'insert') as allowed",
     });
   });
 

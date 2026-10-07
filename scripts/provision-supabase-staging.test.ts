@@ -147,7 +147,7 @@ describe("runSupabaseStagingProvisioning", () => {
   test("pauses only legacy staging, creates Nano-default staging, migrates, and configures Auth", async () => {
     const events: string[] = [];
     const managementClient = createManagementClient({ events });
-    const commandRunner = vi.fn(async (_command, args) => {
+    const commandRunner = vi.fn<CommandRunner>(async (_command, args) => {
       events.push(`command:${args.join(" ")}`);
       return { status: 0, stderr: "", stdout: "ok" };
     });
@@ -232,8 +232,8 @@ describe("runSupabaseStagingProvisioning", () => {
     ).rejects.toThrow("Supabase migration dry-run failed.");
 
     expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
-    expect(managementClient.deleteProject).toBeUndefined();
-    expect(managementClient.restoreProject).toBeUndefined();
+    expect("deleteProject" in managementClient).toBe(false);
+    expect("restoreProject" in managementClient).toBe(false);
     expect(managementClient.pauseProject).not.toHaveBeenCalledWith(
       manifest.supabase.legacy.production.projectRef,
     );
@@ -258,7 +258,7 @@ describe("runSupabaseStagingProvisioning", () => {
 
     expect(managementClient.pauseProject).not.toHaveBeenCalled();
     expect(managementClient.createProject).not.toHaveBeenCalled();
-    expect(result.targetRef).toBe(newProjectRef);
+    expect(result).toMatchObject({ targetRef: newProjectRef });
   });
 });
 
@@ -274,7 +274,7 @@ function executeProvisioning({
   generatePassword = () => databasePassword,
   log = vi.fn(),
   managementClient = createManagementClient(),
-} = {}) {
+}: ProvisionOptions = {}) {
   return runSupabaseStagingProvisioning({
     args,
     commandRunner,
@@ -298,7 +298,7 @@ function createManagementClient({
     name: manifest.supabase.targets.staging.name,
     region: "sa-east-1",
   }),
-} = {}) {
+}: ManagementClientOptions = {}) {
   let legacyPaused = false;
   let targetCreated = projects.some(
     (item) => item.name === manifest.supabase.targets.staging.name,
@@ -342,6 +342,28 @@ function createManagementClient({
     }),
   };
 }
+
+type CommandResult = { status: number; stderr: string; stdout: string };
+type CommandRunner = (
+  command: string,
+  args: string[],
+  options: { environment: Record<string, string> },
+) => Promise<CommandResult>;
+
+type ManagementClientOptions = {
+  events?: string[];
+  projects?: ReturnType<typeof project>[];
+  regions?: { code: string }[];
+  targetProject?: ReturnType<typeof project>;
+};
+
+type ProvisionOptions = {
+  args?: string[];
+  commandRunner?: ReturnType<typeof vi.fn<CommandRunner>>;
+  generatePassword?: () => string;
+  log?: ReturnType<typeof vi.fn>;
+  managementClient?: ReturnType<typeof createManagementClient>;
+};
 
 function activeLegacyProjects() {
   return [

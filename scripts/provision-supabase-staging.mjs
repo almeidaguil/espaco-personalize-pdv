@@ -21,7 +21,7 @@ export async function runSupabaseStagingProvisioning({
   generatePassword = createDatabasePassword,
   inventoryReader = readInventoryEvidence,
   log,
-  managementClient,
+  managementClient = /** @type {any} */ (undefined),
   manifest,
   now = () => new Date(),
   wait,
