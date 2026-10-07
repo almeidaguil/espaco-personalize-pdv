@@ -1,9 +1,10 @@
 # Plano De Reestruturacao Para Loja Fisica
 
-Estado atual: PR01 a PR06 concluidos em implementacao e gates locais. O runtime
-e o schema final operam sem o modulo de eventos, com evidencia final da Task 5
-em 2026-10-06. A revisao independente e a integracao do PR06 seguem pendentes.
-PR07 (QA multioperador), PR08 (ambientes) e PR09 (release) seguem pendentes.
+Estado atual: PR01 a PR06 concluidos e integrados, incluindo PR05 e PR06.
+O runtime opera sem eventos, com caixas proprios e relatorios por vendedor/sessao.
+O PR07 entrega QA multioperador e gate local/CI; revisao, checks do PR e
+integracao seguem com o controlador. PR08 (ambientes) e PR09 (release) seguem
+pendentes.
 
 ## 1. Objetivo
 
@@ -339,7 +340,7 @@ Testes e aceite:
 
 ### PR 05 - Corte Operacional Do Caixa E PDV
 
-Status: concluido, com todas as tarefas e criterios de aceite atendidos.
+Status: concluido e integrado, com tarefas e criterios de aceite atendidos.
 
 Objetivo: ativar o fluxo definitivo da Roberto Multimarcas.
 
@@ -370,8 +371,7 @@ Testes e aceite:
 
 ### PR 06 - Remocao Completa De Eventos
 
-Status: implementacao, tarefas e aceites locais concluidos em 2026-10-06.
-Revisao independente e integracao pendentes com o controlador.
+Status: concluido e integrado em 2026-10-06, com tarefas e aceites atendidos.
 
 Objetivo: eliminar o legado depois que nenhum fluxo depender dele.
 
@@ -402,31 +402,35 @@ e 42 testes E2E sem skips. Nenhum Supabase/Vercel remoto foi acessado ou alterad
 
 ### PR 07 - E2E Multioperador E Concorrencia
 
+Status: implementacao entregue; gates completos registrados na Task 5.
+Revisao independente, checks do PR e integracao pendentes com o controlador.
+
 Objetivo: provar os fluxos reais com usuarios independentes antes do reset
 remoto.
 
 Tarefas:
 
-- [ ] Criar seed local idempotente com um admin e dois operadores.
-- [ ] Usar contextos de navegador separados por usuario.
-- [ ] Substituir a limpeza por update direto por preparacao via RPCs ou reset do
+- [x] Criar seed local idempotente com um admin e dois operadores.
+- [x] Usar contextos de navegador separados por usuario.
+- [x] Substituir a limpeza por update direto por preparacao via RPCs ou reset do
       ambiente isolado.
-- [ ] Fazer o setup falhar explicitamente quando nao conseguir preparar dados.
-- [ ] Cobrir abertura simultanea de caixas.
-- [ ] Cobrir bloqueio da segunda abertura para o mesmo usuario.
-- [ ] Cobrir fechamento e reabertura no mesmo dia.
-- [ ] Cobrir vendas simultaneas no estoque compartilhado.
-- [ ] Cobrir isolamento de caixa e fechamento administrativo.
-- [ ] Cobrir relatorio diario consolidado e por operador.
-- [ ] Atualizar o gate E2E de release.
-- [ ] Publicar traces e relatorios como artefatos quando houver falha.
+- [x] Fazer o setup falhar explicitamente quando nao conseguir preparar dados.
+- [x] Cobrir abertura simultanea de caixas.
+- [x] Cobrir bloqueio da segunda abertura para o mesmo usuario.
+- [x] Cobrir fechamento e reabertura no mesmo dia.
+- [x] Cobrir vendas simultaneas no estoque compartilhado.
+- [x] Cobrir isolamento de caixa e fechamento administrativo.
+- [x] Cobrir relatorio diario consolidado e por operador.
+- [x] Atualizar o gate E2E de release.
+- [x] Publicar traces e relatorios como artefatos quando houver falha.
 
 Testes e aceite:
 
-- [ ] Suite completa passa localmente contra Supabase reinicializado.
+- [x] Suite completa passa localmente contra Supabase reinicializado.
 - [ ] Gate remoto passa em ambiente isolado.
-- [ ] Testes nao dependem de ordem nem de dados preexistentes.
-- [ ] Falhas preservam traces sem registrar credenciais.
+- [x] Testes nao dependem de ordem nem de dados preexistentes.
+- [x] Falhas preservam traces e relatorios restritos a dados e credenciais
+      efemeros locais, tratados como sensiveis; logs dos subprocessos sao redigidos.
 
 ### PR 08 - Provisionamento E Bootstrap Roberto Multimarcas
 
@@ -516,24 +520,28 @@ npm run format:check
 npm run lint
 npm run type-check
 npm run test
+npm run test:no-event-legacy
 npm run test:db
 npm run build
-npm run test:e2e:required
+npm run test:e2e:local-reset
 ```
 
 PRs com migration tambem exigem:
 
-- `supabase db reset` em ambiente local;
+- reset exclusivamente local pelo gate, em stack isolada de testes;
 - validacao de constraints, indices, grants e RLS;
 - smoke das RPCs com usuario admin e operador;
 - verificacao de que nenhuma chave real foi versionada.
 
-O workflow `Quality` inicia um Supabase local efemero e executa `npm run
-test:db` para PRs destinados a `develop` ou `main`. O Playwright completo
-permanece no gate de release; ate o PR 07 ampliar sua automacao, PRs 02 a 06
-devem registrar no corpo do pull request a execucao local de `npm run
-test:e2e:required`. O comando `npm run test:e2e` isolado nao e gate, porque pode
-pular fluxos autenticados quando faltam credenciais.
+O workflow `Quality` inicia Supabase local efemero e executa `test:db` e
+`test:no-event-legacy` para PRs destinados a `develop` ou `main`.
+O `E2E Release Gate` tambem executa nos dois destinos com Supabase local efemero,
+sem secrets nem project ref remoto. Usa `test:e2e:local-reset`, seed idempotente
+de admin e dois operadores e suite obrigatoria, sem skips autenticados.
+Publica traces/relatorios somente em falha E2E, por tres dias, e para a stack
+com `if: always()`. O comando `test:e2e` isolado nao e gate, pois pode pular
+fluxos autenticados quando faltam credenciais. Provisionamento remoto continua
+exclusivo do PR08.
 
 ## 11. Decisoes Aprovadas Para O PR 02
 

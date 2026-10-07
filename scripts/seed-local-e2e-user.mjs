@@ -2,109 +2,111 @@ import { existsSync, readFileSync } from "node:fs";
 
 import { createClient } from "@supabase/supabase-js";
 
+import { assertLocalSupabaseUrl, resolveE2EUsers } from "./e2e-test-users.mjs";
+
 const environment = {
   ...readEnvFile(".env.local"),
   ...readEnvFile(".env.e2e.local"),
   ...process.env,
 };
 
-const requiredVariables = [
-  "E2E_USER_EMAIL",
-  "E2E_USER_PASSWORD",
-  "NEXT_PUBLIC_SUPABASE_URL",
-  "SUPABASE_SECRET_KEY",
-];
-const missingVariables = requiredVariables.filter(
-  (variableName) => !environment[variableName],
-);
-
-if (missingVariables.length > 0) {
-  console.error(
-    `Missing variables required to seed the local E2E user: ${missingVariables.join(", ")}`,
+try {
+  const users = resolveE2EUsers(environment);
+  const requiredVariables = ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SECRET_KEY"];
+  const missingVariables = requiredVariables.filter(
+    (variableName) => !environment[variableName]?.trim(),
   );
-  process.exit(1);
-}
 
-const supabaseUrl = new URL(environment.NEXT_PUBLIC_SUPABASE_URL);
+  if (missingVariables.length > 0) {
+    throw new Error(
+      `Missing required E2E environment variables: ${missingVariables.join(", ")}`,
+    );
+  }
 
-if (!["127.0.0.1", "localhost"].includes(supabaseUrl.hostname)) {
-  console.error(
-    "Refusing to seed an E2E user outside the local Supabase instance.",
-  );
-  process.exit(1);
-}
+  assertLocalSupabaseUrl(environment.NEXT_PUBLIC_SUPABASE_URL);
 
-const supabase = createClient(
-  supabaseUrl.toString(),
-  environment.SUPABASE_SECRET_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  },
-);
-const email = environment.E2E_USER_EMAIL;
-const password = environment.E2E_USER_PASSWORD;
-const fullName = "E2E Admin";
-const { data: usersData, error: listUsersError } =
-  await supabase.auth.admin.listUsers({ page: 1, perPage: 1_000 });
-
-if (listUsersError) {
-  throw listUsersError;
-}
-
-const existingUser = usersData.users.find((user) => user.email === email);
-let userId;
-
-if (existingUser) {
-  const { data, error } = await supabase.auth.admin.updateUserById(
-    existingUser.id,
+  const supabase = createClient(
+    environment.NEXT_PUBLIC_SUPABASE_URL,
+    environment.SUPABASE_SECRET_KEY,
     {
-      password,
-      user_metadata: {
-        ...existingUser.user_metadata,
-        full_name: fullName,
-        role: "admin",
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
       },
     },
   );
-
-  if (error) {
-    throw error;
+  const existingUsers = [];
+  for (let page = 1; ; page += 1) {
+    const { data, error } = await supabase.auth.admin.listUsers({
+      page,
+      perPage: 1_000,
+    });
+    if (error) throw new Error("Failed to list local E2E users.");
+    existingUsers.push(...data.users);
+    if (data.users.length < 1_000) break;
   }
 
-  userId = data.user.id;
-} else {
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    email_confirm: true,
-    password,
-    user_metadata: {
-      full_name: fullName,
-      role: "admin",
-    },
-  });
+  for (const { name, email, password, fullName, role } of users) {
+    const existingUser = existingUsers.find(
+      (user) => user.email?.toLowerCase() === email.toLowerCase(),
+    );
+    let userId;
 
-  if (error) {
-    throw error;
+    if (existingUser) {
+      const { data, error } = await supabase.auth.admin.updateUserById(
+        existingUser.id,
+        {
+          password,
+          email_confirm: true,
+          user_metadata: {
+            ...existingUser.user_metadata,
+            full_name: fullName,
+            role,
+          },
+        },
+      );
+
+      if (error) {
+        throw new Error(`Failed to update local E2E ${name}.`);
+      }
+
+      userId = data.user.id;
+    } else {
+      const { data, error } = await supabase.auth.admin.createUser({
+        email,
+        email_confirm: true,
+        password,
+        user_metadata: {
+          full_name: fullName,
+          role,
+        },
+      });
+
+      if (error) {
+        throw new Error(`Failed to create local E2E ${name}.`);
+      }
+
+      userId = data.user.id;
+    }
+
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert({ id: userId, email, full_name: fullName, role });
+
+    if (profileError) {
+      throw new Error(`Failed to update local E2E ${name} profile.`);
+    }
+
+    console.log(
+      `Local E2E ${name} is ready (${existingUser ? "updated" : "created"}).`,
+    );
   }
-
-  userId = data.user.id;
+} catch (error) {
+  console.error(
+    error instanceof Error ? error.message : "Failed to seed local E2E users.",
+  );
+  process.exit(1);
 }
-
-const { error: profileError } = await supabase
-  .from("profiles")
-  .update({ full_name: fullName, role: "admin" })
-  .eq("id", userId);
-
-if (profileError) {
-  throw profileError;
-}
-
-console.log(
-  `Local E2E admin is ready (${existingUser ? "updated" : "created"}).`,
-);
 
 function readEnvFile(filePath) {
   if (!existsSync(filePath)) {

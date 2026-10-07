@@ -3,10 +3,11 @@
 ## Estado Atual
 
 O runtime atual opera como loja fisica, com caixas independentes por operador.
-As entregas 1 a 6 estao concluidas em implementacao e gates locais. A entrega 6
-removeu o modulo legado do runtime e do schema, com evidencia final da Task 5
-em 2026-10-06. A revisao independente e a integracao do PR06 seguem pendentes.
-QA multioperador (PR07), ambientes (PR08) e release (PR09) continuam pendentes.
+As entregas 1 a 6 estao concluidas e integradas, incluindo PR05 e PR06.
+A entrega 6 removeu o modulo legado do runtime e do schema em 2026-10-06.
+O PR07 entrega seed de tres identidades, concorrencia real e gate local/CI;
+sua revisao, PR e integracao seguem com o controlador. Ambientes (PR08) e
+release (PR09) continuam pendentes.
 
 O detalhamento de tarefas e criterios esta no
 [plano de reestruturacao](plano-reestruturacao-loja-fisica.md). A decisao
@@ -105,7 +106,7 @@ Criterio de pronto:
 
 ## Entrega 5 - Caixa E PDV Por Operador
 
-Status: concluida (PR05), incluindo todas as tarefas e criterios de aceite.
+Status: concluida e integrada (PR05), incluindo tarefas e criterios de aceite.
 
 Objetivo: ativar a operacao diaria da loja.
 
@@ -128,8 +129,7 @@ Criterio de pronto:
 
 ## Entrega 6 - Remocao Do Legado De Eventos
 
-Status: concluida em implementacao e gates locais (PR06, 2026-10-06).
-A revisao independente e a integracao permanecem pendentes com o controlador.
+Status: concluida e integrada (PR06, 2026-10-06).
 
 Objetivo: eliminar codigo e schema sem uso.
 
@@ -157,6 +157,9 @@ e 42 testes E2E sem skips. Nenhum ambiente remoto foi acessado ou alterado.
 
 ## Entrega 7 - QA Multioperador
 
+Status: implementacao entregue no PR07; revisao, checks do PR e integracao
+pendentes com o controlador.
+
 Objetivo: provar isolamento, concorrencia e repetibilidade.
 
 Escopo:
@@ -165,7 +168,10 @@ Escopo:
 - contextos de navegador separados;
 - testes de corrida diretamente contra o banco;
 - traces e relatorios de falha;
-- gate E2E obrigatorio para PRs que alterem banco ou fluxos criticos.
+- gate E2E em todos os PRs para `develop` e `main`, contra Supabase local efemero;
+- `test:e2e:local-reset` destrutivo exclusivamente local, sem project ref remoto;
+- nenhum secret no workflow, logs redigidos e stop do Supabase mesmo em falha;
+- artefatos de falha E2E publicados somente por tres dias.
 
 Criterio de pronto:
 
@@ -174,6 +180,8 @@ Criterio de pronto:
 - falhas de concorrencia e autorizacao sao detectadas no CI.
 
 ## Entrega 8 - Infraestrutura Roberto Multimarcas
+
+Status: pendente (PR08).
 
 Objetivo: provisionar ambientes vazios e exclusivos.
 
@@ -195,6 +203,8 @@ Criterio de pronto:
 - nenhuma credencial aparece no repositorio ou em logs.
 
 ## Entrega 9 - Release
+
+Status: pendente (PR09).
 
 Objetivo: promover o sistema aprovado para a nova producao.
 
@@ -223,15 +233,19 @@ npm run format:check
 npm run lint
 npm run type-check
 npm run test
+npm run test:no-event-legacy
 npm run build
 ```
 
 PRs com banco ou regras financeiras:
 
 ```text
-supabase db reset
-npm run test:e2e:required
+npm run test:db
+npm run test:e2e:local-reset
 ```
+
+O reset do gate e exclusivamente local e apaga dados da stack isolada de testes.
+O workflow `E2E Release Gate` executa em todos os PRs para `develop` e `main`.
 
 Tambem exigem testes reais de RLS/RPC e concorrencia quando aplicavel. Testes
 unitarios com clientes mockados nao substituem essa validacao.
