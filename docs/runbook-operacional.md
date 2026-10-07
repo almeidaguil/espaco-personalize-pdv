@@ -136,6 +136,51 @@ Nesta versão não há venda offline.
 4. Se houver caixa pendente de usuário indisponível, executar fechamento
    administrativo após a conferência.
 
+## Provisionamento Controlado Do PR08
+
+Antes de qualquer acesso remoto, execute os dry-runs e revise
+`config/remote-environments.json`:
+
+```powershell
+npm.cmd run ops:verify-target -- --provider supabase --environment legacy-staging --operation read
+npm.cmd run ops:inventory-staging -- --confirm-ref gpywbeoqcovjrfnmbdqx
+npm.cmd run ops:provision-staging
+npm.cmd run ops:provision-netlify -- --phase site
+```
+
+Regras obrigatórias:
+
+1. Produção legada `ciixpfquwmlsvzleattv` deve estar saudável antes e depois
+   de toda mutação.
+2. A pausa do staging `espaco-personalize-pdv-staging`, ref
+   `gpywbeoqcovjrfnmbdqx`, exige confirmação explícita imediatamente antes da
+   execução; autorização anterior ou genérica não substitui esse checkpoint.
+3. Não excluir projetos. O novo staging parcial é preservado para diagnóstico.
+4. Não usar `db reset` remoto, não aplicar SQL manual e não criar produção no
+   PR08.
+5. Site Netlify indisponível ou produção não comprovadamente bloqueada exige
+   interrupção e nova aprovação.
+6. Tokens, senha do banco e credenciais do admin permanecem somente na sessão.
+
+Depois da criação, registre somente refs/IDs não sensíveis no manifesto,
+execute bootstrap idempotente e verificação:
+
+```powershell
+npm.cmd run ops:bootstrap-staging-admin -- --execute --confirm-ref <novo-staging-ref>
+npm.cmd run ops:verify-staging -- --confirm-ref <novo-staging-ref>
+npm.cmd run ops:provision-netlify -- --phase configure-staging --execute --confirm-site roberto-multimarcas-pdv
+npm.cmd run test:e2e:staging-smoke
+```
+
+O smoke remoto é somente leitura: login, dashboard e rotas protegidas. Não
+reutiliza seed/reset E2E local e não cria caixa, produto ou venda.
+
+Em falha após pausar o staging legado, preserve evidências. Para restaurá-lo,
+pause primeiro o novo staging, confirme novamente ambos os refs e respeite o
+limite de dois projetos Supabase Free ativos. A produção Vercel legada continua
+sendo o rollback imediato. Consulte [Ambientes](ambientes.md),
+[Supabase CLI](supabase-cli.md) e [Netlify CLI](netlify-cli.md).
+
 ## Smoke Test De Release Ou Primeiro Uso
 
 Execute primeiro em ambiente isolado de homologação com o schema da versão.

@@ -113,7 +113,7 @@ Antes de produzir, conferir:
 - senha administrativa operacional conhecida somente pelos autorizadores;
 - usuários temporários desativados quando não fizerem parte da operação;
 - segredos e senhas expostos durante homologação rotacionados;
-- secrets do GitHub e variáveis da Vercel atualizados após a rotação;
+- secrets do GitHub e variáveis do Netlify atualizados após a rotação;
 - arquivos locais com credenciais fora do versionamento.
 
 A `publishable key` é pública. `SUPABASE_SECRET_KEY`, senha do banco, tokens de
@@ -131,21 +131,27 @@ segredos definitivos de produção.
   e registrar a compensação por cancelamento quando aplicável.
 - Não apagar vendas ou movimentações financeiras para limpar relatórios reais.
 
-## 6. Vercel E Promoção
+## 6. Netlify E Promoção
 
 Conferir no projeto que receberá a release:
 
-- projeto, domínio e ambiente identificados;
-- Preview e Production separados;
-- `Production` associada à `main`;
-- variáveis públicas e privadas apontando para o banco correto;
+- conta, site, domínio e ambiente identificados no manifesto;
+- repositório conectado exatamente a `almeidaguil/espaco-personalize-pdv`;
+- branch produtiva `netlify-production-disabled-pr09` durante o PR08;
+- única branch permitida `develop`, além de previews não produtivos;
+- `prevent_non_git_prod_deploys` habilitado e nenhum uso de `--prod`;
+- variáveis públicas e privadas de staging restritas a `deploy-preview`,
+  `branch-deploy` e branch `develop`;
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e
   `SUPABASE_SECRET_KEY` configuradas;
-- PR de `develop` para `main` com `Quality` e `E2E Release Gate` aprovados;
-- deploy sem erros.
+- smoke remoto somente leitura aprovado no deploy não produtivo;
+- PR de `develop` para `main` e variáveis de produção continuam bloqueados até
+  a janela do PR09;
+- deploy sem erros e consumo do plano Free revisado.
 
-A criação e o vínculo dos projetos exclusivos da Roberto Multimarcas ainda
-dependem do PR08. Não considerar essa infraestrutura entregue pelo PR06.
+A produção Vercel legada e o Supabase `ciixpfquwmlsvzleattv` permanecem
+intactos durante o PR08. O novo projeto Supabase de produção, variáveis de
+produção e publicação em `main` pertencem exclusivamente ao PR09.
 
 ## 7. Smoke Manual Após Deploy
 

@@ -20,6 +20,7 @@ export default defineConfig({
     ? [["github"], ["list"], ["html", { open: "never" }]]
     : "list",
   testDir: "./tests/e2e",
+  testIgnore: "remote-staging-smoke.spec.ts",
   timeout: 60_000,
   workers: 1,
   use: {

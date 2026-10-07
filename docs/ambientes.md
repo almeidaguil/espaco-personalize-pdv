@@ -1,37 +1,36 @@
 # Ambientes
 
-O projeto usa ambientes isolados. Banco, autenticacao, chaves e dados nunca
-devem ser compartilhados entre staging e producao.
+Banco, autenticação, chaves e dados são isolados entre local, staging e
+produção. O PR08 substitui apenas o staging; o corte de produção pertence ao
+PR09.
 
-## Matriz Atual Durante A Transicao
+## Matriz Durante O PR08
 
-| Ambiente | Branch      | Vercel                 | Supabase               | Arquivo local opcional  |
-| -------- | ----------- | ---------------------- | ---------------------- | ----------------------- |
-| Local    | `feature/*` | Servidor Next.js local | Supabase CLI local     | `.env.local`            |
-| Staging  | `develop`   | Preview                | `gpywbeoqcovjrfnmbdqx` | `.env.staging.local`    |
-| Producao | `main`      | Production             | `ciixpfquwmlsvzleattv` | `.env.production.local` |
+| Ambiente        | Branch      | Aplicação             | Supabase                                                       | Estado                       |
+| --------------- | ----------- | --------------------- | -------------------------------------------------------------- | ---------------------------- |
+| Local           | `feature/*` | Next.js local         | Supabase CLI local                                             | ativo                        |
+| Staging legado  | —           | Vercel legado         | `gpywbeoqcovjrfnmbdqx`                                         | ativo até a pausa confirmada |
+| Staging novo    | `develop`   | Netlify não produtivo | `roberto-multimarcas-pdv-staging`, ref registrado após criação | alvo do PR08                 |
+| Produção legada | `main`      | Vercel legado         | `ciixpfquwmlsvzleattv`                                         | preservado e saudável        |
+| Produção nova   | `main`      | Netlify               | `roberto-multimarcas-pdv`                                      | proibida no PR08; PR09       |
 
-Os refs acima pertencem a operacao legada Espaco Personalize e permanecem em
-uso somente enquanto a reestruturacao nao for promovida. Eles nao devem ser
-renomeados, limpos ou removidos durante os PRs de desenvolvimento.
+O site Netlify aprovado é `roberto-multimarcas-pdv`, sujeito à disponibilidade.
+A branch produtiva fica deliberadamente apontada para
+`netlify-production-disabled-pr09`; somente `develop`, `deploy-preview` e
+`branch-deploy` recebem credenciais de staging.
 
-## Matriz Alvo Roberto Multimarcas
+## Manifesto E Arquivos Locais
 
-| Ambiente | Branch      | Vercel                    | Supabase                          |
-| -------- | ----------- | ------------------------- | --------------------------------- |
-| Local    | `feature/*` | Servidor Next.js local    | Supabase CLI local                |
-| Staging  | `develop`   | Novo projeto/Preview      | `roberto-multimarcas-pdv-staging` |
-| Producao | `main`      | `roberto-multimarcas-pdv` | `roberto-multimarcas-pdv`         |
+`config/remote-environments.json` é a allowlist versionada de nomes, refs, IDs,
+hosts, conta, organização, repositório e branches. O manifesto nunca contém
+tokens, senhas ou chaves. Depois de cada criação remota, apenas IDs e URLs não
+sensíveis comprovados são persistidos.
 
-Os project refs do Supabase alvo serao registrados depois do provisionamento.
-O endpoint Supabase usa um ref aleatorio; a URL publica com a marca sera a da
-aplicacao Vercel.
+Arquivos `*.local` e `.provisioning/` são ignorados pelo Git. Os arquivos
+`.env.staging.example` e `.env.production.example` contêm apenas o contrato e
+placeholders.
 
-Os arquivos `*.local` sao ignorados pelo Git. Os arquivos
-`.env.staging.example` e `.env.production.example` documentam somente o
-contrato das variaveis e devem conter apenas placeholders.
-
-## Variaveis Obrigatorias
+## Variáveis Obrigatórias
 
 ```txt
 NEXT_PUBLIC_SUPABASE_URL=
@@ -39,65 +38,80 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
 ```
 
-`SUPABASE_SECRET_KEY` e exclusiva do servidor. Nunca exponha essa chave com o
-prefixo `NEXT_PUBLIC_`, em componentes de cliente, logs ou artefatos de CI.
+`SUPABASE_SECRET_KEY` é exclusiva do servidor. Nunca use o prefixo
+`NEXT_PUBLIC_`, componentes cliente, logs ou artefatos de CI para essa chave.
+No PR08 os três valores são enviados ao Netlify somente para os contextos não
+produtivos permitidos.
 
-## Vercel
+Credenciais operacionais temporárias:
 
-Configure os valores reais diretamente nos ambientes da Vercel:
-
-- `Production`: projeto Supabase de producao e branch `main`;
-- `Preview` da branch `develop`: projeto Supabase de staging;
-- `Development`: sem credenciais remotas; o fluxo local usa `.env.local` e o
-  Supabase CLI local.
-
-Depois de vincular o repositorio ao projeto Vercel, uma copia local temporaria
-pode ser obtida com:
-
-```powershell
-vercel.cmd env pull .env.staging.local --environment preview --git-branch develop
-vercel.cmd env pull .env.production.local --environment production
+```txt
+SUPABASE_ACCESS_TOKEN=
+NETLIFY_AUTH_TOKEN=
+NETLIFY_ACCOUNT_ID=
+STAGING_ADMIN_EMAIL=
+STAGING_ADMIN_FULL_NAME=
+STAGING_ADMIN_PASSWORD=
 ```
 
-O ambiente de producao deve ser baixado apenas quando houver necessidade
-operacional. Prefira validar staging na URL de Preview para reduzir o acesso
-local a segredos de producao.
+Esses valores existem somente na sessão do terminal ou em cofre privado. Não
+os grave no repositório, em documentação, issue ou PR.
 
-## Supabase
+## Sequência PR08
 
-Cada ambiente remoto usa projeto, Auth, banco, Storage e chaves independentes.
-Migrations devem seguir esta ordem:
+1. Executar todos os comandos `ops:*` primeiro em dry-run.
+2. Confirmar organização Supabase `wcqoluxxlvglqtebcucz`, limite gratuito,
+   região `sa-east-1` e produção legada `ciixpfquwmlsvzleattv` saudável.
+3. Inventariar o staging legado em `.provisioning/` e registrar somente resumo
+   redigido.
+4. Imediatamente antes da mutação, confirmar literalmente a pausa de
+   `espaco-personalize-pdv-staging` (`gpywbeoqcovjrfnmbdqx`).
+5. Pausar apenas esse staging e reconfirmar a produção legada saudável.
+6. Criar `roberto-multimarcas-pdv-staging` em `sa-east-1`, sem tamanho pago
+   explícito, e aplicar migrations sem `db reset` remoto.
+7. Registrar o novo ref no manifesto, criar somente o admin de homologação e
+   validar migrations, schema, Auth, RLS, grants, RPCs e banco vazio.
+8. Criar/vincular o site Netlify, registrar conta/site e manter produção
+   bloqueada.
+9. Configurar as três variáveis de staging em memória, fazer deploy não
+   produtivo e executar smoke remoto somente leitura.
+10. Remover tokens da sessão e registrar evidências redigidas.
 
-1. desenvolver e validar no Supabase local;
-2. aplicar e validar em staging;
-3. executar o gate E2E em staging;
-4. promover a mesma versao para producao mediante release aprovada.
+Os comandos completos estão em [Supabase CLI](supabase-cli.md),
+[Netlify CLI](netlify-cli.md) e [Runbook operacional](runbook-operacional.md).
 
-Nunca use `db reset` em staging ou producao. Projetos remotos novos devem ser
-inicializados pela cadeia normal de migrations. Antes de qualquer operacao
-remota, confirme explicitamente o project ref selecionado.
+## Supabase E Rollback
 
-## Provisionamento E Rollback
+Migrations seguem local → staging → produção. Nunca use `db reset` em ambiente
+remoto e nunca reescreva migration aplicada. Todo comando mutável exige
+`--execute`, allowlist e confirmação literal.
 
-- Validar organizacao, quota, regiao, tamanho e eventual custo antes da criacao.
-- Preferir `sa-east-1` para os bancos novos, sujeito a aprovacao.
-- Gerar credenciais novas para a Roberto Multimarcas.
-- Aplicar migrations e E2E primeiro no novo staging.
-- Manter os projetos legados intactos durante a janela de rollback.
-- Fazer backup tecnico antes do corte, mesmo com descarte de dados autorizado.
-- Nao copiar usuarios, dados ou Storage da operacao anterior por padrao.
-- Nao excluir ou desativar projeto remoto sem uma autorizacao especifica.
-- Registrar os novos refs sem incluir chaves ou senhas na documentacao.
+Se o novo staging falhar após a troca:
+
+1. preserve o projeto parcial e as evidências;
+2. se for necessário restaurar o legado, pause primeiro o novo staging para
+   manter no máximo dois projetos gratuitos ativos;
+3. restaure `gpywbeoqcovjrfnmbdqx` somente após nova confirmação explícita;
+4. não exclua projeto automaticamente.
+
+A produção legada não é pausada, alterada ou excluída no PR08.
+
+## Netlify E Limite Gratuito
+
+O `netlify.toml` fixa Node/npm e o build oficial. O provisionador usa
+`netlify-cli@27.11.2` por `npx`, recusa flags de produção e valida conta, site,
+repositório e branches após a alteração. Se o nome aprovado estiver
+indisponível, o fluxo para e exige nova aprovação.
+
+O plano Free possui orçamento mensal compartilhado. Ao se aproximar de 300
+créditos, suspenda deploys não essenciais antes de consumir o limite. O Vercel
+legado permanece intacto até o PR09.
 
 ## Fluxo Git E Release
 
-1. Crie `feature/nome-da-funcionalidade` a partir de `develop` atualizado.
-2. Use commits assinados no padrao Conventional Commits.
-3. Abra pull request da branch `feature/*` para `develop`.
-4. Exija o workflow `Quality` aprovado antes do merge.
-5. Valide a Preview de staging e execute o `E2E Release Gate`.
-6. Abra pull request de release de `develop` para `main`.
-7. Faça merge somente com revisao e todos os checks aprovados.
-
-Commits e pushes diretos em `main` sao proibidos. Force push em `main` e
-`develop` tambem e proibido.
+1. Criar `feature/*` a partir de `develop` atualizado.
+2. Usar commits assinados e Conventional Commits.
+3. Integrar `feature/*` em `develop` somente por PR e checks.
+4. Validar staging Netlify e o gate E2E aplicável.
+5. Abrir PR de release `develop` → `main` somente no PR09.
+6. Nunca fazer push direto ou force push em `develop`/`main`.

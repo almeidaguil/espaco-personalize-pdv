@@ -12,8 +12,8 @@ dados pessoais ou payloads completos.
 - Logs do servidor em JSON para falhas inesperadas na finalização e no
   cancelamento de venda e no fechamento de caixa.
 - Redação de campos sensíveis pelo logger local.
-- GitHub Actions, Vercel Preview, contrato de banco e E2E Release Gate como
-  sinais de qualidade antes da release.
+- GitHub Actions, deploys não produtivos Netlify, contrato de banco e E2E
+  Release Gate como sinais de qualidade antes da release.
 
 Os logs atuais identificam a operação e a falha. Não presumir que todo registro
 já inclua IDs de operador, caixa e venda; usar esses identificadores quando
@@ -35,7 +35,8 @@ Monitorar:
 
 Fontes atuais:
 
-- Vercel Runtime Logs;
+- Netlify deploy/function logs para o staging novo;
+- Vercel Runtime Logs para a produção legada enquanto o PR09 não ocorrer;
 - Supabase Logs;
 - GitHub Actions.
 
@@ -60,7 +61,9 @@ sensíveis no texto da mensagem ou em outros campos.
 
 ## Checklist Antes Do Go-Live
 
-- [ ] Confirmar acesso aos logs da Vercel e do Supabase.
+- [ ] Confirmar acesso aos logs do Netlify, Vercel legado e Supabase.
+- [ ] Conferir consumo do plano Netlify Free e bloquear deploys não essenciais
+      perto de 300 créditos mensais.
 - [ ] Executar smoke em ambiente isolado e conferir diagnóstico de falhas.
 - [ ] Definir responsável e canal seguro de acompanhamento de incidentes.
 - [ ] Conferir acesso restrito aos traces e evidências.
