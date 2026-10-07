@@ -1,0 +1,64 @@
+# Evidências Do Provisionamento De Staging — PR08
+
+Registro redigido do provisionamento controlado dos ambientes da Roberto
+Multimarcas. Tokens, chaves, senhas, e-mails, IDs pessoais e caminhos de objetos
+não são registrados neste documento.
+
+## Preflight
+
+- Inventário capturado em: `2026-10-07T09:40:37.484Z`.
+- Organização Supabase validada: `wcqoluxxlvglqtebcucz`.
+- Staging legado validado: `espaco-personalize-pdv-staging`, ref
+  `gpywbeoqcovjrfnmbdqx`, região `us-west-2`, estado `ACTIVE_HEALTHY`.
+- Produção legada validada: ref `ciixpfquwmlsvzleattv`, região `us-west-2`,
+  estado `ACTIVE_HEALTHY`.
+- Região do novo staging validada: `sa-east-1` disponível.
+- Novo staging Supabase: ausente; criação ainda não executada.
+- SHA-256 da evidência privada ignorada pelo Git:
+  `f23dbd663770a8ca3a9d44b7a24042c5c24b06ad365891717378c8eec252c3b1`.
+
+## Contagens Do Staging Legado
+
+| Tabela            | Registros |
+| ----------------- | --------: |
+| `profiles`        |         2 |
+| `categories`      |         0 |
+| `products`        |        34 |
+| `stock_movements` |        49 |
+| `cash_sessions`   |        41 |
+| `sales`           |        24 |
+| `sale_items`      |        24 |
+| `payments`        |        24 |
+
+## Netlify
+
+Validação concluída em `2026-10-07T11:14:28.6376212Z`.
+
+- Conta: `6ac5be70c558d25c9b304db5`.
+- Plano: Free, 300 créditos mensais, uso observado 0 e recarga automática
+  desativada.
+- Site: `roberto-multimarcas-pdv`.
+- Site ID: `cf55faf1-cf67-4120-a2f4-23eb5600e6c7`.
+- URL: `https://roberto-multimarcas-pdv.netlify.app`.
+- Repositório: `almeidaguil/espaco-personalize-pdv`.
+- Branch não produtiva autorizada: `develop`.
+- Branch produtiva bloqueada: `netlify-production-disabled-pr09`.
+- Comando de build: `npm run build`.
+- Deploys produtivos fora do Git: bloqueados.
+- Deploy executado: nenhum nesta etapa.
+
+Durante a primeira tentativa, a API criou o shell e recusou ativar a proteção
+antes do vínculo ao repositório. O shell foi preservado, identificado pelo ID
+acima e recuperado somente após validação de conta, nome, ausência de vínculo e
+confirmação literal do ID. A automação passou a ordenar criação, vínculo e
+proteção, com cobertura automatizada para recuperação explícita.
+
+## Estado Do Checkpoint
+
+- Dry-runs Supabase e Netlify: aprovados.
+- Inventário redigido: aprovado.
+- Site Netlify não produtivo: criado, vinculado e validado.
+- Staging legado Supabase: ainda ativo e inalterado.
+- Produção legada Supabase: ativa, saudável e inalterada.
+- Pausa do staging legado e criação do staging novo: aguardando confirmação
+  destrutiva específica do proprietário.

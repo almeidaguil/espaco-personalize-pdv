@@ -81,6 +81,15 @@ describe("parseRemoteEnvironmentManifest", () => {
     });
   });
 
+  test("accepts the current Netlify hexadecimal account id", () => {
+    const configuredManifest = structuredClone(manifestFixture);
+    configuredManifest.netlify.accountId = "6ac5be70c558d25c9b304db5";
+
+    const manifest = parseRemoteEnvironmentManifest(configuredManifest);
+
+    expect(manifest.netlify.accountId).toBe("6ac5be70c558d25c9b304db5");
+  });
+
   test.each([
     [
       "invalid Supabase ref",

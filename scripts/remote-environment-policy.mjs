@@ -6,6 +6,9 @@ const projectRefSchema = z.string().regex(/^[a-z]{20}$/);
 const nullableProjectRefSchema = projectRefSchema.nullable();
 const uuidSchema = z.string().uuid();
 const nullableUuidSchema = uuidSchema.nullable();
+const nullableNetlifyAccountIdSchema = z
+  .union([uuidSchema, z.string().regex(/^[a-f0-9]{24}$/)])
+  .nullable();
 
 const supabaseProjectSchema = z.object({
   hostname: z.string().regex(/^[a-z]{20}\.supabase\.co$/),
@@ -26,7 +29,7 @@ const supabaseTargetSchema = z.object({
 
 const remoteEnvironmentManifestSchema = z.object({
   netlify: z.object({
-    accountId: nullableUuidSchema,
+    accountId: nullableNetlifyAccountIdSchema,
     productionBranch: z.string().min(1),
     repository: z.string().regex(/^[^/]+\/[^/]+$/),
     siteId: nullableUuidSchema,

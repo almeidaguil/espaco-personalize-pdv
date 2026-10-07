@@ -35,8 +35,8 @@
     }
   },
   "netlify": {
-    "accountId": null,
-    "siteId": null,
+    "accountId": "6ac5be70c558d25c9b304db5",
+    "siteId": "cf55faf1-cf67-4120-a2f4-23eb5600e6c7",
     "siteName": "roberto-multimarcas-pdv",
     "siteUrl": "https://roberto-multimarcas-pdv.netlify.app",
     "repository": "almeidaguil/espaco-personalize-pdv",

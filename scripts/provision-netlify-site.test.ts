@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 
 import { describe, expect, test, vi } from "vitest";
 
-import manifestFixture from "../config/remote-environments.json";
+import remoteEnvironmentManifest from "../config/remote-environments.json";
 import { parseRemoteEnvironmentManifest } from "./remote-environment-policy.mjs";
 import { runNetlifyProvisioning } from "./provision-netlify-site.mjs";
 
@@ -12,6 +12,14 @@ const authToken = "netlify-auth-token-sentinel";
 const projectRef = "qrstabcdefghijklmnop";
 const publishableKey = "publishable-key-sentinel";
 const secretKey = "secret-key-sentinel";
+const manifestFixture = {
+  ...remoteEnvironmentManifest,
+  netlify: {
+    ...remoteEnvironmentManifest.netlify,
+    accountId: null,
+    siteId: null,
+  },
+};
 
 describe("Netlify configuration", () => {
   test("pins the official build without a publish directory or secrets", async () => {
@@ -88,6 +96,40 @@ describe("runNetlifyProvisioning", () => {
     expect(netlifyClient.createSite).not.toHaveBeenCalled();
   });
 
+  test("recovers only the explicitly confirmed unlinked shell", async () => {
+    const events: string[] = [];
+    const partialSite = validSite({
+      build_settings: {},
+      prevent_non_git_prod_deploys: false,
+      repo: null,
+    });
+    const netlifyClient = createNetlifyClient({
+      events,
+      site: validSite(),
+      sites: [partialSite],
+    });
+    const commandRunner = createCommandRunner(events);
+
+    const result = await executeSite({
+      args: [
+        "--phase",
+        "site",
+        "--execute",
+        "--confirm-site",
+        "roberto-multimarcas-pdv",
+        "--recover-site-id",
+        siteId,
+      ],
+      commandRunner,
+      netlifyClient,
+    });
+
+    expect(netlifyClient.createSite).not.toHaveBeenCalled();
+    expect(netlifyClient.updateSite).toHaveBeenCalledTimes(2);
+    expect(events).toEqual(["update", "update", "link", "get"]);
+    expect(result).toMatchObject({ mode: "executed", siteId });
+  });
+
   test("creates, links, and proves the non-production site configuration", async () => {
     const events: string[] = [];
     const netlifyClient = createNetlifyClient({ events });
@@ -97,10 +139,8 @@ describe("runNetlifyProvisioning", () => {
 
     expect(netlifyClient.createSite).toHaveBeenCalledWith("owner", {
       name: "roberto-multimarcas-pdv",
-      prevent_non_git_prod_deploys: true,
     });
-    expect(netlifyClient.updateSite).toHaveBeenCalledWith(siteId, {
-      prevent_non_git_prod_deploys: true,
+    expect(netlifyClient.updateSite).toHaveBeenNthCalledWith(1, siteId, {
       repo: {
         allowed_branches: ["develop"],
         cmd: "npm run build",
@@ -112,6 +152,9 @@ describe("runNetlifyProvisioning", () => {
         stop_builds: false,
       },
     });
+    expect(netlifyClient.updateSite).toHaveBeenNthCalledWith(2, siteId, {
+      prevent_non_git_prod_deploys: true,
+    });
     expect(commandRunner.mock.calls[0][0]).toBe("npx.cmd");
     expect(commandRunner.mock.calls[0][1]).toEqual([
       "--yes",
@@ -121,7 +164,7 @@ describe("runNetlifyProvisioning", () => {
       siteId,
     ]);
     expect(commandRunner.mock.calls.flat().join(" ")).not.toContain("--prod");
-    expect(events).toEqual(["create", "update", "link", "get"]);
+    expect(events).toEqual(["create", "update", "update", "link", "get"]);
     expect(result).toMatchObject({ accountId, mode: "executed", siteId });
     expect(JSON.stringify(result)).not.toContain(authToken);
   });

@@ -138,26 +138,33 @@ export async function runNetlifyProvisioning({
       (candidate) => candidate.name === target.siteName,
     );
     if (sameName) {
-      throw new Error("The approved Netlify site name is unavailable.");
-    }
-
-    try {
-      site = await netlifyClient.createSite(account.slug, {
-        name: target.siteName,
-        prevent_non_git_prod_deploys: true,
-      });
-    } catch (error) {
-      const safeError = redactSensitiveText(error, [
-        environment.NETLIFY_AUTH_TOKEN,
-      ]);
-      throw new Error(
-        `The approved Netlify site name is unavailable: ${safeError.message ?? safeError}`,
-      );
+      if (
+        options.recoverSiteId !== sameName.id ||
+        !isRecoverableUnlinkedShell(sameName, accountId)
+      ) {
+        throw new Error("The approved Netlify site name is unavailable.");
+      }
+      site = sameName;
+    } else {
+      try {
+        site = await netlifyClient.createSite(account.slug, {
+          name: target.siteName,
+        });
+      } catch (error) {
+        const safeError = redactSensitiveText(error, [
+          environment.NETLIFY_AUTH_TOKEN,
+        ]);
+        throw new Error(
+          `The approved Netlify site name is unavailable: ${safeError.message ?? safeError}`,
+        );
+      }
     }
 
     await netlifyClient.updateSite(site.id, {
-      prevent_non_git_prod_deploys: true,
       repo: expectedBuildSettings(target),
+    });
+    await netlifyClient.updateSite(site.id, {
+      prevent_non_git_prod_deploys: true,
     });
     await runNetlifyCommand({
       args: ["link", "--id", site.id],
@@ -190,7 +197,17 @@ function parseArguments(args) {
     confirmation: readOption(args, "--confirm-site"),
     execute: args.includes("--execute"),
     phase,
+    recoverSiteId: readOption(args, "--recover-site-id"),
   };
+}
+
+function isRecoverableUnlinkedShell(site, accountId) {
+  return (
+    site?.account_id === accountId &&
+    site?.prevent_non_git_prod_deploys === false &&
+    !site?.repo &&
+    Object.keys(site?.build_settings ?? {}).length === 0
+  );
 }
 
 function authorizeCreation(manifest, options) {
@@ -389,7 +406,7 @@ export async function runProvisionNetlifyCli(
 ) {
   if (argv.includes("--help")) {
     console.log(
-      "Uso: npm run ops:provision-netlify -- --phase <site|configure-staging> [--execute --confirm-site <site>]",
+      "Uso: npm run ops:provision-netlify -- --phase <site|configure-staging> [--execute --confirm-site <site>] [--recover-site-id <id>]",
     );
     return;
   }
