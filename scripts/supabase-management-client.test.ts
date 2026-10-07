@@ -13,7 +13,12 @@ const projectRef = "abcdefghijklmnopqrst";
 describe("createSupabaseManagementClient", () => {
   test.each([
     ["listProjects", [], "GET", "/projects"],
-    ["listAvailableRegions", [], "GET", "/projects/available-regions"],
+    [
+      "listAvailableRegions",
+      ["wcqoluxxlvglqtebcucz"],
+      "GET",
+      "/projects/available-regions?organization_slug=wcqoluxxlvglqtebcucz",
+    ],
     ["getProject", [projectRef], "GET", `/projects/${projectRef}`],
     [
       "getDatabaseOpenApi",
@@ -213,7 +218,7 @@ describe("createSupabaseManagementClient", () => {
 });
 
 describe("parseSupabaseApiKeys", () => {
-  test("prefers modern publishable and secret keys", () => {
+  test("uses the modern publishable key and JWT service role for admin clients", () => {
     expect(
       parseSupabaseApiKeys([
         { api_key: "legacy-anon", name: "anon", type: "legacy" },
@@ -231,7 +236,7 @@ describe("parseSupabaseApiKeys", () => {
       ]),
     ).toEqual({
       publishableKey: "modern-publishable",
-      secretKey: "modern-secret",
+      secretKey: "legacy-service-role",
     });
   });
 

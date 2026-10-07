@@ -127,7 +127,10 @@ describe("runSupabaseStagingProvisioning", () => {
 
   test("rejects unavailable sa-east-1 and a wrong confirmation", async () => {
     const unavailableRegionClient = createManagementClient({
-      regions: [{ code: "us-east-1" }],
+      regions: {
+        message: "available regions",
+        regions: [{ code: "us-east-1" }],
+      },
     });
     await expect(
       executeProvisioning({ managementClient: unavailableRegionClient }),
@@ -161,6 +164,9 @@ describe("runSupabaseStagingProvisioning", () => {
     });
 
     expect(managementClient.pauseProject).toHaveBeenCalledOnce();
+    expect(managementClient.listAvailableRegions).toHaveBeenCalledWith(
+      manifest.supabase.organization.id,
+    );
     expect(managementClient.pauseProject).toHaveBeenCalledWith(
       manifest.supabase.legacy.staging.projectRef,
     );
@@ -353,7 +359,7 @@ type CommandRunner = (
 type ManagementClientOptions = {
   events?: string[];
   projects?: ReturnType<typeof project>[];
-  regions?: { code: string }[];
+  regions?: unknown;
   targetProject?: ReturnType<typeof project>;
 };
 

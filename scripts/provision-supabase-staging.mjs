@@ -67,7 +67,9 @@ export async function runSupabaseStagingProvisioning({
     });
   }
 
-  const regions = await managementClient.listAvailableRegions();
+  const regions = await managementClient.listAvailableRegions(
+    manifest.supabase.organization.id,
+  );
   if (!containsRegion(regions, target.region)) {
     throw new Error(`${target.region} is unavailable for project creation.`);
   }
@@ -244,6 +246,10 @@ function validateInventoryEvidence(inventory, manifest, currentTime) {
 }
 
 function containsRegion(regions, expectedRegion) {
+  if (!regions || typeof regions !== "object") {
+    return false;
+  }
+
   if (Array.isArray(regions)) {
     return regions.some(
       (region) =>

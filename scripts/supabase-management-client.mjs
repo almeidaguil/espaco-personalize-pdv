@@ -37,7 +37,10 @@ export function createSupabaseManagementClient({
       ),
     getProject: (projectRef) =>
       request(`/projects/${assertProjectRef(projectRef)}`),
-    listAvailableRegions: () => request("/projects/available-regions"),
+    listAvailableRegions: (organizationSlug) =>
+      request(
+        `/projects/available-regions?organization_slug=${encodeURIComponent(organizationSlug)}`,
+      ),
     listProjects: () => request("/projects"),
     pauseProject: (projectRef) =>
       request(`/projects/${assertProjectRef(projectRef)}/pause`, {
@@ -117,8 +120,8 @@ export function parseSupabaseApiKeys(keys) {
     keys.find((key) => key.type === "publishable") ??
     keys.find((key) => key.name === "anon");
   const secret =
-    keys.find((key) => key.type === "secret") ??
-    keys.find((key) => key.name === "service_role");
+    keys.find((key) => key.name === "service_role") ??
+    keys.find((key) => key.type === "secret");
 
   if (!publishable?.api_key || !secret?.api_key) {
     throw new Error("Supabase API key set is incomplete.");
