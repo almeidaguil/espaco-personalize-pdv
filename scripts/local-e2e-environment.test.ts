@@ -30,6 +30,17 @@ describe("parseSupabaseEnvironment", () => {
 });
 
 describe("buildLocalE2EEnvironment", () => {
+  it.each([undefined, "", "http://127.0.0.1:4000"])(
+    "pins helper URLs to the Next server and prevents env-file fallback",
+    (inheritedUrl) => {
+      const child = buildLocalE2EEnvironment(
+        { E2E_BASE_URL: inheritedUrl },
+        status,
+      );
+      expect(child.E2E_BASE_URL).toBe("http://localhost:3000");
+    },
+  );
+
   it("maps local CLI values and preserves unrelated child environment", () => {
     const parent = { PATH: "test-path", CI: "true" };
     const child = buildLocalE2EEnvironment(parent, status);
@@ -115,8 +126,8 @@ describe("runLocalE2EGate", () => {
       commands.push({ command, args, options });
       return {
         status: exitCodes[commands.length - 1],
-        stdout: statusOutput,
-        stderr: "SECRET_KEY=private-stderr-value",
+        stdout: commands.length === 1 ? statusOutput : "Local step completed.",
+        stderr: commands.length === 1 ? "SECRET_KEY=private-stderr-value" : "",
       };
     };
     return { commands, logs, execute, log: (line: string) => logs.push(line) };
@@ -134,7 +145,7 @@ describe("runLocalE2EGate", () => {
     const child = fake.commands[1].options.env;
     for (const command of fake.commands.slice(1)) {
       expect(command.options.env).toBe(child);
-      expect(command.options.stdio).toBe("inherit");
+      expect(command.options.stdio).toBe("pipe");
     }
     expect(child.NEXT_PUBLIC_SUPABASE_URL).toBe("http://127.0.0.1:54321");
     expect(child.SUPABASE_SECRET_KEY).toBe(status.SECRET_KEY);
@@ -150,6 +161,55 @@ describe("runLocalE2EGate", () => {
     expect(logs).not.toContain(statusOutput);
     expect(logs).not.toContain("private-stderr-value");
   });
+
+  it.each(["stdout", "stderr"])(
+    "redacts failure credentials from %s while preserving diagnostics and exit code",
+    (stream) => {
+      const fake = harness([0, 0, 0, 37]);
+      const environment = {
+        CI_DEPLOY_TOKEN: "inherited-deploy-token",
+        AUTHORIZATION: "Bearer inherited-authorization",
+        DATABASE_URL:
+          "postgresql://postgres:inherited-db-password@localhost/db",
+        CUSTOM_CREDENTIAL: "inherited-credential",
+        EXTRA_API_KEY: "extra-api-key",
+      };
+      let sensitiveValues: string[] = [];
+      const execute = (...args: Parameters<typeof fake.execute>) => {
+        const result = fake.execute(...args);
+        if (args[1][1] !== "test:e2e:required") return result;
+        const child = args[2].env;
+        sensitiveValues = [
+          ...credentialPrefixes.flatMap((prefix) => [
+            child[`${prefix}_EMAIL`]!,
+            child[`${prefix}_PASSWORD`]!,
+          ]),
+          child.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+          child.SUPABASE_SECRET_KEY!,
+          ...Object.values(environment),
+          "inherited-db-password",
+        ];
+        return {
+          ...result,
+          [stream]: [
+            "Timeout 1000ms exceeded.",
+            `locator.fill(${child.E2E_USER_PASSWORD})`,
+            ...sensitiveValues.map((value) => `credential=${value}`),
+            "1 failed: authentication.spec.ts",
+          ].join("\n"),
+        };
+      };
+      expect(runLocalE2EGate({ environment, args: [], ...fake, execute })).toBe(
+        37,
+      );
+      const output = fake.logs.join("\n");
+      expect(output).toContain("Timeout 1000ms exceeded.");
+      expect(output).toContain("1 failed: authentication.spec.ts");
+      expect(output).toContain("locator.fill([REDACTED])");
+      for (const value of sensitiveValues) expect(output).not.toContain(value);
+      expect(fake.commands).toHaveLength(4);
+    },
+  );
 
   it.each(["--linked", "--db-url", "--local", "https://remote.test"])(
     "rejects argument %s before any child command",

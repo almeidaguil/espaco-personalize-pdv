@@ -13,8 +13,8 @@ import {
  *   args?: string[],
  *   execute?: (command: string, args: string[], options: {
  *     cwd: string, env: Record<string, string | undefined>, shell: boolean,
- *     encoding?: "utf8", stdio?: "inherit"
- *   }) => { status: number | null, stdout?: string | null },
+ *     encoding?: "utf8", stdio?: "pipe", maxBuffer?: number
+ *   }) => { status: number | null, stdout?: string | null, stderr?: string | null },
  *   log?: (message: string) => void
  * }} options
  */
@@ -39,10 +39,9 @@ export function runLocalE2EGate({
       log("The local Supabase stack is not available.");
       return status.status ?? 1;
     }
-    const child = buildLocalE2EEnvironment(
-      environment,
-      parseSupabaseEnvironment(status.stdout ?? ""),
-    );
+    const localStatus = parseSupabaseEnvironment(status.stdout ?? "");
+    const child = buildLocalE2EEnvironment(environment, localStatus);
+    const redact = createOutputRedactor({ ...localStatus, ...child });
     log(
       `E2E gate local hostname: ${new URL(child.NEXT_PUBLIC_SUPABASE_URL).hostname}`,
     );
@@ -67,8 +66,13 @@ export function runLocalE2EGate({
         cwd: process.cwd(),
         env: child,
         shell: process.platform === "win32",
-        stdio: "inherit",
+        encoding: "utf8",
+        stdio: "pipe",
+        maxBuffer: 16 * 1024 * 1024,
       });
+      for (const output of [result.stdout, result.stderr]) {
+        if (output) log(redact(output));
+      }
       if (result.status !== 0) return result.status ?? 1;
     }
     log("Local E2E gate completed successfully.");
@@ -79,6 +83,47 @@ export function runLocalE2EGate({
     );
     return 1;
   }
+}
+
+/** @param {Record<string, string | undefined>} environment */
+function createOutputRedactor(environment) {
+  const sensitiveValues = new Set();
+  for (const [name, value] of Object.entries(environment)) {
+    if (!value) continue;
+    if (
+      /PASSWORD|PASSWD|(?:^|_)PASS$|SECRET|TOKEN|KEY|EMAIL|AUTH|CREDENTIAL|COOKIE/i.test(
+        name,
+      )
+    ) {
+      sensitiveValues.add(value);
+    }
+    // Connection URLs may embed credentials without a sensitive variable name.
+    try {
+      const url = new URL(value);
+      if (url.password) {
+        sensitiveValues.add(value);
+        sensitiveValues.add(url.password);
+        sensitiveValues.add(decodeURIComponent(url.password));
+      }
+    } catch {
+      // Ordinary environment strings are not URLs.
+    }
+  }
+  const variants = [...sensitiveValues].flatMap((value) => [
+    value,
+    JSON.stringify(value).slice(1, -1),
+    encodeURIComponent(value),
+  ]);
+  const replacements = [...new Set(variants)].sort(
+    (a, b) => b.length - a.length,
+  );
+  /** @param {string} output */
+  return (output) => {
+    for (const value of replacements) {
+      output = output.replaceAll(value, "[REDACTED]");
+    }
+    return output;
+  };
 }
 
 if (

@@ -82,6 +82,7 @@ export function buildLocalE2EEnvironment(environment, supabaseStatus) {
     SUPABASE_SECRET_KEY: supabaseStatus.SECRET_KEY,
     SUPABASE_TELEMETRY_DISABLED: "1",
     NEXT_TELEMETRY_DISABLED: "1",
+    E2E_BASE_URL: "http://localhost:3000",
     E2E_LOCAL_RESET: "1",
   };
   const runId = randomBytes(16).toString("hex");
