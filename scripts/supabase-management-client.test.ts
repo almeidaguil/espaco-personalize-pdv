@@ -13,6 +13,7 @@ const projectRef = "abcdefghijklmnopqrst";
 describe("createSupabaseManagementClient", () => {
   test.each([
     ["listProjects", [], "GET", "/projects"],
+    ["listAvailableRegions", [], "GET", "/projects/available-regions"],
     ["getProject", [projectRef], "GET", `/projects/${projectRef}`],
     ["pauseProject", [projectRef], "POST", `/projects/${projectRef}/pause`],
     [

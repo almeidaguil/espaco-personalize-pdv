@@ -1,0 +1,389 @@
+import { describe, expect, test, vi } from "vitest";
+
+import manifestFixture from "../config/remote-environments.json";
+import { parseRemoteEnvironmentManifest } from "./remote-environment-policy.mjs";
+import { runSupabaseStagingProvisioning } from "./provision-supabase-staging.mjs";
+
+const manifest = parseRemoteEnvironmentManifest(manifestFixture);
+const newProjectRef = "qrstabcdefghijklmnop";
+const databasePassword = "database-password-sentinel-Aa1!";
+const now = new Date("2026-10-07T12:00:00.000Z");
+
+describe("runSupabaseStagingProvisioning", () => {
+  test("builds a verified dry-run without calling mutable operations", async () => {
+    const managementClient = createManagementClient();
+    const log = vi.fn();
+
+    const result = await runSupabaseStagingProvisioning({
+      args: [],
+      commandRunner: vi.fn(),
+      environment: {},
+      inventoryReader: vi.fn().mockResolvedValue(validInventory()),
+      log,
+      managementClient,
+      manifest,
+      now: () => now,
+      wait: vi.fn(),
+    });
+
+    expect(result).toEqual({
+      legacyState: "ACTIVE_HEALTHY",
+      mode: "dry-run",
+      nextAction: `rerun with --execute --confirm-legacy-ref ${manifest.supabase.legacy.staging.projectRef}`,
+      productionState: "ACTIVE_HEALTHY",
+      region: "sa-east-1",
+      targetState: "absent",
+    });
+    expect(managementClient.pauseProject).not.toHaveBeenCalled();
+    expect(managementClient.createProject).not.toHaveBeenCalled();
+    expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
+    expect(log).toHaveBeenCalledWith(result);
+  });
+
+  test("returns a plan-only dry-run when credentials are not available", async () => {
+    const result = await runSupabaseStagingProvisioning({
+      args: [],
+      commandRunner: vi.fn(),
+      environment: {},
+      log: vi.fn(),
+      manifest,
+      wait: vi.fn(),
+    });
+
+    expect(result).toEqual({
+      legacyState: "unknown",
+      mode: "dry-run",
+      nextAction:
+        "provide SUPABASE_ACCESS_TOKEN and a fresh inventory evidence",
+      productionState: "unknown",
+      region: "sa-east-1",
+      targetState: "pending",
+    });
+  });
+
+  test.each([
+    ["missing", null],
+    ["stale", validInventory("2026-10-05T11:59:59.000Z")],
+    [
+      "wrong project",
+      {
+        ...validInventory(),
+        project: {
+          ...validInventory().project,
+          projectRef: "wrongprojectrefabcde",
+        },
+      },
+    ],
+  ])("rejects %s inventory before any mutation", async (_name, inventory) => {
+    const managementClient = createManagementClient();
+
+    await expect(
+      runSupabaseStagingProvisioning({
+        args: [
+          "--execute",
+          "--confirm-legacy-ref",
+          manifest.supabase.legacy.staging.projectRef,
+        ],
+        commandRunner: vi.fn(),
+        environment: {},
+        inventoryReader: vi.fn().mockResolvedValue(inventory),
+        log: vi.fn(),
+        managementClient,
+        manifest,
+        now: () => now,
+        wait: vi.fn(),
+      }),
+    ).rejects.toThrow(/inventory evidence/i);
+
+    expect(managementClient.pauseProject).not.toHaveBeenCalled();
+  });
+
+  test.each([
+    [
+      "more than two active projects",
+      [
+        ...activeLegacyProjects(),
+        project({ id: "thirdactiveprojectxy", name: "other" }),
+      ],
+      /active Supabase projects/i,
+    ],
+    [
+      "production identity mismatch",
+      activeLegacyProjects().map((item) =>
+        item.id === manifest.supabase.legacy.production.projectRef
+          ? { ...item, name: "wrong-production" }
+          : item,
+      ),
+      /production.*divergent/i,
+    ],
+  ])("rejects %s before pausing", async (_name, projects, error) => {
+    const managementClient = createManagementClient({ projects });
+
+    await expect(executeProvisioning({ managementClient })).rejects.toThrow(
+      error,
+    );
+    expect(managementClient.pauseProject).not.toHaveBeenCalled();
+  });
+
+  test("rejects unavailable sa-east-1 and a wrong confirmation", async () => {
+    const unavailableRegionClient = createManagementClient({
+      regions: [{ code: "us-east-1" }],
+    });
+    await expect(
+      executeProvisioning({ managementClient: unavailableRegionClient }),
+    ).rejects.toThrow(/sa-east-1.*unavailable/i);
+    expect(unavailableRegionClient.pauseProject).not.toHaveBeenCalled();
+
+    const wrongConfirmationClient = createManagementClient();
+    await expect(
+      executeProvisioning({
+        args: ["--execute", "--confirm-legacy-ref", "wrong-ref"],
+        managementClient: wrongConfirmationClient,
+      }),
+    ).rejects.toThrow(/confirmação literal/i);
+    expect(wrongConfirmationClient.pauseProject).not.toHaveBeenCalled();
+  });
+
+  test("pauses only legacy staging, creates Nano-default staging, migrates, and configures Auth", async () => {
+    const events: string[] = [];
+    const managementClient = createManagementClient({ events });
+    const commandRunner = vi.fn(async (_command, args) => {
+      events.push(`command:${args.join(" ")}`);
+      return { status: 0, stderr: "", stdout: "ok" };
+    });
+    const log = vi.fn();
+
+    const result = await executeProvisioning({
+      commandRunner,
+      generatePassword: () => databasePassword,
+      log,
+      managementClient,
+    });
+
+    expect(managementClient.pauseProject).toHaveBeenCalledOnce();
+    expect(managementClient.pauseProject).toHaveBeenCalledWith(
+      manifest.supabase.legacy.staging.projectRef,
+    );
+    expect(managementClient.createProject).toHaveBeenCalledWith({
+      dbPass: databasePassword,
+      name: "roberto-multimarcas-pdv-staging",
+      organizationSlug: "wcqoluxxlvglqtebcucz",
+      region: "sa-east-1",
+    });
+    expect(
+      Object.keys(managementClient.createProject.mock.calls[0][0]),
+    ).not.toContain("desiredInstanceSize");
+    expect(commandRunner.mock.calls.map((call) => call[1])).toEqual([
+      ["supabase", "link", "--project-ref", newProjectRef],
+      ["supabase", "db", "push", "--linked", "--dry-run"],
+      ["supabase", "db", "push", "--linked"],
+    ]);
+    commandRunner.mock.calls.forEach((call) => {
+      expect(call[2].environment.SUPABASE_DB_PASSWORD).toBe(databasePassword);
+      expect(call[1]).not.toContain(databasePassword);
+    });
+    expect(managementClient.updateAuthConfig).toHaveBeenCalledWith(
+      newProjectRef,
+      {
+        disable_signup: true,
+        external_anonymous_users_enabled: false,
+        external_email_enabled: true,
+        password_hibp_enabled: true,
+        password_min_length: 14,
+        site_url: "https://roberto-multimarcas-pdv.netlify.app",
+        uri_allow_list: "https://roberto-multimarcas-pdv.netlify.app/**",
+      },
+    );
+    expect(events).toEqual([
+      "pause:gpywbeoqcovjrfnmbdqx",
+      "create:roberto-multimarcas-pdv-staging",
+      `command:supabase link --project-ref ${newProjectRef}`,
+      "command:supabase db push --linked --dry-run",
+      "command:supabase db push --linked",
+      `auth:${newProjectRef}`,
+    ]);
+    expect(result).toEqual({
+      legacyState: "INACTIVE",
+      mode: "executed",
+      nextAction: "persist the target ref and run the staging bootstrap",
+      productionState: "ACTIVE_HEALTHY",
+      region: "sa-east-1",
+      targetRef: newProjectRef,
+      targetState: "ACTIVE_HEALTHY",
+    });
+    expect(JSON.stringify(result)).not.toContain(databasePassword);
+    expect(JSON.stringify(log.mock.calls)).not.toContain(databasePassword);
+  });
+
+  test("stops after a migration dry-run failure without Auth, delete, restore, or production mutation", async () => {
+    const managementClient = createManagementClient();
+    const commandRunner = vi.fn(async (_command, args) => ({
+      status: args.includes("--dry-run") ? 1 : 0,
+      stderr: args.includes("--dry-run") ? `failure ${databasePassword}` : "",
+      stdout: "",
+    }));
+
+    await expect(
+      executeProvisioning({
+        commandRunner,
+        generatePassword: () => databasePassword,
+        managementClient,
+      }),
+    ).rejects.toThrow("Supabase migration dry-run failed.");
+
+    expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
+    expect(managementClient.deleteProject).toBeUndefined();
+    expect(managementClient.restoreProject).toBeUndefined();
+    expect(managementClient.pauseProject).not.toHaveBeenCalledWith(
+      manifest.supabase.legacy.production.projectRef,
+    );
+  });
+
+  test("resumes an existing healthy target without pausing or creating again", async () => {
+    const target = project({
+      id: newProjectRef,
+      name: manifest.supabase.targets.staging.name,
+      region: "sa-east-1",
+    });
+    const managementClient = createManagementClient({
+      projects: [
+        { ...activeLegacyProjects()[0], status: "INACTIVE" },
+        activeLegacyProjects()[1],
+        target,
+      ],
+      targetProject: target,
+    });
+
+    const result = await executeProvisioning({ managementClient });
+
+    expect(managementClient.pauseProject).not.toHaveBeenCalled();
+    expect(managementClient.createProject).not.toHaveBeenCalled();
+    expect(result.targetRef).toBe(newProjectRef);
+  });
+});
+
+function executeProvisioning({
+  args = [
+    "--execute",
+    "--confirm-legacy-ref",
+    manifest.supabase.legacy.staging.projectRef,
+  ],
+  commandRunner = vi
+    .fn()
+    .mockResolvedValue({ status: 0, stderr: "", stdout: "" }),
+  generatePassword = () => databasePassword,
+  log = vi.fn(),
+  managementClient = createManagementClient(),
+} = {}) {
+  return runSupabaseStagingProvisioning({
+    args,
+    commandRunner,
+    environment: { SUPABASE_ACCESS_TOKEN: "access-token-sentinel" },
+    generatePassword,
+    inventoryReader: vi.fn().mockResolvedValue(validInventory()),
+    log,
+    managementClient,
+    manifest,
+    now: () => now,
+    wait: vi.fn().mockResolvedValue(undefined),
+  });
+}
+
+function createManagementClient({
+  events = [],
+  projects = activeLegacyProjects(),
+  regions = [{ code: "sa-east-1" }, { code: "us-east-1" }],
+  targetProject = project({
+    id: newProjectRef,
+    name: manifest.supabase.targets.staging.name,
+    region: "sa-east-1",
+  }),
+} = {}) {
+  let legacyPaused = false;
+  let targetCreated = projects.some(
+    (item) => item.name === manifest.supabase.targets.staging.name,
+  );
+
+  return {
+    createProject: vi.fn(async ({ name }) => {
+      events.push(`create:${name}`);
+      targetCreated = true;
+      return { ...targetProject, status: "COMING_UP" };
+    }),
+    getProject: vi.fn(async (projectRef: string) => {
+      if (projectRef === manifest.supabase.legacy.staging.projectRef) {
+        return {
+          ...activeLegacyProjects()[0],
+          status: legacyPaused ? "INACTIVE" : "ACTIVE_HEALTHY",
+        };
+      }
+      if (projectRef === newProjectRef && targetCreated) {
+        return targetProject;
+      }
+      throw new Error("unexpected project ref");
+    }),
+    listAvailableRegions: vi.fn().mockResolvedValue(regions),
+    listProjects: vi.fn(async () => {
+      if (!legacyPaused && !targetCreated) return projects;
+      return projects.map((item) =>
+        item.id === manifest.supabase.legacy.staging.projectRef
+          ? { ...item, status: legacyPaused ? "INACTIVE" : item.status }
+          : item,
+      );
+    }),
+    pauseProject: vi.fn(async (projectRef: string) => {
+      events.push(`pause:${projectRef}`);
+      legacyPaused = true;
+      return null;
+    }),
+    updateAuthConfig: vi.fn(async (projectRef: string) => {
+      events.push(`auth:${projectRef}`);
+      return { disable_signup: true };
+    }),
+  };
+}
+
+function activeLegacyProjects() {
+  return [
+    project({
+      id: manifest.supabase.legacy.staging.projectRef,
+      name: manifest.supabase.legacy.staging.name,
+      region: "us-west-2",
+    }),
+    project({
+      id: manifest.supabase.legacy.production.projectRef,
+      name: manifest.supabase.legacy.production.name,
+      region: "us-west-2",
+    }),
+  ];
+}
+
+function project({
+  id,
+  name,
+  region = "us-west-2",
+}: {
+  id: string;
+  name: string;
+  region?: string;
+}) {
+  return {
+    id,
+    name,
+    organization_id: manifest.supabase.organization.id,
+    region,
+    status: "ACTIVE_HEALTHY",
+  };
+}
+
+function validInventory(capturedAt = "2026-10-07T11:00:00.000Z") {
+  return {
+    capturedAt,
+    project: {
+      name: manifest.supabase.legacy.staging.name,
+      projectRef: manifest.supabase.legacy.staging.projectRef,
+      region: manifest.supabase.legacy.staging.region,
+      status: "ACTIVE_HEALTHY",
+    },
+  };
+}

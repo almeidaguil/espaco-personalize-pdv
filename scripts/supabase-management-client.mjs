@@ -33,6 +33,7 @@ export function createSupabaseManagementClient({
       request(`/projects/${assertProjectRef(projectRef)}/config/auth`),
     getProject: (projectRef) =>
       request(`/projects/${assertProjectRef(projectRef)}`),
+    listAvailableRegions: () => request("/projects/available-regions"),
     listProjects: () => request("/projects"),
     pauseProject: (projectRef) =>
       request(`/projects/${assertProjectRef(projectRef)}/pause`, {
