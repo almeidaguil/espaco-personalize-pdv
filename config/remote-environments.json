@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "supabase": {
+    "organization": {
+      "id": "wcqoluxxlvglqtebcucz",
+      "name": "almeidaguil's Org"
+    },
+    "legacy": {
+      "staging": {
+        "name": "espaco-personalize-pdv-staging",
+        "projectRef": "gpywbeoqcovjrfnmbdqx",
+        "region": "us-west-2",
+        "hostname": "gpywbeoqcovjrfnmbdqx.supabase.co"
+      },
+      "production": {
+        "name": "espaco-personalize-pdv",
+        "projectRef": "ciixpfquwmlsvzleattv",
+        "region": "us-west-2",
+        "hostname": "ciixpfquwmlsvzleattv.supabase.co"
+      }
+    },
+    "targets": {
+      "staging": {
+        "name": "roberto-multimarcas-pdv-staging",
+        "projectRef": null,
+        "region": "sa-east-1",
+        "hostname": null
+      },
+      "production": {
+        "name": "roberto-multimarcas-pdv",
+        "projectRef": null,
+        "region": "sa-east-1",
+        "hostname": null
+      }
+    }
+  },
+  "netlify": {
+    "accountId": null,
+    "siteId": null,
+    "siteName": "roberto-multimarcas-pdv",
+    "siteUrl": "https://roberto-multimarcas-pdv.netlify.app",
+    "repository": "almeidaguil/espaco-personalize-pdv",
+    "stagingBranch": "develop",
+    "productionBranch": "netlify-production-disabled-pr09"
+  }
+}
