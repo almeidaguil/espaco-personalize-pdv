@@ -133,6 +133,7 @@ describe("createNetlifyManagementClient", () => {
       {
         is_secret: true,
         key: "NEXT_PUBLIC_SUPABASE_URL",
+        scopes: ["builds"],
         values: [
           {
             context: "deploy-preview",
@@ -152,6 +153,7 @@ describe("createNetlifyManagementClient", () => {
       {
         is_secret: true,
         key: "SUPABASE_SECRET_KEY",
+        scopes: ["builds"],
         values: [
           { context: "deploy-preview", value: "supabase-secret-sentinel" },
           { context: "branch-deploy", value: "supabase-secret-sentinel" },
@@ -164,7 +166,6 @@ describe("createNetlifyManagementClient", () => {
       },
     ]);
     expect(writeInit.body).not.toContain('"context":"production"');
-    expect(writeInit.body).not.toContain('"scopes"');
   });
 
   test("updates existing variables idempotently and returns no values", async () => {
@@ -199,6 +200,7 @@ describe("createNetlifyManagementClient", () => {
       `${baseUrl}/accounts/${accountId}/env/SUPABASE_SECRET_KEY?site_id=${siteId}`,
     );
     expect(init.method).toBe("PUT");
+    expect(JSON.parse(init.body).scopes).toEqual(["builds"]);
     expect(JSON.stringify(result)).not.toContain("new-secret-sentinel");
   });
 

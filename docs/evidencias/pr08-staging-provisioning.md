@@ -67,8 +67,9 @@ proteção, com cobertura automatizada para recuperação explícita.
   caracteres e URL/allowlist restritas ao site Netlify aprovado.
 - Proteção HaveIBeenPwned: indisponível no plano Free; a API respondeu `402` e a
   automação aplicou somente o fallback explicitamente permitido.
-- Bootstrap do administrador, variáveis Netlify, deploy não produtivo e smoke:
-  pendentes.
+- Bootstrap do administrador: concluído em `2026-10-07T19:35:24.8780997Z`, com
+  exatamente um usuário e perfil `admin`; e-mail e credencial não registrados.
+- Variáveis Netlify, deploy não produtivo e smoke: pendentes.
 
 Na primeira retomada, o Node 22 no Windows recusou executar `npx.cmd` diretamente
 com `spawnSync` e retornou `EINVAL`. Um executor compartilhado passou a usar o

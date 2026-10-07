@@ -45,6 +45,7 @@ async function upsertSiteEnvironmentVariables(
   const entries = Object.entries(variables).map(([key, value]) => ({
     is_secret: true,
     key,
+    scopes: ["builds"],
     values: [
       { context: "deploy-preview", value },
       { context: "branch-deploy", value },
