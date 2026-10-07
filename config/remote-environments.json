@@ -22,9 +22,9 @@
     "targets": {
       "staging": {
         "name": "roberto-multimarcas-pdv-staging",
-        "projectRef": null,
+        "projectRef": "otsxpchqtfypxgzjzrxs",
         "region": "sa-east-1",
-        "hostname": null
+        "hostname": "otsxpchqtfypxgzjzrxs.supabase.co"
       },
       "production": {
         "name": "roberto-multimarcas-pdv",

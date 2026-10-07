@@ -229,13 +229,20 @@ describe("runSupabaseStagingProvisioning", () => {
       stdout: "",
     }));
 
-    await expect(
-      executeProvisioning({
+    let message = "";
+    try {
+      await executeProvisioning({
         commandRunner,
         generatePassword: () => databasePassword,
         managementClient,
-      }),
-    ).rejects.toThrow("Supabase migration dry-run failed.");
+      });
+    } catch (error) {
+      message = error instanceof Error ? error.message : String(error);
+    }
+
+    expect(message).toContain("Supabase migration dry-run failed.");
+    expect(message).toContain("[REDACTED]");
+    expect(message).not.toContain(databasePassword);
 
     expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
     expect("deleteProject" in managementClient).toBe(false);
@@ -264,7 +271,37 @@ describe("runSupabaseStagingProvisioning", () => {
 
     expect(managementClient.pauseProject).not.toHaveBeenCalled();
     expect(managementClient.createProject).not.toHaveBeenCalled();
+    expect(managementClient.updateDatabasePassword).toHaveBeenCalledWith(
+      newProjectRef,
+      databasePassword,
+    );
     expect(result).toMatchObject({ targetRef: newProjectRef });
+  });
+
+  test("falls back only when leaked-password protection is unavailable on Free", async () => {
+    const managementClient = createManagementClient();
+    managementClient.updateAuthConfig
+      .mockRejectedValueOnce(
+        new Error(
+          "Supabase API returned 402: HaveIBeenPwned.org is available on Pro Plans and up.",
+        ),
+      )
+      .mockResolvedValueOnce({ disable_signup: true });
+
+    await executeProvisioning({ managementClient });
+
+    expect(managementClient.updateAuthConfig).toHaveBeenCalledTimes(2);
+    expect(managementClient.updateAuthConfig.mock.calls[0][1]).toMatchObject({
+      password_hibp_enabled: true,
+    });
+    expect(managementClient.updateAuthConfig.mock.calls[1][1]).toEqual({
+      disable_signup: true,
+      external_anonymous_users_enabled: false,
+      external_email_enabled: true,
+      password_min_length: 14,
+      site_url: "https://roberto-multimarcas-pdv.netlify.app",
+      uri_allow_list: "https://roberto-multimarcas-pdv.netlify.app/**",
+    });
   });
 });
 
@@ -346,6 +383,7 @@ function createManagementClient({
       events.push(`auth:${projectRef}`);
       return { disable_signup: true };
     }),
+    updateDatabasePassword: vi.fn(async () => ({ message: "updated" })),
   };
 }
 

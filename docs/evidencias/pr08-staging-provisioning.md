@@ -13,7 +13,8 @@ não são registrados neste documento.
 - Produção legada validada: ref `ciixpfquwmlsvzleattv`, região `us-west-2`,
   estado `ACTIVE_HEALTHY`.
 - Região do novo staging validada: `sa-east-1` disponível.
-- Novo staging Supabase: ausente; criação ainda não executada.
+- Novo staging Supabase: `roberto-multimarcas-pdv-staging`, ref
+  `otsxpchqtfypxgzjzrxs`, região `sa-east-1`, estado `ACTIVE_HEALTHY`.
 - SHA-256 da evidência privada ignorada pelo Git:
   `f23dbd663770a8ca3a9d44b7a24042c5c24b06ad365891717378c8eec252c3b1`.
 
@@ -58,7 +59,19 @@ proteção, com cobertura automatizada para recuperação explícita.
 - Dry-runs Supabase e Netlify: aprovados.
 - Inventário redigido: aprovado.
 - Site Netlify não produtivo: criado, vinculado e validado.
-- Staging legado Supabase: ainda ativo e inalterado.
+- Staging legado Supabase: pausado, estado `INACTIVE`.
 - Produção legada Supabase: ativa, saudável e inalterada.
-- Pausa do staging legado e criação do staging novo: aguardando confirmação
-  destrutiva específica do proprietário.
+- Novo staging Supabase: criado, saudável e com migrations aplicadas em
+  `2026-10-07T16:37:23.6584486Z`.
+- Auth do novo staging: signup público e anônimo desativados, senha mínima de 14
+  caracteres e URL/allowlist restritas ao site Netlify aprovado.
+- Proteção HaveIBeenPwned: indisponível no plano Free; a API respondeu `402` e a
+  automação aplicou somente o fallback explicitamente permitido.
+- Bootstrap do administrador, variáveis Netlify, deploy não produtivo e smoke:
+  pendentes.
+
+Na primeira retomada, o Node 22 no Windows recusou executar `npx.cmd` diretamente
+com `spawnSync` e retornou `EINVAL`. Um executor compartilhado passou a usar o
+interpretador do Windows apenas para arquivos `.cmd`, mantendo os argumentos
+controlados e credenciais somente no ambiente do processo. A senha efêmera do
+banco foi rotacionada somente no novo staging e nunca foi registrada.

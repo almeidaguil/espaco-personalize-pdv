@@ -56,6 +56,12 @@ export function createSupabaseManagementClient({
         body: configuration,
         method: "PATCH",
       }),
+    updateDatabasePassword: (projectRef, password) =>
+      request(`/projects/${assertProjectRef(projectRef)}/database/password`, {
+        body: { password },
+        method: "PATCH",
+        sensitiveValues: [password],
+      }),
   };
 }
 

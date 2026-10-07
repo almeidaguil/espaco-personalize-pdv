@@ -1,14 +1,15 @@
 import { randomBytes } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 import {
   loadRemoteEnvironmentManifest,
+  redactSensitiveText,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
 import { createSupabaseManagementClient } from "./supabase-management-client.mjs";
+import { runCliCommand } from "./run-cli-command.mjs";
 
 const inventoryMaximumAgeMs = 24 * 60 * 60 * 1_000;
 const pollingAttempts = 20;
@@ -141,6 +142,10 @@ export async function runSupabaseStagingProvisioning({
   }
 
   const targetRef = targetProject.id ?? targetProject.ref;
+  if (!databasePassword) {
+    databasePassword = generatePassword();
+    await managementClient.updateDatabasePassword(targetRef, databasePassword);
+  }
   const commandEnvironment = {
     ...environment,
     ...(databasePassword ? { SUPABASE_DB_PASSWORD: databasePassword } : {}),
@@ -166,7 +171,7 @@ export async function runSupabaseStagingProvisioning({
   );
 
   const siteUrl = manifest.netlify.siteUrl.replace(/\/$/, "");
-  await managementClient.updateAuthConfig(targetRef, {
+  const authConfiguration = {
     disable_signup: true,
     external_anonymous_users_enabled: false,
     external_email_enabled: true,
@@ -174,7 +179,15 @@ export async function runSupabaseStagingProvisioning({
     password_min_length: 14,
     site_url: siteUrl,
     uri_allow_list: `${siteUrl}/**`,
-  });
+  };
+  try {
+    await managementClient.updateAuthConfig(targetRef, authConfiguration);
+  } catch (error) {
+    if (!isUnsupportedLeakedPasswordProtection(error)) throw error;
+    const { password_hibp_enabled: _unsupported, ...freePlanConfiguration } =
+      authConfiguration;
+    await managementClient.updateAuthConfig(targetRef, freePlanConfiguration);
+  }
 
   const finalProjects = await managementClient.listProjects();
   const production = findProjectByRef(
@@ -379,12 +392,24 @@ async function runSupabaseCommand(
 ) {
   const result = await commandRunner("npx.cmd", args, { environment });
   if (result.status !== 0) {
-    throw new Error(failureMessage);
+    const detail = redactSensitiveText(
+      [result.stderr, result.stdout].filter(Boolean).join("\n").trim(),
+      [environment.SUPABASE_ACCESS_TOKEN, environment.SUPABASE_DB_PASSWORD],
+    );
+    throw new Error(`${failureMessage}${detail ? ` ${detail}` : ""}`);
   }
 }
 
 function createDatabasePassword() {
   return `${randomBytes(32).toString("base64url")}Aa1!`;
+}
+
+function isUnsupportedLeakedPasswordProtection(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    /\b402\b/.test(message) &&
+    /HaveIBeenPwned|leaked password protection/i.test(message)
+  );
 }
 
 async function readInventoryEvidence() {
@@ -395,19 +420,6 @@ async function readInventoryEvidence() {
   } catch {
     return null;
   }
-}
-
-function runCommand(command, args, { environment }) {
-  const result = spawnSync(command, args, {
-    encoding: "utf8",
-    env: environment,
-    shell: false,
-  });
-  return {
-    status: result.status ?? 1,
-    stderr: result.stderr ?? "",
-    stdout: result.stdout ?? "",
-  };
 }
 
 async function wait(delayMs) {
@@ -436,7 +448,7 @@ export async function runProvisionSupabaseStagingCli(
     : undefined;
   const result = await runSupabaseStagingProvisioning({
     args: argv,
-    commandRunner: runCommand,
+    commandRunner: runCliCommand,
     environment,
     log: (value) => console.log(JSON.stringify(value, null, 2)),
     managementClient,

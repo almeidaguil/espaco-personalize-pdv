@@ -1,4 +1,3 @@
-import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -8,6 +7,7 @@ import {
   redactSensitiveText,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
+import { runCliCommand } from "./run-cli-command.mjs";
 
 const netlifyCliPackage = "netlify-cli@27.11.2";
 const allowedPhases = new Set(["site", "configure-staging"]);
@@ -387,19 +387,6 @@ function readOption(args, name) {
   return index === -1 ? undefined : args[index + 1];
 }
 
-function runCommand(command, args, { environment }) {
-  const result = spawnSync(command, args, {
-    encoding: "utf8",
-    env: environment,
-    shell: false,
-  });
-  return {
-    status: result.status ?? 1,
-    stderr: result.stderr ?? "",
-    stdout: result.stdout ?? "",
-  };
-}
-
 export async function runProvisionNetlifyCli(
   argv = process.argv.slice(2),
   environment = process.env,
@@ -420,7 +407,7 @@ export async function runProvisionNetlifyCli(
     : undefined;
   return runNetlifyProvisioning({
     args: argv,
-    commandRunner: runCommand,
+    commandRunner: runCliCommand,
     environment,
     log: (value) => console.log(JSON.stringify(value, null, 2)),
     manifest,

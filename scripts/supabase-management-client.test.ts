@@ -121,6 +121,25 @@ describe("createSupabaseManagementClient", () => {
     });
   });
 
+  test("rotates the database password through the dedicated endpoint", async () => {
+    const password = "new-database-password-sentinel-Aa1!";
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ message: "updated" }));
+    const client = createSupabaseManagementClient({
+      accessToken,
+      baseUrl,
+      fetch,
+    });
+
+    await client.updateDatabasePassword(projectRef, password);
+
+    const [url, init] = fetch.mock.calls[0];
+    expect(url).toBe(`${baseUrl}/projects/${projectRef}/database/password`);
+    expect(init.method).toBe("PATCH");
+    expect(JSON.parse(init.body)).toEqual({ password });
+  });
+
   test("runs only the explicit read-only database query endpoint", async () => {
     const fetch = vi
       .fn()
