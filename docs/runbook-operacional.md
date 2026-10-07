@@ -139,9 +139,12 @@ Nesta versão não há venda offline.
 ## Smoke Test De Release Ou Primeiro Uso
 
 Execute primeiro em ambiente isolado de homologação com o schema da versão.
-Prepare credenciais e dados exclusivos de teste; a seed local atual cria somente
-o admin E2E. Operadores adicionais podem ser cadastrados em `/settings` para
-validação manual; a seed multioperador automatizada pertence ao PR07.
+No Supabase local exclusivo de testes, executar `npm run test:e2e:local-reset`:
+o comando destrutivo reinicializa somente a base local, reaplica migrations,
+cria ou atualiza admin e operadores A/B com credenciais efêmeras e executa a
+suíte obrigatória. Recusa URLs remotas e project ref; não faz bootstrap remoto.
+O workflow usa essa mesma stack efêmera em PRs para `develop` e `main`, sem
+secrets, e para o Supabase mesmo em falha.
 
 1. Fazer login e conferir painel e permissões.
 2. Cadastrar produto e registrar saldo inicial.
@@ -156,9 +159,13 @@ validação manual; a seed multioperador automatizada pertence ao PR07.
    caixa em contingência.
 10. Conferir consolidado do período, filtros por vendedor/sessão e CSV.
 
-Registre o resultado dos cenários manuais; não os trate como cobertura E2E
-multioperador já automatizada. No Supabase local isolado, o reset local seguido
-da seed restaura a base de testes. Não reutilize o procedimento em produção.
+Registre o resultado do smoke manual após deploy. O gate do PR07 já automatiza
+caixas independentes, concorrência de abertura/vendas/fechamento, isolamento,
+contingência auditada e relatórios/CSV multioperador, sem skips autenticados.
+Os contextos de navegador e clientes são separados por identidade; a preparação
+financeira usa RPCs. Traces e relatórios do CI são publicados somente em falha
+E2E, por três dias, e podem conter sessões efêmeras sensíveis.
+Não reutilize o reset local ou as credenciais de teste em produção.
 
 Após deploy, o smoke de produção deve ser controlado pelo responsável: usar
 cadastros reais, registrar o teste e compensar a venda por cancelamento quando

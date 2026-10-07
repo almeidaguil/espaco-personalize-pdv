@@ -1,8 +1,9 @@
 # Checklist De Go-Live
 
 Checklist para liberar a operação da loja física Roberto Multimarcas.
-Documenta o runtime atual; não declara concluídos o QA multioperador (PR07),
-o provisionamento dos novos ambientes (PR08) ou a release (PR09).
+Documenta o runtime atual e o gate multioperador do PR07. PR05 e PR06 foram
+integrados; o provisionamento dos novos ambientes (PR08) e a release (PR09)
+continuam pendentes.
 
 ## Regra De Release
 
@@ -19,11 +20,17 @@ o provisionamento dos novos ambientes (PR08) ou a release (PR09).
 
 Na raiz do repositório, com dependências instaladas:
 
+O build exige `NEXT_PUBLIC_SUPABASE_URL` e
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` na sessão. Para validação sem credenciais,
+usar a configuração pública de formato do workflow Quality: URL local
+`http://127.0.0.1:54321` e placeholder `ci-publishable-key`.
+
 ```powershell
 npm.cmd run test
 npm.cmd run lint
 npm.cmd run type-check
 npm.cmd run format:check
+npm.cmd run test:no-event-legacy
 npm.cmd run build
 ```
 
@@ -48,18 +55,17 @@ Conferir também:
 
 ## 2. Gate E2E E Smoke Funcional
 
-Preparar usuário e configuração seguindo o
+Preparar a stack local isolada seguindo o
 [Gate E2E de release](e2e-release-gate.md) e executar:
 
 ```powershell
-npm.cmd run e2e:seed-local
-npm.cmd run test:e2e:required
+npm.cmd run test:e2e:local-reset
 ```
 
-A seed é exclusiva de Supabase local e cria/atualiza o admin E2E atual.
-Não cria automaticamente dois operadores. Após reset local, executar a seed
-novamente. A suíte altera dados e pode fechar caixas visíveis à conta E2E:
-usar ambiente e usuários exclusivos de homologação.
+O comando destrutivo apaga exclusivamente a base local de testes, reaplica
+migrations e executa seed idempotente de admin, operador A e operador B com
+credenciais efêmeras. Recusa alvos remotos e project ref. Não usa secrets no
+workflow, que executa em PRs para `develop` e `main` com Supabase local efêmero.
 
 Conferir o resultado automatizado e registrar o smoke manual:
 
@@ -75,8 +81,11 @@ Conferir o resultado automatizado e registrar o smoke manual:
 - relatório por período, vendedor e sessão, com CSV equivalente;
 - divergências e ajustes após fechamento conciliados.
 
-Os cenários multioperador acima são verificações manuais até a ampliação prevista
-no PR07. A execução do E2E atual não comprova sozinha essa cobertura.
+O PR07 automatiza caixas independentes, abertura concorrente, isolamento,
+contingência administrativa, disputa da última unidade e relatórios/CSV reais.
+Exigir execução sem skips autenticados. O smoke manual após deploy complementa
+a suíte. Em falha E2E no CI, os traces e relatórios são publicados por três dias;
+tratar os artefatos como sensíveis. A stack é parada mesmo em falha.
 
 ## 3. Preparação Do Banco De Entrega
 
