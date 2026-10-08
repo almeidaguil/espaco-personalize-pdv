@@ -135,3 +135,6 @@ Em `2026-10-08T13:37:29-03:00`, a árvore final foi reconciliada novamente:
   migrations;
 - `format:check`, ESLint, TypeScript, remoção do legado de eventos e build
   Next.js: aprovados.
+- GitHub PR #168: Quality checks, Database contract, Playwright E2E, Vercel e
+  Vercel Preview Comments aprovados; Supabase Preview ignorado conforme o fluxo
+  do staging dedicado.

@@ -545,7 +545,7 @@ Run: `git diff --check origin/develop...HEAD`
 
 Expected: sem erros.
 
-- [ ] **Step 5: Publicar branch e abrir PR**
+- [x] **Step 5: Publicar branch e abrir PR**
 
 ```powershell
 git push -u origin feature/provision-roberto-environments
@@ -554,7 +554,7 @@ gh pr create --base develop --head feature/provision-roberto-environments --titl
 
 O corpo do PR contém escopo, riscos, rollback, refs/IDs não sensíveis, evidências dos gates e declara explicitamente: produção nova não criada, produção legada não alterada, nenhum projeto excluído.
 
-- [ ] **Step 6: Aguardar checks e entregar para aprovação**
+- [x] **Step 6: Aguardar checks e entregar para aprovação**
 
 Run: `gh pr checks --watch`
 
