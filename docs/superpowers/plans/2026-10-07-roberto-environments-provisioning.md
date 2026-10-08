@@ -531,7 +531,7 @@ Confirmar staging novo saudável, produção legada saudável, staging legado pa
 
 Usar `superpowers:requesting-code-review` com foco em segurança de alvo, vazamento de segredos, idempotência, rollback/cota e diferença entre documentação e estado remoto. Corrigir somente achados reproduzidos e repetir gates afetados.
 
-- [ ] **Step 4: Auditar branch e assinatura**
+- [x] **Step 4: Auditar branch e assinatura**
 
 Run: `git status --short --branch`
 
