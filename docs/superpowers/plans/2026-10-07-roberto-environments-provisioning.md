@@ -327,7 +327,7 @@ git commit -S -m "feat(ops): add staging bootstrap and verification"
 **Interfaces:**
 
 - Consumes: política da Task 1, cliente Vercel da Task 2 e chaves Supabase obtidas em memória.
-- Produces: `runVercelProvisioning({ args, manifest, environment, vercelClient, commandRunner, log }): Promise<VercelProvisioningResult>`.
+- Produces: `runVercelProvisioning({ args, manifest, environment, vercelClient, log, wait }): Promise<VercelProvisioningResult>`.
 - Produces: CLI `npm run ops:provision-vercel -- --phase <configure-preview|deploy-preview|verify-preview> [--execute --confirm-project <project-id>]`.
 - Produces: estado não sensível `{ orgId, projectId, projectName, previewUrl?, repository, stagingBranch, productionDeployments }`.
 
@@ -485,6 +485,8 @@ Receber `STAGING_ADMIN_EMAIL`, `STAGING_ADMIN_PASSWORD` e `STAGING_ADMIN_FULL_NA
 - [ ] **Step 8: Configurar staging Vercel e deployment Preview**
 
 Executar `ops:provision-vercel -- --phase configure-preview` para gravar as três variáveis de staging somente em Preview e depois `--phase deploy-preview` para criar o deployment sem `--prod`, sempre confirmando literalmente o project ID. Persistir ID/URL retornados e executar `--phase verify-preview`. Verificar por metadados que `SUPABASE_SECRET_KEY` é sensível, Production continua sem credenciais, aliases ou deployments e a produção legada permanece intacta.
+
+Checkpoint de 2026-10-07: a Vercel classificou como Production o primeiro deployment solicitado pela CLI e pela API com referência Git. Todos os artefatos falhos foram removidos e o projeto voltou a zero deployments. A etapa permanece bloqueada até aprovação de um projeto dedicado de staging ou correção confirmada da plataforma.
 
 - [ ] **Step 9: Executar verificação remota e smoke autenticado**
 

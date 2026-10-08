@@ -78,15 +78,16 @@ O projeto novo será usado somente para Preview no PR08. Variáveis, aliases,
 deployment de Production e `--prod` continuam proibidos. A produção Vercel e o
 Supabase legados permanecem intactos.
 
-Quatro tentativas pela CLI foram classificadas incorretamente como Production
+Quatro tentativas pela CLI e uma tentativa pela API com referência Git foram
+classificadas incorretamente como Production
 pela Vercel, apesar da ausência de `--prod`; todas falharam no build antes de
 publicar o runtime porque variáveis Preview não são injetadas em Production.
 Cada deployment falho foi removido pelo ID exato e a consulta final voltou a
 mostrar zero deployments de Production. O comportamento coincide com a
 [ocorrência aberta na CLI da Vercel](https://github.com/vercel/vercel/issues/17069).
-O fluxo CLI foi abandonado e substituído por criação via API a partir da
-referência Git aprovada, com remoção automática e falha fechada se o alvo vier
-classificado como Production.
+Os dois fluxos foram abandonados após a reprodução. A automação mantém remoção
+automática e falha fechada se uma solicitação de Preview vier classificada como
+Production. A consulta final mostrou zero deployments Production e Preview.
 
 ## Estado Do Checkpoint
 
@@ -105,8 +106,10 @@ classificado como Production.
   automação aplicou somente o fallback explicitamente permitido.
 - Bootstrap do administrador: concluído em `2026-10-07T19:35:24.8780997Z`, com
   exatamente um usuário e perfil `admin`; e-mail e credencial não registrados.
-- Vercel: framework/Node e variáveis Preview concluídos; deployment Preview via
-  referência Git, reconciliação do Auth e smoke permanecem pendentes.
+- Vercel: framework/Node e variáveis Preview concluídos; o primeiro deployment
+  Preview está bloqueado pelo defeito reproduzido da plataforma. Reconciliação
+  do Auth e smoke dependem da decisão arquitetural sobre um projeto dedicado de
+  staging.
 
 Na primeira retomada, o Node 22 no Windows recusou executar `npx.cmd` diretamente
 com `spawnSync` e retornou `EINVAL`. Um executor compartilhado passou a usar o

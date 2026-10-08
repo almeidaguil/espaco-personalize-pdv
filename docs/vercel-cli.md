@@ -112,5 +112,13 @@ Ao final, comprove por metadados:
 Em qualquer divergência, pare sem promover ou excluir recursos. Preserve o
 Preview parcial para diagnóstico e retome apenas etapas idempotentes depois de
 corrigir o manifesto ou a configuração. A tentativa Netlify anterior permanece
-registrada somente como evidência histórica; nenhuma exclusão remota faz parte
-deste PR.
+registrada somente como evidência histórica. Exclua apenas deployments falhos
+identificados exatamente quando isso for necessário para restaurar o estado
+comprovado de zero Production Deployments.
+
+Em 2026-10-07, o primeiro deployment do projeto novo foi classificado como
+Production tanto pela CLI quanto pela API com referência Git, mesmo sem
+`--prod` ou `target`. Todos os artefatos falhos foram removidos e a automação
+passou a falhar fechada. Não repita o deploy nesse projeto até resolver a
+[ocorrência conhecida da Vercel](https://github.com/vercel/vercel/issues/17069)
+ou aprovar um projeto de staging dedicado.
