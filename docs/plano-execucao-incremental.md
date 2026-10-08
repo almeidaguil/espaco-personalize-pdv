@@ -188,8 +188,10 @@ Objetivo: provisionar ambientes vazios e exclusivos.
 Escopo:
 
 - Supabase somente de staging; producao nova pertence ao PR09;
-- Vercel `roberto-multimarcas-pdv` somente com Preview no PR08;
-- URL Preview validada para homologacao;
+- Vercel `roberto-multimarcas-pdv-staging` dedicado, usando seu ambiente
+  Production exclusivamente como staging no PR08;
+- `roberto-multimarcas-pdv` reservado sem variaveis ou deployments para o PR09;
+- URL estavel de staging validada para homologacao;
 - variaveis por ambiente;
 - bootstrap de admin e vendedores;
 - runbook de validacao e rollback;
@@ -199,8 +201,8 @@ Criterio de pronto:
 
 - quota e eventual custo aprovados;
 - staging novo passa migrations, smoke e E2E;
-- projeto Vercel novo permanece sem variaveis, alias ou deployment de
-  Production ate a release;
+- projeto dedicado tem somente as tres variaveis de staging e um deployment
+  READY; o projeto reservado para producao permanece vazio;
 - nenhuma credencial aparece no repositorio ou em logs.
 
 ## Entrega 9 - Release

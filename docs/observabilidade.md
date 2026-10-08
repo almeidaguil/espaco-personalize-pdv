@@ -12,7 +12,7 @@ dados pessoais ou payloads completos.
 - Logs do servidor em JSON para falhas inesperadas na finalização e no
   cancelamento de venda e no fechamento de caixa.
 - Redação de campos sensíveis pelo logger local.
-- GitHub Actions, deployments Vercel Preview, contrato de banco e E2E
+- GitHub Actions, deployment Vercel de staging dedicado, contrato de banco e E2E
   Release Gate como sinais de qualidade antes da release.
 
 Os logs atuais identificam a operação e a falha. Não presumir que todo registro
@@ -35,7 +35,7 @@ Monitorar:
 
 Fontes atuais:
 
-- Vercel Runtime Logs do projeto novo para o staging Preview;
+- Vercel Runtime Logs de `roberto-multimarcas-pdv-staging`;
 - Vercel Runtime Logs do projeto legado para a produção enquanto o PR09 não
   ocorrer;
 - Supabase Logs;

@@ -1,76 +1,39 @@
 # Vercel CLI
 
-Runbook do Vercel para o staging da Roberto Multimarcas. O proprietário
-declarou uso pessoal e não comercial para o plano Hobby. Durante o PR08 o
-projeto novo recebe somente configuração e deployment Preview; Production
-permanece exclusiva do ambiente legado até o corte aprovado do PR09.
+Runbook do staging Vercel da Roberto Multimarcas. O proprietário declarou uso
+pessoal e não comercial no plano Hobby.
 
 ## Versão E Autenticação
 
-Use a versão validada no projeto:
+Use Vercel CLI `62.7.0` com Node.js `22.23.2`:
 
 ```powershell
-vercel.cmd --version
+npx.cmd --yes vercel@62.7.0 --version
+npx.cmd --yes vercel@62.7.0 whoami --scope guilherme-a-s-projects
 ```
 
-Versão esperada: `62.7.0`, executada com Node.js `22.23.2`. Se for necessário
-autenticar novamente, use o fluxo OAuth oficial e confirme a identidade:
+A sessão fica no perfil local. Tokens nunca entram em arquivos versionados,
+documentação, PRs ou logs.
 
-```powershell
-vercel.cmd login
-vercel.cmd whoami
-```
+## Alvos Autorizados
 
-A sessão fica no perfil local. Não copie tokens para arquivos versionados,
-documentação, issue, PR ou argumentos registrados. Automações não interativas
-podem receber `VERCEL_TOKEN` somente no processo e devem removê-lo ao final.
+| Uso                  | Projeto                           | Project ID                         | Regra                                               |
+| -------------------- | --------------------------------- | ---------------------------------- | --------------------------------------------------- |
+| Staging PR08         | `roberto-multimarcas-pdv-staging` | `prj_fb7pug2hcbCGI1XIMLz5VuMr4S79` | `Production` deste projeto representa staging       |
+| Produção futura PR09 | `roberto-multimarcas-pdv`         | `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` | deve permanecer sem variáveis e deployments no PR08 |
 
-## Alvos Do PR08
+Org ID: `team_jstETBWBHJi0hsir3a3bAkbK`. Supabase de staging:
+`otsxpchqtfypxgzjzrxs`.
 
-- produção legada: projeto Vercel `espaco-personalize-pdv`, intacto;
-- staging novo: projeto Vercel `roberto-multimarcas-pdv`;
-- project ID novo: `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`;
-- org ID: `team_jstETBWBHJi0hsir3a3bAkbK`;
-- Supabase de staging: `otsxpchqtfypxgzjzrxs`;
-- Supabase de produção: continua `ciixpfquwmlsvzleattv` no legado.
+O manifesto `config/remote-environments.json` é a allowlist. Toda mutação deve
+confirmar literalmente o project ID do staging dedicado. O provisionador falha
+se o nome não terminar em `-staging`, se `dedicatedStaging` não for verdadeiro
+ou se o project ID coincidir com o projeto reservado.
 
-O diretório `.vercel/` gerado pelo vínculo local permanece ignorado pelo Git.
-Os IDs não são segredos, mas todo comando mutável deve compará-los com o
-manifesto antes de prosseguir.
+## Configuração Do Staging
 
-## Preflight Obrigatório
-
-Execute inspeções somente leitura antes de qualquer configuração:
-
-```powershell
-vercel.cmd project inspect roberto-multimarcas-pdv
-vercel.cmd ls roberto-multimarcas-pdv
-```
-
-O primeiro preflight encontrou o projeto sem deployments, mas ainda com
-framework `Other` e Node `24.x`. Corrija e revalide para preset Next.js e Node
-22.x antes do primeiro Preview. Interrompa em caso de divergência de conta,
-project ID, repositório, framework ou versão de Node.
-
-## Restrições De Production
-
-No PR08 é proibido:
-
-- executar `vercel --prod`;
-- criar ou atualizar variável no ambiente Production;
-- associar alias ou domínio produtivo a um Preview;
-- publicar a branch `main` pelo projeto novo;
-- promover um Preview para Production;
-- alterar ou excluir o projeto Vercel legado.
-
-Antes de conectar o repositório, impeça deploy automático de `main` e confirme
-que a integração permitirá somente o fluxo Preview aprovado. O domínio principal
-`roberto-multimarcas-pdv.vercel.app` não deve ser tratado como staging enquanto
-não houver um deployment de Production no PR09.
-
-## Variáveis De Preview
-
-Configure somente o ambiente Preview:
+O projeto dedicado usa preset Next.js, Node 22.x e exatamente estas variáveis no
+seu ambiente `Production`:
 
 ```txt
 NEXT_PUBLIC_SUPABASE_URL=
@@ -78,47 +41,81 @@ NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
 SUPABASE_SECRET_KEY=
 ```
 
-Os valores entram pela API HTTPS ou entrada padrão da CLI, nunca em linha de
-comando ou arquivo versionado. `SUPABASE_SECRET_KEY` deve ser sensível. Depois da
-gravação, confira apenas nomes, ambiente e metadados; não leia ou imprima os
-valores.
+`SUPABASE_SECRET_KEY` é sensível. Valores entram somente pela API HTTPS ou pelo
+stdin do CLI e não são lidos de volta. Preview do projeto dedicado fica vazio.
 
-## Deployment E Validação
-
-O provisionador deve executar primeiro em dry-run:
+Sequência inicial fail-closed, antes de persistir um deployment no manifesto:
 
 ```powershell
-npm.cmd run ops:provision-vercel -- --phase deploy-preview
-npm.cmd run ops:provision-vercel -- --phase configure-preview
+npm.cmd run ops:provision-vercel -- --phase configure-staging
+npm.cmd run ops:provision-vercel -- --phase deploy-staging
+npm.cmd run ops:provision-vercel -- --phase verify-staging
 ```
 
-Na execução autorizada, o provisionador cria o deployment a partir da referência
-Git aprovada pela API, sem conectar a integração Git e sem informar `target`.
-Se a Vercel classificar a operação como Production, o artefato é removido e a
-execução falha fechada. Registre a URL HTTPS exata do Preview, atualize o
-`site_url` e a allowlist do Supabase de staging e execute o smoke somente
-leitura contra essa URL.
+Depois que o deployment está registrado, use somente a verificação idempotente:
 
-Ao final, comprove por metadados:
+```powershell
+npm.cmd run ops:provision-vercel -- --phase verify-staging
+```
 
-- deployment com ambiente `Preview`;
-- projeto, conta e repositório iguais ao manifesto;
-- variáveis presentes somente em Preview;
-- zero Production Deployments, variáveis Production e aliases produtivos;
-- projeto Vercel e Supabase legados de produção intactos.
+Na execução remota, acrescente `--execute --confirm-project
+prj_fb7pug2hcbCGI1XIMLz5VuMr4S79` e forneça o token somente no processo.
 
-## Falhas E Retomada
+## Deployment E Proteção
 
-Em qualquer divergência, pare sem promover ou excluir recursos. Preserve o
-Preview parcial para diagnóstico e retome apenas etapas idempotentes depois de
-corrigir o manifesto ou a configuração. A tentativa Netlify anterior permanece
-registrada somente como evidência histórica. Exclua apenas deployments falhos
-identificados exatamente quando isso for necessário para restaurar o estado
-comprovado de zero Production Deployments.
+Deployment validado:
 
-Em 2026-10-07, o primeiro deployment do projeto novo foi classificado como
-Production tanto pela CLI quanto pela API com referência Git, mesmo sem
-`--prod` ou `target`. Todos os artefatos falhos foram removidos e a automação
-passou a falhar fechada. Não repita o deploy nesse projeto até resolver a
-[ocorrência conhecida da Vercel](https://github.com/vercel/vercel/issues/17069)
-ou aprovar um projeto de staging dedicado.
+- ID `dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD`;
+- URL imutável
+  `https://roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app`;
+- URL estável `https://roberto-multimarcas-pdv-staging.vercel.app`;
+- estado `READY`, target `Production` e metadados
+  `roberto_environment=staging`, `dedicated_staging=true`, `pr08=true`.
+
+Vercel Authentication continua habilitada. O Playwright usa um bypass de
+automação temporário pelos cabeçalhos oficiais
+`x-vercel-protection-bypass` e `x-vercel-set-bypass-cookie`; o segredo vive
+somente no processo e é revogado em um bloco de limpeza, inclusive se o teste
+falhar. A criação e a revogação usam a API HTTPS autenticada; o segredo não é
+enviado como argumento de processo. O comando
+`npm.cmd run test:e2e:staging-smoke` é dry-run por padrão. A execução exige
+`--execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79`, recusa bypass
+preexistente e confirma contagem final zero. O token Vercel não é propagado ao
+Playwright. Traces ficam desativados nesse smoke para que o header temporário
+não seja serializado em artefatos. Nunca desative SSO para executar E2E.
+
+## Evidência Da Mudança De Arquitetura
+
+No projeto reservado `roberto-multimarcas-pdv`, quatro tentativas pela CLI e uma
+pela API foram classificadas como Production mesmo sem `--prod`/`target`. Todas
+falharam antes de publicar, foram removidas por ID exato e deixaram zero
+deployments. O comportamento coincide com a
+[ocorrência Vercel #17069](https://github.com/vercel/vercel/issues/17069).
+
+Após autorização explícita, foi criado o projeto dedicado de staging. As três
+variáveis Preview obsoletas do projeto reservado foram removidas; removê-las da
+Vercel não revoga a chave no Supabase, mas a mesma chave permanece autorizada
+somente no staging dedicado.
+
+## Verificação E Retomada
+
+Confirme por metadados:
+
+- projeto dedicado com exatamente três variáveis em `Production`, nenhuma em
+  Preview, Vercel Authentication ativa, zero bypasses e um deployment `READY`
+  entre todos os targets;
+- projeto reservado com identidade exata, zero variáveis, zero deployments de
+  qualquer target e somente o domínio padrão
+  `roberto-multimarcas-pdv.vercel.app`, sem domínio customizado;
+- Auth do Supabase apontando para a URL estável;
+- zero bypasses de automação após o smoke;
+- produção legada Vercel/Supabase intacta.
+
+O deployment inicial usa o `sourceRef` de bootstrap
+`feature/provision-roberto-environments`; esse commit passa a compor `develop`
+quando o PR for integrado. O provisionador do PR08 é deliberadamente imutável e
+não substitui deployments persistidos. Como não há integração Git, promoções
+futuras dependem de um fluxo posterior, versionado e auditado.
+
+Em divergência, pare sem promover, excluir projeto ou alterar `main`. Preserve
+evidências redigidas e retome apenas a etapa idempotente correspondente.

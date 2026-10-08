@@ -14,6 +14,7 @@ export function resolveRemoteStagingSmokeEnvironment(environment, manifest) {
     "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
     "STAGING_ADMIN_EMAIL",
     "STAGING_ADMIN_PASSWORD",
+    "VERCEL_AUTOMATION_BYPASS_SECRET",
   ];
   const missing = required.filter((name) => !environment[name]?.trim());
   if (missing.length > 0) {
@@ -21,12 +22,12 @@ export function resolveRemoteStagingSmokeEnvironment(environment, manifest) {
   }
 
   const baseUrl = parseUrl(environment.E2E_BASE_URL);
-  if (!manifest.vercel.deploymentUrl) {
+  if (!manifest.vercel.siteUrl) {
     throw new Error(
-      "The Vercel Preview URL must be registered for remote smoke.",
+      "The Vercel staging URL must be registered for remote smoke.",
     );
   }
-  const expectedBaseUrl = new URL(manifest.vercel.deploymentUrl);
+  const expectedBaseUrl = new URL(manifest.vercel.siteUrl);
   if (
     baseUrl.protocol !== "https:" ||
     baseUrl.hostname !== expectedBaseUrl.hostname ||
@@ -34,7 +35,7 @@ export function resolveRemoteStagingSmokeEnvironment(environment, manifest) {
     baseUrl.password
   ) {
     throw new Error(
-      "E2E_BASE_URL must use the approved HTTPS Vercel Preview hostname.",
+      "E2E_BASE_URL must use the approved HTTPS Vercel staging hostname.",
     );
   }
 
@@ -70,10 +71,23 @@ export function resolveRemoteStagingSmokeEnvironment(environment, manifest) {
 
   return {
     baseUrl: baseUrl.href.replace(/\/$/, ""),
+    bypassSecret: environment.VERCEL_AUTOMATION_BYPASS_SECRET,
     email: environment.STAGING_ADMIN_EMAIL,
     password: environment.STAGING_ADMIN_PASSWORD,
     publishableKey: environment.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
     supabaseUrl: supabaseUrl.href.replace(/\/$/, ""),
+  };
+}
+
+export function createRemoteStagingPlaywrightUse(smokeEnvironment) {
+  return {
+    baseURL: smokeEnvironment.baseUrl,
+    extraHTTPHeaders: {
+      "x-vercel-protection-bypass": smokeEnvironment.bypassSecret,
+      "x-vercel-set-bypass-cookie": "true",
+    },
+    // A trace serializes request headers, including the temporary bypass.
+    trace: "off",
   };
 }
 

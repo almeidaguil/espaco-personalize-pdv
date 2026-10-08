@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from "vitest";
 import { createVercelManagementClient } from "./vercel-management-client.mjs";
 
 const orgId = "team_jstETBWBHJi0hsir3a3bAkbK";
-const projectId = "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq";
+const projectId = "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79";
 
 describe("createVercelManagementClient", () => {
   test("scopes project reads to the approved organization", async () => {
@@ -26,7 +26,7 @@ describe("createVercelManagementClient", () => {
     );
   });
 
-  test("upserts only Preview variables with the requested visibility", async () => {
+  test("upserts variables only into the requested environment", async () => {
     const fetch = vi.fn().mockResolvedValue(jsonResponse({ created: true }));
     const client = createVercelManagementClient({
       authToken: "vercel-token-sentinel",
@@ -37,6 +37,7 @@ describe("createVercelManagementClient", () => {
       key: "SUPABASE_SECRET_KEY",
       orgId,
       projectId,
+      targetEnvironment: "production",
       type: "sensitive",
       value: "service-secret-sentinel",
     });
@@ -47,41 +48,58 @@ describe("createVercelManagementClient", () => {
     );
     expect(JSON.parse(options.body)).toEqual({
       key: "SUPABASE_SECRET_KEY",
-      target: ["preview"],
+      target: ["production"],
       type: "sensitive",
       value: "service-secret-sentinel",
     });
   });
 
-  test("lists only production deployments through an explicit target", async () => {
+  test("lists every project deployment without hiding Preview", async () => {
     const fetch = vi.fn().mockResolvedValue(jsonResponse({ deployments: [] }));
     const client = createVercelManagementClient({
       authToken: "vercel-token-sentinel",
       fetch,
     });
 
-    await client.listProductionDeployments(projectId, orgId);
+    await client.listProjectDeployments(projectId, orgId);
 
     expect(fetch).toHaveBeenCalledWith(
-      `https://api.vercel.com/v6/deployments?projectId=${projectId}&target=production&teamId=${orgId}`,
+      `https://api.vercel.com/v6/deployments?projectId=${projectId}&teamId=${orgId}`,
       expect.any(Object),
     );
   });
 
-  test("creates a Git-source deployment without a production target", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(jsonResponse({ id: "dpl_preview123", target: null }));
+  test("lists project domains inside the approved organization", async () => {
+    const fetch = vi.fn().mockResolvedValue(jsonResponse({ domains: [] }));
     const client = createVercelManagementClient({
       authToken: "vercel-token-sentinel",
       fetch,
     });
 
-    await client.createPreviewDeployment({
+    await client.listProjectDomains(projectId, orgId);
+
+    expect(fetch).toHaveBeenCalledWith(
+      `https://api.vercel.com/v9/projects/${projectId}/domains?teamId=${orgId}`,
+      expect.any(Object),
+    );
+  });
+
+  test("creates a production-target deployment inside the dedicated staging project", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(
+        jsonResponse({ id: "dpl_staging123", target: "production" }),
+      );
+    const client = createVercelManagementClient({
+      authToken: "vercel-token-sentinel",
+      fetch,
+    });
+
+    await client.createStagingDeployment({
       branch: "feature/provision-roberto-environments",
       orgId,
       projectId,
-      projectName: "roberto-multimarcas-pdv",
+      projectName: "roberto-multimarcas-pdv-staging",
       repositoryId: 1264018806,
     });
 
@@ -93,11 +111,53 @@ describe("createVercelManagementClient", () => {
         repoId: 1264018806,
         type: "github",
       },
-      meta: { pr08: "true", roberto_environment: "staging" },
-      name: "roberto-multimarcas-pdv",
+      meta: {
+        dedicated_staging: "true",
+        pr08: "true",
+        roberto_environment: "staging",
+      },
+      name: "roberto-multimarcas-pdv-staging",
       project: projectId,
+      target: "production",
     });
-    expect(options.body).not.toContain('"target"');
+  });
+
+  test("creates and revokes an automation bypass through HTTPS without returning it in errors", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        jsonResponse({
+          protectionBypass: {
+            "temporary-bypass-sentinel": { scope: "automation-bypass" },
+          },
+        }),
+      )
+      .mockResolvedValueOnce(jsonResponse({ protectionBypass: {} }));
+    const client = createVercelManagementClient({
+      authToken: "vercel-token-sentinel",
+      fetch,
+    });
+
+    await client.createAutomationBypass({
+      orgId,
+      projectId,
+      secret: "temporary-bypass-sentinel",
+    });
+    await client.revokeAutomationBypass({
+      orgId,
+      projectId,
+      secret: "temporary-bypass-sentinel",
+    });
+
+    expect(fetch.mock.calls[0][0]).toBe(
+      `https://api.vercel.com/v1/projects/${projectId}/protection-bypass?teamId=${orgId}`,
+    );
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      generate: { secret: "temporary-bypass-sentinel" },
+    });
+    expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({
+      revoke: { regenerate: false, secret: "temporary-bypass-sentinel" },
+    });
   });
 
   test("deletes only an explicitly identified deployment", async () => {
@@ -136,6 +196,7 @@ describe("createVercelManagementClient", () => {
         key: "SUPABASE_SECRET_KEY",
         orgId,
         projectId,
+        targetEnvironment: "production",
         type: "sensitive",
         value: "service-secret-sentinel",
       }),
@@ -146,6 +207,7 @@ describe("createVercelManagementClient", () => {
         key: "SUPABASE_SECRET_KEY",
         orgId,
         projectId,
+        targetEnvironment: "production",
         type: "sensitive",
         value: "service-secret-sentinel",
       }),

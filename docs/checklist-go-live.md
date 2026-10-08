@@ -131,25 +131,25 @@ segredos definitivos de produção.
   e registrar a compensação por cancelamento quando aplicável.
 - Não apagar vendas ou movimentações financeiras para limpar relatórios reais.
 
-## 6. Vercel Preview E Promoção
+## 6. Vercel Staging E Promoção
 
 Conferir no projeto que receberá a release:
 
-- conta, projeto, URL Preview e ambiente identificados no manifesto;
-- repositório conectado exatamente a `almeidaguil/espaco-personalize-pdv`;
-- preset Next.js e Node 22.x confirmados no projeto novo;
-- branch `main` impedida de gerar deployment no projeto novo durante o PR08;
-- somente Preview e a branch `develop` autorizados para staging;
-- nenhum uso de `--prod`, alias produtivo ou Production Deployment;
-- variáveis públicas e privadas de staging restritas ao ambiente Preview;
+- conta, projetos, URL estável e ambiente identificados no manifesto;
+- preset Next.js e Node 22.x confirmados no projeto dedicado
+  `roberto-multimarcas-pdv-staging`;
+- `Production` do projeto dedicado identificado exclusivamente como staging;
+- projeto reservado `roberto-multimarcas-pdv` com zero variáveis e deployments;
+- branch `main` impedida de publicar durante o PR08;
+- variáveis públicas e privadas restritas ao projeto dedicado;
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e
   `SUPABASE_SECRET_KEY` configuradas, com a chave de servidor sensível;
-- zero variáveis configuradas no ambiente Production do projeto novo;
-- smoke remoto somente leitura aprovado no deployment Preview;
+- exatamente três variáveis em Production do staging dedicado e nenhuma em Preview;
+- smoke remoto somente leitura aprovado, SSO preservado e bypass temporário revogado;
 - PR de `develop` para `main`, variáveis e deployment de Production continuam
   bloqueados até
   a janela do PR09;
-- deployment Preview sem erros e consumo do plano Hobby revisado.
+- deployment de staging `READY` e consumo do plano Hobby revisado.
 
 A produção Vercel legada e o Supabase `ciixpfquwmlsvzleattv` permanecem
 intactos durante o PR08. O novo projeto Supabase de produção, variáveis de

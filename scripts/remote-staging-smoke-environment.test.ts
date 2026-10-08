@@ -2,16 +2,20 @@ import { describe, expect, test } from "vitest";
 
 import manifestFixture from "../config/remote-environments.json";
 import { parseRemoteEnvironmentManifest } from "./remote-environment-policy.mjs";
-import { resolveRemoteStagingSmokeEnvironment } from "./remote-staging-smoke-environment.mjs";
+import {
+  createRemoteStagingPlaywrightUse,
+  resolveRemoteStagingSmokeEnvironment,
+} from "./remote-staging-smoke-environment.mjs";
 
 const projectRef = "qrstabcdefghijklmnop";
 const manifest = createManifest();
 const validEnvironment = {
-  E2E_BASE_URL: "https://roberto-preview.vercel.app",
+  E2E_BASE_URL: "https://roberto-multimarcas-pdv-staging.vercel.app",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "publishable-key-sentinel",
   NEXT_PUBLIC_SUPABASE_URL: `https://${projectRef}.supabase.co`,
   STAGING_ADMIN_EMAIL: "owner@roberto-multimarcas.test",
   STAGING_ADMIN_PASSWORD: "Strong-staging-password-2026!",
+  VERCEL_AUTOMATION_BYPASS_SECRET: "bypass-secret-sentinel",
 };
 
 describe("resolveRemoteStagingSmokeEnvironment", () => {
@@ -19,7 +23,8 @@ describe("resolveRemoteStagingSmokeEnvironment", () => {
     expect(
       resolveRemoteStagingSmokeEnvironment(validEnvironment, manifest),
     ).toEqual({
-      baseUrl: "https://roberto-preview.vercel.app",
+      baseUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
+      bypassSecret: "bypass-secret-sentinel",
       email: "owner@roberto-multimarcas.test",
       password: "Strong-staging-password-2026!",
       publishableKey: "publishable-key-sentinel",
@@ -28,10 +33,10 @@ describe("resolveRemoteStagingSmokeEnvironment", () => {
   });
 
   test.each([
-    [{ E2E_BASE_URL: "http://localhost:3000" }, /HTTPS Vercel Preview/i],
+    [{ E2E_BASE_URL: "http://localhost:3000" }, /HTTPS Vercel staging/i],
     [
       { E2E_BASE_URL: "https://legacy-project.vercel.app" },
-      /HTTPS Vercel Preview/i,
+      /HTTPS Vercel staging/i,
     ],
     [
       { NEXT_PUBLIC_SUPABASE_URL: "https://gpywbeoqcovjrfnmbdqx.supabase.co" },
@@ -74,13 +79,32 @@ describe("resolveRemoteStagingSmokeEnvironment", () => {
   });
 });
 
+describe("createRemoteStagingPlaywrightUse", () => {
+  test("disables traces so the temporary bypass secret cannot reach an artifact", () => {
+    const resolved = resolveRemoteStagingSmokeEnvironment(
+      validEnvironment,
+      manifest,
+    );
+
+    expect(createRemoteStagingPlaywrightUse(resolved)).toEqual({
+      baseURL: resolved.baseUrl,
+      extraHTTPHeaders: {
+        "x-vercel-protection-bypass": "bypass-secret-sentinel",
+        "x-vercel-set-bypass-cookie": "true",
+      },
+      trace: "off",
+    });
+  });
+});
+
 function createManifest() {
   const value = {
     ...manifestFixture,
     vercel: {
       ...manifestFixture.vercel,
       deploymentId: "dpl_preview123",
-      deploymentUrl: "https://roberto-preview.vercel.app",
+      deploymentUrl: "https://roberto-preview-build.vercel.app",
+      siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
     },
     supabase: {
       ...manifestFixture.supabase,

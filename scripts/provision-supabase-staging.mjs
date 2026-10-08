@@ -1,6 +1,6 @@
 import { randomBytes } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { readFile, realpath } from "node:fs/promises";
+import { extname, isAbsolute, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import {
@@ -28,6 +28,7 @@ export async function runSupabaseStagingProvisioning({
   wait,
 }) {
   const options = parseArguments(args);
+  const inventoryPath = resolveInventoryEvidencePath(options.inventoryPath);
   const target = manifest.supabase.targets.staging;
 
   if (!managementClient) {
@@ -48,25 +49,8 @@ export async function runSupabaseStagingProvisioning({
     return planOnlyResult;
   }
 
-  const inventory = await inventoryReader();
+  const inventory = await inventoryReader(inventoryPath);
   validateInventoryEvidence(inventory, manifest, now());
-
-  if (options.execute) {
-    validateRemoteOperation({
-      confirmation: options.confirmLegacyRef,
-      environment: "legacy-staging",
-      execute: true,
-      manifest,
-      operation: "mutate",
-      provider: "supabase",
-      target: {
-        hostname: manifest.supabase.legacy.staging.hostname,
-        name: manifest.supabase.legacy.staging.name,
-        organizationId: manifest.supabase.organization.id,
-        projectRef: manifest.supabase.legacy.staging.projectRef,
-      },
-    });
-  }
 
   const regions = await managementClient.listAvailableRegions(
     manifest.supabase.organization.id,
@@ -79,10 +63,15 @@ export async function runSupabaseStagingProvisioning({
   const initialState = validateProjectTopology(initialProjects, manifest);
 
   if (!options.execute) {
+    const nextAction = initialState.target
+      ? target.projectRef
+        ? `rerun with --execute --confirm-target-ref ${target.projectRef}`
+        : `persist target ref ${initialState.target.id ?? initialState.target.ref} before resuming`
+      : `rerun with --execute --confirm-legacy-ref ${initialState.legacy.id} --confirm-target-name ${target.name}`;
     const dryRunResult = {
       legacyState: initialState.legacy.status,
       mode: "dry-run",
-      nextAction: `rerun with --execute --confirm-legacy-ref ${initialState.legacy.id}`,
+      nextAction,
       productionState: initialState.production.status,
       region: target.region,
       targetState: initialState.target?.status ?? "absent",
@@ -99,7 +88,9 @@ export async function runSupabaseStagingProvisioning({
   let databasePassword = environment.SUPABASE_DB_PASSWORD;
 
   if (!targetProject) {
+    authorizePendingTargetMutation(manifest, options.confirmTargetName);
     if (legacy.status !== "INACTIVE") {
+      authorizeLegacyStagingMutation(manifest, options.confirmLegacyRef);
       await managementClient.pauseProject(legacy.id ?? legacy.ref);
       legacy = await pollProject({
         acceptedStates: ["INACTIVE"],
@@ -132,16 +123,32 @@ export async function runSupabaseStagingProvisioning({
       projectRef: createdRef,
       wait,
     });
-  } else if (targetProject.status !== "ACTIVE_HEALTHY") {
-    targetProject = await pollProject({
-      acceptedStates: ["ACTIVE_HEALTHY"],
-      managementClient,
-      projectRef: targetProject.id ?? targetProject.ref,
-      wait,
-    });
+  } else {
+    authorizePersistedTargetMutation(
+      manifest,
+      options.confirmTargetRef,
+      targetProject,
+    );
+    if (targetProject.status !== "ACTIVE_HEALTHY") {
+      targetProject = await pollProject({
+        acceptedStates: ["ACTIVE_HEALTHY"],
+        managementClient,
+        projectRef: targetProject.id ?? targetProject.ref,
+        wait,
+      });
+    }
   }
 
   const targetRef = targetProject.id ?? targetProject.ref;
+  if (
+    !matchesTargetProject(
+      targetProject,
+      manifest,
+      manifest.supabase.organization.id,
+    )
+  ) {
+    throw new Error("Roberto staging identity is divergent.");
+  }
   if (!databasePassword) {
     databasePassword = generatePassword();
     await managementClient.updateDatabasePassword(targetRef, databasePassword);
@@ -170,12 +177,12 @@ export async function runSupabaseStagingProvisioning({
     "Supabase migration push failed.",
   );
 
-  if (!manifest.vercel.deploymentUrl) {
+  if (!manifest.vercel.siteUrl) {
     throw new Error(
-      "The Vercel Preview URL must be persisted before configuring Auth.",
+      "The Vercel staging URL must be persisted before configuring Auth.",
     );
   }
-  const siteUrl = manifest.vercel.deploymentUrl.replace(/\/$/, "");
+  const siteUrl = manifest.vercel.siteUrl.replace(/\/$/, "");
   const authConfiguration = {
     disable_signup: true,
     external_anonymous_users_enabled: false,
@@ -225,11 +232,25 @@ function parseArguments(args) {
       continue;
     }
     if (argument === "--confirm-legacy-ref") {
+      assertOptionValue(args, index, argument);
       options.confirmLegacyRef = args[index + 1];
       index += 1;
       continue;
     }
+    if (argument === "--confirm-target-ref") {
+      assertOptionValue(args, index, argument);
+      options.confirmTargetRef = args[index + 1];
+      index += 1;
+      continue;
+    }
+    if (argument === "--confirm-target-name") {
+      assertOptionValue(args, index, argument);
+      options.confirmTargetName = args[index + 1];
+      index += 1;
+      continue;
+    }
     if (argument === "--inventory") {
+      assertOptionValue(args, index, argument);
       options.inventoryPath = args[index + 1];
       index += 1;
       continue;
@@ -241,6 +262,13 @@ function parseArguments(args) {
     throw new Error(`Unexpected argument: ${argument}`);
   }
   return options;
+}
+
+function assertOptionValue(args, index, option) {
+  const value = args[index + 1];
+  if (!value || value.startsWith("--")) {
+    throw new Error(`${option} requires a file path or literal value.`);
+  }
 }
 
 function validateInventoryEvidence(inventory, manifest, currentTime) {
@@ -322,18 +350,19 @@ function validateProjectTopology(projects, manifest, options = {}) {
   if (production.status !== "ACTIVE_HEALTHY") {
     throw new Error("Legacy production is not healthy.");
   }
+  const target = findTargetProject(organizationProjects, manifest);
+  if (manifest.supabase.targets.staging.projectRef && !target) {
+    throw new Error("Roberto staging identity is divergent.");
+  }
+  if (target && !matchesTargetProject(target, manifest, organizationId)) {
+    throw new Error("Roberto staging identity is divergent.");
+  }
   if (!options.allowInactiveLegacy && legacy.status !== "ACTIVE_HEALTHY") {
-    const existingTarget = findTargetProject(organizationProjects, manifest);
-    if (!existingTarget) {
+    if (!target) {
       throw new Error(
         "Legacy staging is not healthy and the target is absent.",
       );
     }
-  }
-
-  const target = findTargetProject(organizationProjects, manifest);
-  if (target && !matchesTargetProject(target, manifest, organizationId)) {
-    throw new Error("Roberto staging identity is divergent.");
   }
 
   return { legacy, production, target };
@@ -344,9 +373,12 @@ function findProjectByRef(projects, projectRef) {
 }
 
 function findTargetProject(projects, manifest) {
-  return projects.find(
-    (project) => project.name === manifest.supabase.targets.staging.name,
-  );
+  const expected = manifest.supabase.targets.staging;
+  if (expected.projectRef) {
+    return findProjectByRef(projects, expected.projectRef);
+  }
+
+  return projects.find((project) => project.name === expected.name);
 }
 
 function matchesProject(project, expected, organizationId) {
@@ -369,10 +401,76 @@ function matchesTargetProject(project, manifest, organizationId) {
   return Boolean(
     /^[a-z]{20}$/.test(projectRef) &&
     !legacyRefs.includes(projectRef) &&
+    (!expected.projectRef || projectRef === expected.projectRef) &&
     project.name === expected.name &&
     project.region === expected.region &&
     (project.organization_id ?? project.organization_slug) === organizationId,
   );
+}
+
+function authorizeLegacyStagingMutation(manifest, confirmation) {
+  validateRemoteOperation({
+    confirmation,
+    environment: "legacy-staging",
+    execute: true,
+    manifest,
+    operation: "mutate",
+    provider: "supabase",
+    target: {
+      hostname: manifest.supabase.legacy.staging.hostname,
+      name: manifest.supabase.legacy.staging.name,
+      organizationId: manifest.supabase.organization.id,
+      projectRef: manifest.supabase.legacy.staging.projectRef,
+    },
+  });
+}
+
+function authorizePendingTargetMutation(manifest, confirmation) {
+  const expected = manifest.supabase.targets.staging;
+  if (expected.projectRef || expected.hostname) {
+    throw new Error(
+      "A persisted staging target must be confirmed by project ref.",
+    );
+  }
+  validateRemoteOperation({
+    confirmation,
+    environment: "staging",
+    execute: true,
+    manifest,
+    operation: "mutate",
+    provider: "supabase",
+    target: {
+      hostname: null,
+      name: expected.name,
+      organizationId: manifest.supabase.organization.id,
+      projectRef: null,
+    },
+  });
+}
+
+function authorizePersistedTargetMutation(manifest, confirmation, project) {
+  const expected = manifest.supabase.targets.staging;
+  if (!expected.projectRef || !expected.hostname) {
+    throw new Error(
+      "The target ref must be persisted before resuming staging mutations.",
+    );
+  }
+
+  validateRemoteOperation({
+    confirmation,
+    environment: "staging",
+    execute: true,
+    manifest,
+    operation: "mutate",
+    provider: "supabase",
+    target: {
+      hostname: expected.hostname,
+      name: project.name,
+      organizationId:
+        project.organization_id ?? project.organization_slug ?? null,
+      projectRef: project.id ?? project.ref,
+    },
+  });
 }
 
 async function pollProject({
@@ -417,12 +515,56 @@ function isUnsupportedLeakedPasswordProtection(error) {
   );
 }
 
-async function readInventoryEvidence() {
-  try {
-    return JSON.parse(
-      await readFile(resolve(".provisioning/inventory/inventory.json"), "utf8"),
+function resolveInventoryEvidencePath(inventoryPath) {
+  const authorizedDirectory = resolve(".provisioning/inventory");
+  const candidate = resolve(
+    inventoryPath ?? resolve(authorizedDirectory, "inventory.json"),
+  );
+  const relativePath = relative(authorizedDirectory, candidate);
+  const isOutsideDirectory =
+    relativePath === "" ||
+    relativePath === ".." ||
+    relativePath.startsWith(`..${process.platform === "win32" ? "\\" : "/"}`) ||
+    isAbsolute(relativePath);
+
+  if (isOutsideDirectory || extname(candidate).toLowerCase() !== ".json") {
+    throw new Error(
+      "Inventory evidence must be a JSON file inside the authorized inventory directory.",
     );
-  } catch {
+  }
+
+  return candidate;
+}
+
+async function readInventoryEvidence(inventoryPath) {
+  const authorizedDirectory = resolve(".provisioning/inventory");
+  const authorizedPath = resolveInventoryEvidencePath(inventoryPath);
+  try {
+    const [realDirectory, realInventoryPath] = await Promise.all([
+      realpath(authorizedDirectory),
+      realpath(authorizedPath),
+    ]);
+    const relativePath = relative(realDirectory, realInventoryPath);
+    if (
+      relativePath === "" ||
+      relativePath === ".." ||
+      relativePath.startsWith(
+        `..${process.platform === "win32" ? "\\" : "/"}`,
+      ) ||
+      isAbsolute(relativePath)
+    ) {
+      throw new Error(
+        "Inventory evidence must resolve inside the authorized inventory directory.",
+      );
+    }
+    return JSON.parse(await readFile(realInventoryPath, "utf8"));
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      /authorized inventory directory/.test(error.message)
+    ) {
+      throw error;
+    }
     return null;
   }
 }
@@ -441,7 +583,7 @@ export async function runProvisionSupabaseStagingCli(
 
   if (argv.includes("--help")) {
     console.log(
-      `Uso: npm run ops:provision-staging -- [--execute --confirm-legacy-ref ${manifest.supabase.legacy.staging.projectRef}]`,
+      `Uso: npm run ops:provision-staging -- [--inventory <arquivo-json>] [--execute --confirm-legacy-ref ${manifest.supabase.legacy.staging.projectRef} --confirm-target-name ${manifest.supabase.targets.staging.name}] | [--execute --confirm-target-ref <novo-staging-ref>]`,
     );
     return;
   }

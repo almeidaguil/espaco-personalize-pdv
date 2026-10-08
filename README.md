@@ -26,8 +26,8 @@ identifica o responsavel pela sessao autenticada. Consulte o
 - Husky
 - Commitlint
 - GitHub Actions
-- Vercel (Preview novo no PR08 e produção legada preservada até o corte do
-  PR09)
+- Vercel (projeto dedicado de staging no PR08 e produção legada preservada até
+  o corte do PR09)
 
 ## Ambiente Local
 
@@ -60,11 +60,17 @@ npm.cmd ci
 ## Ambientes E Fluxo Git
 
 - Desenvolvimento local usa `.env.local` e o Supabase CLI local.
-- Staging usa a branch `develop`, deploy Preview no projeto Vercel
-  `roberto-multimarcas-pdv` e um projeto Supabase isolado.
+- Staging tem `develop` como branch de referência e usa o projeto Vercel
+  dedicado `roberto-multimarcas-pdv-staging` com um Supabase isolado. O
+  deployment inicial do PR08 é um snapshot auditável da branch
+  `feature/provision-roberto-environments`; no merge, esse mesmo commit passa a
+  compor `develop`. O PR08 não implementa deploy contínuo: promoções futuras
+  exigem um fluxo versionado posterior. O ambiente `Production` desse projeto
+  Vercel representa exclusivamente staging.
 - Durante o PR08, a produção usa `main`, Vercel legado e o Supabase legado;
-  o projeto Vercel novo não recebe variáveis, alias ou deployment de Production,
-  e o novo banco de produção será criado somente no corte aprovado do PR09.
+  o projeto Vercel reservado `roberto-multimarcas-pdv` permanece sem variáveis
+  e sem deployments; o novo banco de produção será criado somente no corte
+  aprovado do PR09.
 - Arquivos com valores reais são locais ou gerenciados pelo provedor e nunca
   são versionados.
 - Commits diretos na `main` sao proibidos. O fluxo oficial e

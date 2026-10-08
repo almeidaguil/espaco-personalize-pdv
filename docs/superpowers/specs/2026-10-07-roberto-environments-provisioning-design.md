@@ -51,13 +51,16 @@ cota e podem ser restaurados pelo período oferecido pela plataforma.
 ### Hospedagem
 
 O projeto Vercel legado `espaco-personalize-pdv` permanecerá intacto durante o
-PR08. O novo projeto Vercel `roberto-multimarcas-pdv` será usado exclusivamente
-para Preview no PR08. Criar o contêiner do projeto não autoriza criar deployment,
-alias ou variáveis no ambiente Production.
+PR08. O staging usa o projeto dedicado `roberto-multimarcas-pdv-staging`; o
+ambiente Production desse projeto representa somente staging. O projeto
+`roberto-multimarcas-pdv` fica reservado e vazio para a produção do PR09.
 
 O repositório GitHub `almeidaguil/espaco-personalize-pdv` é público e será a
-origem dos deploys. O acesso Vercel deve ser autorizado pelo proprietário e cada
-operação deve validar o projeto e a conta antes de alterar o ambiente remoto.
+origem dos deploys via API. O PR08 não cria integração Git persistente: o
+bootstrap usa a feature branch registrada e a publicação de `develop` após o
+merge exige nova operação explícita. O acesso Vercel deve ser autorizado pelo
+proprietário e cada operação deve validar projeto e conta antes de alterar o
+ambiente remoto.
 
 ## 4. Estratégia De Substituição Sem Custo
 
@@ -76,10 +79,10 @@ substituição será escalonada.
 7. Aplicar a cadeia imutável de migrations no novo staging, sem `db reset` remoto.
 8. Criar somente o administrador inicial de homologação.
 9. Validar schema, grants, RLS, RPCs e smoke autenticado.
-10. Criar e vincular o projeto Vercel `roberto-multimarcas-pdv` sem deployment de
-    Production.
-11. Configurar somente Preview e a branch `develop` contra o novo staging.
-12. Manter variáveis, alias e publicação de Production bloqueados até o PR09.
+10. Reservar `roberto-multimarcas-pdv` sem variáveis ou deployments.
+11. Criar `roberto-multimarcas-pdv-staging` e configurar Production desse
+    projeto somente contra o novo staging.
+12. Manter a publicação de `main` e a produção real bloqueadas até o PR09.
 
 Ao final do PR08 haverá dois projetos ativos: produção legada e staging novo.
 
@@ -178,19 +181,27 @@ A conta de produção não será criada por esse fluxo no PR08.
 
 ### 5.6 Vercel
 
-O novo projeto Vercel deverá:
+Os projetos Vercel deverão:
 
-- usar o nome `roberto-multimarcas-pdv` e a conta pessoal aprovada;
+- usar `roberto-multimarcas-pdv-staging` para staging e reservar
+  `roberto-multimarcas-pdv` para produção futura na conta pessoal aprovada;
 - permanecer distinto do projeto legado `espaco-personalize-pdv`;
-- conectar somente o repositório público autorizado, depois de comprovar as
-  proteções contra Production;
+- usar somente o repositório público autorizado como `gitSource` da API, sem
+  conexão Git persistente no PR08, depois de comprovar as proteções;
 - usar o preset Next.js e Node.js 22 conforme `.nvmrc` e `package.json`;
 - executar o build oficial do projeto;
-- configurar as três variáveis Supabase somente em Preview, sem copiá-las para
+- configurar as três variáveis Supabase somente em Production do projeto
+  dedicado de staging, sem copiá-las para
   arquivos versionados e marcando a chave de servidor como sensível;
-- apontar Preview e `develop` somente para o staging Supabase;
-- não configurar variáveis de Production, não executar `--prod`, não associar
-  alias produtivo e não publicar a branch `main` no PR08;
+- apontar a URL estável do projeto dedicado somente para o staging Supabase;
+- não configurar variável ou deployment no projeto reservado, não associar
+  domínio produtivo e não publicar a branch `main` no PR08;
+- auditar todos os targets de deployment, exigir exatamente três variáveis no
+  projeto dedicado e identidade, variáveis, deployments e domínios vazios no
+  projeto reservado, tolerando apenas o domínio padrão `.vercel.app` criado
+  automaticamente;
+- manter Vercel Authentication ativa e criar bypass somente durante o smoke,
+  com limpeza obrigatória e trace desativado;
 - validar que a conta permanece no plano Hobby e interromper antes de qualquer
   recurso ou mudança de plano que possa gerar cobrança.
 
@@ -231,7 +242,7 @@ orientar logout ou rotação posterior.
 - Migration com falha: interromper bootstrap e deploy; não aplicar correções
   manuais fora de migration.
 - Bootstrap incompatível: não sobrescrever usuário; exigir intervenção.
-- Deploy Preview com falha: preservar evidências, não promover e manter a
+- Deploy de staging com falha: preservar evidências, não promover e manter a
   produção legada ativa.
 - Limite do Vercel Hobby próximo do fim: bloquear deploys não essenciais e
   avaliar o consumo antes de publicar novamente.
@@ -256,7 +267,7 @@ orientar logout ou rotação posterior.
 - tabelas, índices, constraints, grants, policies e RPCs esperados;
 - signup público bloqueado e administrador inicial autenticando;
 - escrita financeira direta bloqueada;
-- smoke de login, dashboard e rotas protegidas no deployment Vercel Preview;
+- smoke de login, dashboard e rotas protegidas no projeto Vercel dedicado;
 - nenhum operador, caixa, venda ou produto criado pelo bootstrap;
 - evidência redigida anexada ao PR sem credenciais.
 
@@ -297,8 +308,8 @@ Essas ações pertencem ao PR09 ou exigem autorização específica posterior.
   migrations;
 - somente o administrador inicial presente após o bootstrap;
 - RLS, grants e RPCs validados no ambiente novo;
-- projeto Vercel criado, vinculado e usando staging somente em Preview;
-- zero variáveis, aliases ou deployments de Production no projeto novo;
+- projeto Vercel dedicado criado e usando Production somente como staging;
+- projeto reservado para produção com zero variáveis e deployments;
 - comandos mutáveis protegidos por dry-run, allowlist e confirmação literal;
 - nenhuma credencial ou dado pessoal presente em Git, logs ou artefatos;
 - gates locais e do GitHub aprovados;

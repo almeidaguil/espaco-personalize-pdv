@@ -1,6 +1,5 @@
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { resolve } from "node:path";
-import { spawnSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
 
 import { createClient } from "@supabase/supabase-js";
@@ -14,6 +13,7 @@ import {
   createSupabaseManagementClient,
   parseSupabaseApiKeys,
 } from "./supabase-management-client.mjs";
+import { runCliCommand } from "./run-cli-command.mjs";
 
 const requiredTables = [
   "profiles",
@@ -40,6 +40,7 @@ export async function verifyRemoteStaging({
   anonymousClient,
   authenticatedClient,
   commandRunner,
+  linkedProjectRef,
   localMigrations = /** @type {string[] | undefined} */ (undefined),
   managementClient,
   manifest,
@@ -63,6 +64,11 @@ export async function verifyRemoteStaging({
       projectRef: target.projectRef,
     },
   });
+  if (linkedProjectRef?.trim() !== target.projectRef) {
+    throw new Error(
+      "The local Supabase link does not match the staging project ref.",
+    );
+  }
 
   const expectedMigrations = localMigrations ?? (await readLocalMigrations());
   const migrationResult = await commandRunner("npx.cmd", [
@@ -93,10 +99,10 @@ export async function verifyRemoteStaging({
   assertSchemaContract(openApi);
 
   const authConfig = await managementClient.getAuthConfig(target.projectRef);
-  if (!manifest.vercel.deploymentUrl) {
-    throw new Error("The Vercel Preview URL is not registered.");
+  if (!manifest.vercel.siteUrl) {
+    throw new Error("The Vercel staging URL is not registered.");
   }
-  const expectedSiteUrl = manifest.vercel.deploymentUrl.replace(/\/$/, "");
+  const expectedSiteUrl = manifest.vercel.siteUrl.replace(/\/$/, "");
   if (
     authConfig.disable_signup !== true ||
     authConfig.external_anonymous_users_enabled !== false ||
@@ -104,7 +110,49 @@ export async function verifyRemoteStaging({
     authConfig.uri_allow_list !== `${expectedSiteUrl}/**`
   ) {
     throw new Error(
-      "Public signup, anonymous users, or Vercel Preview Auth URLs are divergent.",
+      "Public signup, anonymous users, or Vercel staging Auth URLs are divergent.",
+    );
+  }
+
+  const rlsSummary = firstQueryRow(
+    await managementClient.runReadOnlyQuery(target.projectRef, {
+      query: `
+        select
+          count(*)::integer as table_count,
+          count(*) filter (where tables.relrowsecurity)::integer
+            as rls_enabled_table_count,
+          count(*) filter (
+            where exists (
+              select 1
+              from pg_catalog.pg_policy policies
+              where policies.polrelid = tables.oid
+            )
+          )::integer as tables_with_policies_count
+        from pg_catalog.pg_class tables
+        join pg_catalog.pg_namespace schemas
+          on schemas.oid = tables.relnamespace
+        where schemas.nspname = 'public'
+          and tables.relkind in ('r', 'p')
+          and tables.relname in (
+            'profiles',
+            'categories',
+            'products',
+            'stock_movements',
+            'cash_sessions',
+            'sales',
+            'sale_items',
+            'payments'
+          )
+      `,
+    }),
+  );
+  if (
+    rlsSummary?.table_count !== requiredTables.length ||
+    rlsSummary.rls_enabled_table_count !== requiredTables.length ||
+    rlsSummary.tables_with_policies_count !== requiredTables.length
+  ) {
+    throw new Error(
+      "RLS and policies are not enabled on every required staging table.",
     );
   }
 
@@ -112,6 +160,39 @@ export async function verifyRemoteStaging({
   const profile = await authenticatedClient.getOwnProfile();
   if (profile?.id !== session.userId || profile?.role !== "admin") {
     throw new Error("The authenticated staging profile is not the sole admin.");
+  }
+
+  const userSummary = firstQueryRow(
+    await managementClient.runReadOnlyQuery(target.projectRef, {
+      query: `
+        select
+          (select count(*)::integer from auth.users) as auth_user_count,
+          count(*)::integer as profile_count,
+          count(*) filter (where profiles.role = 'admin')::integer
+            as admin_profile_count,
+          count(*) filter (where profiles.role <> 'admin')::integer
+            as non_admin_profile_count,
+          count(*) filter (
+            where exists (
+              select 1
+              from auth.users
+              where auth.users.id = profiles.id
+            )
+          )::integer as profiles_linked_to_auth_count
+        from public.profiles
+      `,
+    }),
+  );
+  if (
+    userSummary?.auth_user_count !== 1 ||
+    userSummary.profile_count !== 1 ||
+    userSummary.admin_profile_count !== 1 ||
+    userSummary.non_admin_profile_count !== 0 ||
+    userSummary.profiles_linked_to_auth_count !== 1
+  ) {
+    throw new Error(
+      "Staging must contain exactly one admin and no other users.",
+    );
   }
 
   for (const table of operationalTables) {
@@ -128,10 +209,7 @@ export async function verifyRemoteStaging({
         "select has_table_privilege($1, 'public.sales', 'insert') as sales_insert, has_table_privilege($1, 'public.sale_items', 'insert') as sale_items_insert, has_table_privilege($1, 'public.payments', 'insert') as payments_insert",
     },
   );
-  const grantRows = Array.isArray(grantResponse)
-    ? grantResponse
-    : grantResponse.result;
-  const grants = grantRows?.[0];
+  const grants = firstQueryRow(grantResponse);
   if (
     !grants ||
     grants.sales_insert !== false ||
@@ -143,17 +221,25 @@ export async function verifyRemoteStaging({
 
   return {
     checks: [
+      "linked-project",
       "migrations",
       "database-lint",
       "schema",
       "auth",
+      "rls-policies",
       "admin-profile",
+      "user-inventory",
       "empty-operational-data",
       "financial-grants",
     ],
     projectRef: target.projectRef,
     status: "passed",
   };
+}
+
+function firstQueryRow(response) {
+  const rows = Array.isArray(response) ? response : response?.result;
+  return rows?.[0];
 }
 
 function parseRemoteMigrationIds(output) {
@@ -186,13 +272,28 @@ async function readLocalMigrations() {
     .filter(Boolean);
 }
 
-function runCommand(command, args) {
-  const result = spawnSync(command, args, { encoding: "utf8", shell: false });
-  return {
-    status: result.status ?? 1,
-    stderr: result.stderr ?? "",
-    stdout: result.stdout ?? "",
-  };
+async function readLocalLinkedProjectRef() {
+  try {
+    return (
+      await readFile(resolve("supabase/.temp/project-ref"), "utf8")
+    ).trim();
+  } catch {
+    throw new Error("Unable to read the local Supabase link metadata.");
+  }
+}
+
+export function runRemoteCommand(
+  command,
+  args,
+  options = {},
+  dependencies = {},
+) {
+  return runCliCommand(
+    command,
+    args,
+    { environment: process.env, ...options },
+    dependencies,
+  );
 }
 
 export async function runVerifyRemoteStagingCli(
@@ -217,6 +318,7 @@ export async function runVerifyRemoteStagingCli(
   if (readOption(argv, "--confirm-ref") !== projectRef) {
     throw new Error("The staging project ref confirmation is divergent.");
   }
+  const linkedProjectRef = await readLocalLinkedProjectRef();
   const managementClient = createSupabaseManagementClient({
     accessToken: environment.SUPABASE_ACCESS_TOKEN,
   });
@@ -261,7 +363,8 @@ export async function runVerifyRemoteStagingCli(
   const result = await verifyRemoteStaging({
     anonymousClient,
     authenticatedClient,
-    commandRunner: runCommand,
+    commandRunner: runRemoteCommand,
+    linkedProjectRef,
     managementClient,
     manifest,
   });

@@ -9,19 +9,25 @@ import {
 
 const manifestFixture = {
   vercel: {
-    deploymentId: null,
-    deploymentUrl: null,
-    environment: "preview",
+    dedicatedStaging: true,
+    deploymentProtection: "vercel-authentication",
+    deploymentId: "dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD",
+    deploymentUrl:
+      "https://roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app",
+    environment: "production",
     framework: "nextjs",
     gitConnectionAllowed: false,
     nodeVersion: "22.x",
     orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
-    projectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
-    projectName: "roberto-multimarcas-pdv",
-    previewSourceRef: "feature/provision-roberto-environments",
+    projectId: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+    projectName: "roberto-multimarcas-pdv-staging",
+    reservedProductionProjectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+    reservedProductionProjectName: "roberto-multimarcas-pdv",
     repository: "almeidaguil/espaco-personalize-pdv",
     repositoryId: 1264018806,
+    siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
     scope: "guilherme-a-s-projects",
+    sourceRef: "feature/provision-roberto-environments",
     stagingBranch: "develop",
   },
   supabase: {
@@ -79,13 +85,15 @@ describe("parseRemoteEnvironmentManifest", () => {
     });
     expect(manifest.supabase.targets.production.projectRef).toBeNull();
     expect(manifest.vercel).toMatchObject({
-      environment: "preview",
+      dedicatedStaging: true,
+      environment: "production",
       framework: "nextjs",
       gitConnectionAllowed: false,
       orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
-      projectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
-      projectName: "roberto-multimarcas-pdv",
-      previewSourceRef: "feature/provision-roberto-environments",
+      projectId: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+      projectName: "roberto-multimarcas-pdv-staging",
+      reservedProductionProjectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+      sourceRef: "feature/provision-roberto-environments",
       repository: "almeidaguil/espaco-personalize-pdv",
       repositoryId: 1264018806,
       stagingBranch: "develop",
@@ -243,7 +251,7 @@ describe("validateRemoteOperation", () => {
   test("authorizes a Vercel mutation only for the exact project id", () => {
     expect(
       validateRemoteOperation({
-        confirmation: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+        confirmation: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
         environment: "staging",
         execute: true,
         manifest,
@@ -251,14 +259,32 @@ describe("validateRemoteOperation", () => {
         provider: "vercel",
         target: {
           orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
-          projectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
-          projectName: "roberto-multimarcas-pdv",
+          projectId: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+          projectName: "roberto-multimarcas-pdv-staging",
         },
       }),
     ).toMatchObject({
-      identifier: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+      identifier: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
       result: "authorized",
     });
+  });
+
+  test("rejects production as a logical Vercel environment", () => {
+    expect(() =>
+      validateRemoteOperation({
+        confirmation: manifest.vercel.projectId,
+        environment: "production",
+        execute: true,
+        manifest,
+        operation: "mutate",
+        provider: "vercel",
+        target: {
+          orgId: manifest.vercel.orgId,
+          projectId: manifest.vercel.projectId,
+          projectName: manifest.vercel.projectName,
+        },
+      }),
+    ).toThrow(/unsupported remote provider or environment/i);
   });
 });
 

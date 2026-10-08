@@ -186,10 +186,11 @@ frontend quando esses valores puderem ser derivados no servidor.
 
 Projetos propostos:
 
-- Vercel: `roberto-multimarcas-pdv`, usado somente para Preview no PR08.
-- URL de staging: URL Vercel Preview exata registrada depois do primeiro
-  deployment aprovado; o dominio principal do projeto nao sera usado antes do
-  PR09.
+- Vercel staging: `roberto-multimarcas-pdv-staging`; o ambiente Production
+  desse projeto dedicado representa somente staging no PR08.
+- Vercel producao futura: `roberto-multimarcas-pdv`, reservado sem variaveis ou
+  deployments ate o PR09.
+- URL de staging: `https://roberto-multimarcas-pdv-staging.vercel.app`.
 - Supabase staging: `roberto-multimarcas-pdv-staging`.
 - Supabase producao: `roberto-multimarcas-pdv`.
 
@@ -206,8 +207,8 @@ Politica de provisionamento:
 - manter staging e producao em projetos distintos;
 - aplicar migrations primeiro em staging;
 - conectar producao somente no PR de release;
-- no PR08, permitir somente Preview e `develop`, sem variaveis, aliases ou
-  deployment de Production e sem uso de `--prod`;
+- no PR08, permitir Production somente no projeto dedicado terminado em
+  `-staging`; manter o projeto reservado para producao vazio;
 - preservar os projetos antigos sem novas escritas durante a janela de
   rollback;
 - desativar projetos antigos apenas em uma etapa posterior e explicitamente
@@ -436,7 +437,7 @@ Testes e aceite:
 
 ### PR 08 - Provisionamento E Bootstrap Roberto Multimarcas
 
-Objetivo: substituir somente o staging, preparar o projeto Vercel para Preview e
+Objetivo: substituir somente o staging, preparar o projeto Vercel dedicado e
 concluir o bootstrap sem alterar a produção legada.
 
 Tarefas:
@@ -444,11 +445,10 @@ Tarefas:
 - [x] Validar quota, regiao, tamanho e custo com o responsavel.
 - [x] Pausar o staging legado somente após confirmação literal e criar apenas o
       novo projeto Supabase de staging; produção nova fica para o PR09.
-- [x] Criar o projeto Vercel `roberto-multimarcas-pdv` sem nenhum deployment.
-- [ ] Corrigir o projeto para preset Next.js e Node 22.x e comprovar zero
-      variaveis, aliases e deployments de Production.
-- [ ] Vincular o repositorio GitHub com a branch `main` bloqueada no projeto novo.
-- [ ] Configurar variaveis somente em Preview e validar a URL exata do deployment.
+- [x] Reservar `roberto-multimarcas-pdv` sem variaveis ou deployments.
+- [x] Criar `roberto-multimarcas-pdv-staging` com preset Next.js e Node 22.x.
+- [x] Manter a integracao Git automatica desabilitada durante o PR08.
+- [x] Configurar variaveis somente no staging dedicado e validar a URL estavel.
 - [x] Criar runbook de provisionamento, validacao e rollback.
 - [x] Exigir identificacao explicita do projeto antes de qualquer operacao
       remota.
@@ -458,13 +458,13 @@ Tarefas:
 - [x] Recriar somente o administrador inicial da Roberto Multimarcas.
 - [x] Definir o processo seguro para cadastrar vendedores sem seed remoto.
 - [x] Manter carga inicial de produtos e estoque fora do bootstrap.
-- [ ] Validar RLS e RPCs depois do bootstrap.
+- [x] Validar RLS e RPCs depois do bootstrap.
 
 Testes e aceite:
 
 - [x] Banco local reproduz o ambiente novo do zero.
-- [ ] Staging novo inicializado e aprovado por verificacao remota e smoke no
-      Vercel Preview antes de producao.
+- [x] Staging novo inicializado e aprovado por verificacao remota e smoke no
+      projeto Vercel dedicado antes de producao.
 - [x] O procedimento recusa project refs nao autorizados.
 - [x] Nenhuma credencial e gravada no repositorio ou em logs.
 
@@ -568,7 +568,7 @@ o contrato da reestruturacao:
    compartilhado pela loja.
 6. Os projetos Supabase alvo devem usar `sa-east-1` e o menor tamanho
    disponivel. Nenhum recurso pago pode ser criado sem autorizacao especifica.
-7. A URL de staging sera uma URL Vercel Preview validada. A URL de producao e um
+7. A URL de staging sera a URL estavel do projeto Vercel dedicado. A URL de producao e um
    eventual dominio personalizado pertencem ao PR09.
 
 ## 12. Criterio De Conclusao Da Reestruturacao

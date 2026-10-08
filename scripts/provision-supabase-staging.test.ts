@@ -1,3 +1,6 @@
+import { mkdir, rm, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+
 import { describe, expect, test, vi } from "vitest";
 
 import manifestFixture from "../config/remote-environments.json";
@@ -10,11 +13,27 @@ const manifest = parseRemoteEnvironmentManifest({
     ...manifestFixture.vercel,
     deploymentId: "dpl_preview123",
     deploymentUrl: "https://roberto-preview.vercel.app",
+    siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
   },
 });
 const newProjectRef = "qrstabcdefghijklmnop";
 const databasePassword = "database-password-sentinel-Aa1!";
 const now = new Date("2026-10-07T12:00:00.000Z");
+const persistedTargetRef = manifest.supabase.targets.staging.projectRef!;
+const unpersistedManifest = parseRemoteEnvironmentManifest({
+  ...manifest,
+  supabase: {
+    ...manifest.supabase,
+    targets: {
+      ...manifest.supabase.targets,
+      staging: {
+        ...manifest.supabase.targets.staging,
+        hostname: null,
+        projectRef: null,
+      },
+    },
+  },
+});
 
 describe("runSupabaseStagingProvisioning", () => {
   test("builds a verified dry-run without calling mutable operations", async () => {
@@ -28,7 +47,7 @@ describe("runSupabaseStagingProvisioning", () => {
       inventoryReader: vi.fn().mockResolvedValue(validInventory()),
       log,
       managementClient,
-      manifest,
+      manifest: unpersistedManifest,
       now: () => now,
       wait: vi.fn(),
     });
@@ -36,7 +55,7 @@ describe("runSupabaseStagingProvisioning", () => {
     expect(result).toEqual({
       legacyState: "ACTIVE_HEALTHY",
       mode: "dry-run",
-      nextAction: `rerun with --execute --confirm-legacy-ref ${manifest.supabase.legacy.staging.projectRef}`,
+      nextAction: `rerun with --execute --confirm-legacy-ref ${manifest.supabase.legacy.staging.projectRef} --confirm-target-name ${manifest.supabase.targets.staging.name}`,
       productionState: "ACTIVE_HEALTHY",
       region: "sa-east-1",
       targetState: "absent",
@@ -45,6 +64,75 @@ describe("runSupabaseStagingProvisioning", () => {
     expect(managementClient.createProject).not.toHaveBeenCalled();
     expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
     expect(log).toHaveBeenCalledWith(result);
+  });
+
+  test("reads inventory evidence from the authorized --inventory path", async () => {
+    const inventoryPath = resolve(
+      ".provisioning/inventory/provision-custom.test.json",
+    );
+    await mkdir(resolve(".provisioning/inventory"), { recursive: true });
+    await writeFile(
+      inventoryPath,
+      JSON.stringify(validInventory("2030-01-01T11:00:00.000Z")),
+      "utf8",
+    );
+
+    try {
+      const result = await runSupabaseStagingProvisioning({
+        args: ["--inventory", inventoryPath],
+        commandRunner: vi.fn(),
+        environment: {},
+        log: vi.fn(),
+        managementClient: createManagementClient(),
+        manifest: unpersistedManifest,
+        now: () => new Date("2030-01-01T12:00:00.000Z"),
+        wait: vi.fn(),
+      });
+
+      expect(result).toMatchObject({ mode: "dry-run" });
+    } finally {
+      await rm(inventoryPath, { force: true });
+    }
+  });
+
+  test("rejects an --inventory path outside the private inventory directory", async () => {
+    const managementClient = createManagementClient();
+
+    await expect(
+      runSupabaseStagingProvisioning({
+        args: ["--inventory", resolve("README.md")],
+        commandRunner: vi.fn(),
+        environment: {},
+        inventoryReader: vi.fn().mockResolvedValue(validInventory()),
+        log: vi.fn(),
+        managementClient,
+        manifest: unpersistedManifest,
+        now: () => now,
+        wait: vi.fn(),
+      }),
+    ).rejects.toThrow(/authorized inventory directory/i);
+
+    expect(managementClient.listProjects).not.toHaveBeenCalled();
+  });
+
+  test("rejects --inventory without a file path", async () => {
+    const managementClient = createManagementClient();
+
+    await expect(
+      runSupabaseStagingProvisioning({
+        args: ["--inventory"],
+        commandRunner: vi.fn(),
+        environment: {},
+        inventoryReader: vi.fn().mockResolvedValue(validInventory()),
+        log: vi.fn(),
+        managementClient,
+        manifest: unpersistedManifest,
+        now: () => now,
+        wait: vi.fn(),
+      }),
+    ).rejects.toThrow(/--inventory.*file path/i);
+
+    expect(managementClient.listProjects).not.toHaveBeenCalled();
   });
 
   test("returns a plan-only dry-run when credentials are not available", async () => {
@@ -152,6 +240,19 @@ describe("runSupabaseStagingProvisioning", () => {
       }),
     ).rejects.toThrow(/confirmação literal/i);
     expect(wrongConfirmationClient.pauseProject).not.toHaveBeenCalled();
+
+    const missingTargetConfirmationClient = createManagementClient();
+    await expect(
+      executeProvisioning({
+        args: [
+          "--execute",
+          "--confirm-legacy-ref",
+          manifest.supabase.legacy.staging.projectRef,
+        ],
+        managementClient: missingTargetConfirmationClient,
+      }),
+    ).rejects.toThrow(/confirmação literal/i);
+    expect(missingTargetConfirmationClient.pauseProject).not.toHaveBeenCalled();
   });
 
   test("pauses only legacy staging, creates Nano-default staging, migrates, and configures Auth", async () => {
@@ -203,8 +304,8 @@ describe("runSupabaseStagingProvisioning", () => {
         external_email_enabled: true,
         password_hibp_enabled: true,
         password_min_length: 14,
-        site_url: "https://roberto-preview.vercel.app",
-        uri_allow_list: "https://roberto-preview.vercel.app/**",
+        site_url: "https://roberto-multimarcas-pdv-staging.vercel.app",
+        uri_allow_list: "https://roberto-multimarcas-pdv-staging.vercel.app/**",
       },
     );
     expect(events).toEqual([
@@ -226,6 +327,28 @@ describe("runSupabaseStagingProvisioning", () => {
     });
     expect(JSON.stringify(result)).not.toContain(databasePassword);
     expect(JSON.stringify(log.mock.calls)).not.toContain(databasePassword);
+  });
+
+  test("rejects a divergent project returned after creation before linking or configuring it", async () => {
+    const divergentProject = project({
+      id: newProjectRef,
+      name: manifest.supabase.targets.staging.name,
+      region: "us-east-1",
+    });
+    const managementClient = createManagementClient({
+      targetProject: divergentProject,
+    });
+    const commandRunner = vi
+      .fn<CommandRunner>()
+      .mockResolvedValue({ status: 0, stderr: "", stdout: "ok" });
+
+    await expect(
+      executeProvisioning({ commandRunner, managementClient }),
+    ).rejects.toThrow(/staging identity.*divergent/i);
+
+    expect(commandRunner).not.toHaveBeenCalled();
+    expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
+    expect(managementClient.updateDatabasePassword).not.toHaveBeenCalled();
   });
 
   test("stops after a migration dry-run failure without Auth, delete, restore, or production mutation", async () => {
@@ -261,7 +384,7 @@ describe("runSupabaseStagingProvisioning", () => {
 
   test("resumes an existing healthy target without pausing or creating again", async () => {
     const target = project({
-      id: newProjectRef,
+      id: persistedTargetRef,
       name: manifest.supabase.targets.staging.name,
       region: "sa-east-1",
     });
@@ -274,15 +397,97 @@ describe("runSupabaseStagingProvisioning", () => {
       targetProject: target,
     });
 
-    const result = await executeProvisioning({ managementClient });
+    const result = await executeProvisioning({
+      args: ["--execute", "--confirm-target-ref", persistedTargetRef],
+      managementClient,
+      provisionManifest: manifest,
+    });
 
     expect(managementClient.pauseProject).not.toHaveBeenCalled();
     expect(managementClient.createProject).not.toHaveBeenCalled();
     expect(managementClient.updateDatabasePassword).toHaveBeenCalledWith(
-      newProjectRef,
+      persistedTargetRef,
       databasePassword,
     );
-    expect(result).toMatchObject({ targetRef: newProjectRef });
+    expect(result).toMatchObject({ targetRef: persistedTargetRef });
+  });
+
+  test("requires the literal persisted target ref before resuming mutations", async () => {
+    const target = project({
+      id: persistedTargetRef,
+      name: manifest.supabase.targets.staging.name,
+      region: "sa-east-1",
+    });
+    const managementClient = createManagementClient({
+      projects: [
+        { ...activeLegacyProjects()[0], status: "INACTIVE" },
+        activeLegacyProjects()[1],
+        target,
+      ],
+      targetProject: target,
+    });
+    const commandRunner = vi.fn<CommandRunner>();
+
+    await expect(
+      executeProvisioning({
+        args: ["--execute", "--confirm-target-ref", newProjectRef],
+        commandRunner,
+        managementClient,
+        provisionManifest: manifest,
+      }),
+    ).rejects.toThrow(/confirma.*literal/i);
+
+    expect(managementClient.updateDatabasePassword).not.toHaveBeenCalled();
+    expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
+    expect(commandRunner).not.toHaveBeenCalled();
+  });
+
+  test("rejects a same-name project whose ref differs from the persisted target", async () => {
+    const divergentTarget = project({
+      id: newProjectRef,
+      name: manifest.supabase.targets.staging.name,
+      region: "sa-east-1",
+    });
+    const managementClient = createManagementClient({
+      projects: [
+        { ...activeLegacyProjects()[0], status: "INACTIVE" },
+        activeLegacyProjects()[1],
+        divergentTarget,
+      ],
+      targetProject: divergentTarget,
+    });
+
+    await expect(
+      executeProvisioning({
+        args: ["--execute", "--confirm-target-ref", persistedTargetRef],
+        managementClient,
+        provisionManifest: manifest,
+      }),
+    ).rejects.toThrow(/staging identity.*divergent/i);
+
+    expect(managementClient.updateDatabasePassword).not.toHaveBeenCalled();
+    expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
+  });
+
+  test("rejects a missing persisted target instead of creating a replacement", async () => {
+    const managementClient = createManagementClient();
+
+    await expect(
+      executeProvisioning({
+        args: [
+          "--execute",
+          "--confirm-legacy-ref",
+          manifest.supabase.legacy.staging.projectRef,
+          "--confirm-target-ref",
+          persistedTargetRef,
+        ],
+        managementClient,
+        provisionManifest: manifest,
+      }),
+    ).rejects.toThrow(/staging identity.*divergent/i);
+
+    expect(managementClient.pauseProject).not.toHaveBeenCalled();
+    expect(managementClient.createProject).not.toHaveBeenCalled();
   });
 
   test("falls back only when leaked-password protection is unavailable on Free", async () => {
@@ -306,8 +511,8 @@ describe("runSupabaseStagingProvisioning", () => {
       external_anonymous_users_enabled: false,
       external_email_enabled: true,
       password_min_length: 14,
-      site_url: "https://roberto-preview.vercel.app",
-      uri_allow_list: "https://roberto-preview.vercel.app/**",
+      site_url: "https://roberto-multimarcas-pdv-staging.vercel.app",
+      uri_allow_list: "https://roberto-multimarcas-pdv-staging.vercel.app/**",
     });
   });
 });
@@ -317,6 +522,8 @@ function executeProvisioning({
     "--execute",
     "--confirm-legacy-ref",
     manifest.supabase.legacy.staging.projectRef,
+    "--confirm-target-name",
+    manifest.supabase.targets.staging.name,
   ],
   commandRunner = vi
     .fn()
@@ -324,6 +531,7 @@ function executeProvisioning({
   generatePassword = () => databasePassword,
   log = vi.fn(),
   managementClient = createManagementClient(),
+  provisionManifest = unpersistedManifest,
 }: ProvisionOptions = {}) {
   return runSupabaseStagingProvisioning({
     args,
@@ -333,7 +541,7 @@ function executeProvisioning({
     inventoryReader: vi.fn().mockResolvedValue(validInventory()),
     log,
     managementClient,
-    manifest,
+    manifest: provisionManifest,
     now: () => now,
     wait: vi.fn().mockResolvedValue(undefined),
   });
@@ -367,7 +575,7 @@ function createManagementClient({
           status: legacyPaused ? "INACTIVE" : "ACTIVE_HEALTHY",
         };
       }
-      if (projectRef === newProjectRef && targetCreated) {
+      if (projectRef === targetProject.id && targetCreated) {
         return targetProject;
       }
       throw new Error("unexpected project ref");
@@ -417,6 +625,7 @@ type ProvisionOptions = {
   generatePassword?: () => string;
   log?: ReturnType<typeof vi.fn>;
   managementClient?: ReturnType<typeof createManagementClient>;
+  provisionManifest?: typeof manifest;
 };
 
 function activeLegacyProjects() {

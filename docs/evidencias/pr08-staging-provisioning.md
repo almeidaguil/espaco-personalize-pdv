@@ -60,59 +60,78 @@ proteção, com cobertura automatizada para recuperação explícita.
 
 ## Pivot Para Vercel Hobby
 
-O proprietário declarou que o uso é pessoal e não comercial e aprovou o Vercel
-Hobby como novo destino. Preflight somente leitura executado em
-`2026-10-07T19:53:05.8854578Z`:
+O proprietário declarou uso pessoal/não comercial e aprovou o Vercel Hobby. No
+projeto inicialmente reservado `roberto-multimarcas-pdv`
+(`prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`), quatro tentativas pela CLI e uma pela API
+foram classificadas como Production mesmo sem `--prod`/`target`. Todas falharam
+antes de publicar, foram removidas por ID exato e reproduziram a
+[ocorrência Vercel #17069](https://github.com/vercel/vercel/issues/17069).
 
-- projeto novo: `roberto-multimarcas-pdv`;
-- project ID: `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`;
-- org ID: `team_jstETBWBHJi0hsir3a3bAkbK`;
-- deployments encontrados: zero;
-- Production Deployment criado: não;
-- configuração inicial encontrada: framework `Other` e Node `24.x`;
-- configuração corrigida e revalidada: framework `Next.js` e Node `22.x`;
-- três variáveis gravadas somente em Preview; `SUPABASE_SECRET_KEY` marcada
-  como Sensitive e Production sem variáveis.
+Em seguida o proprietário autorizou explicitamente criar o projeto dedicado
+`roberto-multimarcas-pdv-staging` e enviar as três variáveis do Supabase
+`otsxpchqtfypxgzjzrxs` ao ambiente Production desse projeto, usado
+exclusivamente como staging.
 
-O projeto novo será usado somente para Preview no PR08. Variáveis, aliases,
-deployment de Production e `--prod` continuam proibidos. A produção Vercel e o
-Supabase legados permanecem intactos.
+Estado Vercel validado:
 
-Quatro tentativas pela CLI e uma tentativa pela API com referência Git foram
-classificadas incorretamente como Production
-pela Vercel, apesar da ausência de `--prod`; todas falharam no build antes de
-publicar o runtime porque variáveis Preview não são injetadas em Production.
-Cada deployment falho foi removido pelo ID exato e a consulta final voltou a
-mostrar zero deployments de Production. O comportamento coincide com a
-[ocorrência aberta na CLI da Vercel](https://github.com/vercel/vercel/issues/17069).
-Os dois fluxos foram abandonados após a reprodução. A automação mantém remoção
-automática e falha fechada se uma solicitação de Preview vier classificada como
-Production. A consulta final mostrou zero deployments Production e Preview.
+- org ID `team_jstETBWBHJi0hsir3a3bAkbK`;
+- staging project ID `prj_fb7pug2hcbCGI1XIMLz5VuMr4S79`;
+- framework Next.js e Node 22.x;
+- duas variáveis Config e uma Secret somente em Production do projeto dedicado;
+- deployment `dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD`, estado `READY`;
+- URL estável `https://roberto-multimarcas-pdv-staging.vercel.app`;
+- metadados `roberto_environment=staging`, `dedicated_staging=true`, `pr08=true`;
+- snapshot inicial vindo de `feature/provision-roberto-environments`; o mesmo
+  commit passa a compor `develop` no merge, sem promessa de deploy contínuo no
+  PR08;
+- Vercel Authentication ativa e zero bypasses após o smoke;
+- projeto reservado `roberto-multimarcas-pdv` com identidade confirmada, zero
+  variáveis, zero deployments de qualquer target e somente o domínio padrão
+  `roberto-multimarcas-pdv.vercel.app`, sem domínio customizado, após remover as
+  três cópias Preview obsoletas.
 
-## Estado Do Checkpoint
+## Estado Final Do Provisionamento
 
-- Dry-runs Supabase: aprovados. O dry-run Netlify permanece apenas como
-  evidência da tentativa descartada.
-- Inventário redigido: aprovado.
-- Site Netlify: criado e vinculado, sem deploy ou variáveis; não é mais o alvo.
+- Inventário redigido e dry-runs: aprovados.
+- Site Netlify histórico: preservado sem deploy ou variáveis; não é alvo.
 - Staging legado Supabase: pausado, estado `INACTIVE`.
 - Produção legada Supabase: ativa, saudável e inalterada.
-- Novo staging Supabase: criado, saudável e com migrations aplicadas em
-  `2026-10-07T16:37:23.6584486Z`.
-- Auth do novo staging: signup público e anônimo desativados e senha mínima de
-  14 caracteres; URL/allowlist ainda apontam para a tentativa Netlify e devem ser
-  atualizadas para a URL Vercel Preview exata antes do smoke.
-- Proteção HaveIBeenPwned: indisponível no plano Free; a API respondeu `402` e a
-  automação aplicou somente o fallback explicitamente permitido.
-- Bootstrap do administrador: concluído em `2026-10-07T19:35:24.8780997Z`, com
-  exatamente um usuário e perfil `admin`; e-mail e credencial não registrados.
-- Vercel: framework/Node e variáveis Preview concluídos; o primeiro deployment
-  Preview está bloqueado pelo defeito reproduzido da plataforma. Reconciliação
-  do Auth e smoke dependem da decisão arquitetural sobre um projeto dedicado de
-  staging.
+- Novo staging Supabase: `ACTIVE_HEALTHY`, `sa-east-1`, migrations alinhadas.
+- Auth: signup público/anônimo desativados, senha mínima 14, `site_url` e
+  allowlist na URL estável Vercel. HaveIBeenPwned indisponível no Free (`402`),
+  com fallback permitido.
+- Bootstrap: exatamente um usuário/perfil `admin`, sem e-mail ou credencial na
+  evidência.
+- Verificação remota: link local preso ao ref exato, migrations, lint, schema,
+  Auth, RLS/policies nas oito tabelas, exatamente um usuário/admin, banco vazio
+  e grants financeiros aprovados.
+- Smoke Playwright somente leitura: 1/1 aprovado em 20,9 s, cobrindo rota
+  protegida, login, dashboard e navegação operacional.
+- Vercel Authentication permaneceu ativa. O bypass temporário usado pelo smoke
+  foi revogado; contagem final de bypasses: zero. A automação versionada recusa
+  bypass preexistente, cria e revoga pela API HTTPS sem segredo em argumentos,
+  limpa em `finally`, não propaga o token Vercel ao navegador e não gera trace
+  com o header secreto.
 
-Na primeira retomada, o Node 22 no Windows recusou executar `npx.cmd` diretamente
-com `spawnSync` e retornou `EINVAL`. Um executor compartilhado passou a usar o
-interpretador do Windows apenas para arquivos `.cmd`, mantendo os argumentos
-controlados e credenciais somente no ambiente do processo. A senha efêmera do
-banco foi rotacionada somente no novo staging e nunca foi registrada.
+Durante a retomada, o Node 22 no Windows recusou executar `npx.cmd` diretamente
+com `spawnSync` e retornou `EINVAL`. O verificador passou a reutilizar o executor
+Windows testado; a correção tem teste de regressão. Nenhum segredo foi
+versionado. Um bypass temporário apareceu em um diagnóstico intermediário e foi
+imediatamente tratado como exposto, revogado e substituído antes do smoke final.
+
+## Reconciliação Final De 2026-10-08
+
+Em `2026-10-08T13:37:29-03:00`, a árvore final foi reconciliada novamente:
+
+- Vercel: projeto dedicado, deployment persistido, exatamente três variáveis,
+  Vercel Authentication ativa e zero bypasses aprovados;
+- projeto Vercel reservado: identidade exata, zero variáveis, zero deployments
+  de qualquer target e somente o domínio padrão `.vercel.app`;
+- smoke remoto gerenciado: aprovado, com `bypassesAfter=0` e trace desativado;
+- Supabase remoto: migrations, lint, schema, Auth, admin, banco operacional vazio
+  e grants financeiros aprovados;
+- Vitest: 112 arquivos e 538 testes aprovados;
+- Playwright local: 48/48 cenários aprovados após reset e aplicação das 24
+  migrations;
+- `format:check`, ESLint, TypeScript, remoção do legado de eventos e build
+  Next.js: aprovados.

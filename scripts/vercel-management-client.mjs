@@ -15,7 +15,16 @@ export function createVercelManagementClient({
   const request = createRequest({ authToken, baseUrl, fetch });
 
   return {
-    createPreviewDeployment: ({
+    createAutomationBypass: ({ orgId, projectId, secret }) =>
+      request(
+        `/v1/projects/${encodeURIComponent(projectId)}/protection-bypass?teamId=${encodeURIComponent(orgId)}`,
+        {
+          body: { generate: { secret } },
+          method: "PATCH",
+          sensitiveValues: [secret],
+        },
+      ),
+    createStagingDeployment: ({
       branch,
       orgId,
       projectId,
@@ -25,9 +34,14 @@ export function createVercelManagementClient({
       request(`/v13/deployments?teamId=${encodeURIComponent(orgId)}`, {
         body: {
           gitSource: { ref: branch, repoId: repositoryId, type: "github" },
-          meta: { pr08: "true", roberto_environment: "staging" },
+          meta: {
+            dedicated_staging: "true",
+            pr08: "true",
+            roberto_environment: "staging",
+          },
           name: projectName,
           project: projectId,
+          target: "production",
         },
         method: "POST",
       }),
@@ -44,25 +58,39 @@ export function createVercelManagementClient({
       request(
         `/v9/projects/${encodeURIComponent(projectId)}?teamId=${encodeURIComponent(orgId)}`,
       ),
-    listProductionDeployments: (projectId, orgId) =>
+    listProjectDeployments: (projectId, orgId) =>
       request(
-        `/v6/deployments?projectId=${encodeURIComponent(projectId)}&target=production&teamId=${encodeURIComponent(orgId)}`,
+        `/v6/deployments?projectId=${encodeURIComponent(projectId)}&teamId=${encodeURIComponent(orgId)}`,
+      ),
+    listProjectDomains: (projectId, orgId) =>
+      request(
+        `/v9/projects/${encodeURIComponent(projectId)}/domains?teamId=${encodeURIComponent(orgId)}`,
       ),
     listProjectEnvironmentVariables: (projectId, orgId) =>
       request(
         `/v10/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}`,
       ),
+    revokeAutomationBypass: ({ orgId, projectId, secret }) =>
+      request(
+        `/v1/projects/${encodeURIComponent(projectId)}/protection-bypass?teamId=${encodeURIComponent(orgId)}`,
+        {
+          body: { revoke: { regenerate: false, secret } },
+          method: "PATCH",
+          sensitiveValues: [secret],
+        },
+      ),
     upsertProjectEnvironmentVariable: ({
       key,
       orgId,
       projectId,
+      targetEnvironment,
       type,
       value,
     }) =>
       request(
         `/v10/projects/${encodeURIComponent(projectId)}/env?teamId=${encodeURIComponent(orgId)}&upsert=true`,
         {
-          body: { key, target: ["preview"], type, value },
+          body: { key, target: [targetEnvironment], type, value },
           method: "POST",
           sensitiveValues: [value],
         },

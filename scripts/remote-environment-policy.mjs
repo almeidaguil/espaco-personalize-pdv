@@ -34,17 +34,27 @@ const remoteEnvironmentManifestSchema = z.object({
       .url()
       .refine((value) => value.startsWith("https://"))
       .nullable(),
-    environment: z.literal("preview"),
+    dedicatedStaging: z.literal(true),
+    deploymentProtection: z.literal("vercel-authentication"),
+    environment: z.literal("production"),
     framework: z.literal("nextjs"),
     gitConnectionAllowed: z.literal(false),
     nodeVersion: z.literal("22.x"),
     orgId: vercelOrgIdSchema,
     projectId: vercelProjectIdSchema,
     projectName: z.string().regex(/^[a-z0-9-]+$/),
-    previewSourceRef: z.string().regex(/^feature\/[a-z0-9-]+$/),
+    reservedProductionProjectId: vercelProjectIdSchema,
+    reservedProductionProjectName: z.string().regex(/^[a-z0-9-]+$/),
     repository: z.string().regex(/^[^/]+\/[^/]+$/),
     repositoryId: z.number().int().positive(),
+    siteUrl: z
+      .url()
+      .refine(
+        (value) =>
+          value === "https://roberto-multimarcas-pdv-staging.vercel.app",
+      ),
     scope: z.string().regex(/^[a-z0-9-]+$/),
+    sourceRef: z.string().regex(/^feature\/[a-z0-9-]+$/),
     stagingBranch: z.string().min(1),
   }),
   supabase: z.object({
@@ -180,7 +190,7 @@ function resolveSupabaseEnvironment(manifest, environment) {
 }
 
 function validateVercelTarget(manifest, environment, target) {
-  if (environment !== "staging" && environment !== "production") {
+  if (environment !== "staging") {
     return null;
   }
 

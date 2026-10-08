@@ -2,7 +2,10 @@ import { defineConfig, devices } from "@playwright/test";
 
 import manifestFixture from "./config/remote-environments.json";
 import { parseRemoteEnvironmentManifest } from "./scripts/remote-environment-policy.mjs";
-import { resolveRemoteStagingSmokeEnvironment } from "./scripts/remote-staging-smoke-environment.mjs";
+import {
+  createRemoteStagingPlaywrightUse,
+  resolveRemoteStagingSmokeEnvironment,
+} from "./scripts/remote-staging-smoke-environment.mjs";
 
 const smokeEnvironment = resolveRemoteStagingSmokeEnvironment(
   process.env,
@@ -23,8 +26,8 @@ export default defineConfig({
   testMatch: "remote-staging-smoke.spec.ts",
   timeout: 60_000,
   use: {
-    baseURL: smokeEnvironment.baseUrl,
-    trace: "retain-on-failure",
+    ...createRemoteStagingPlaywrightUse(smokeEnvironment),
+    trace: "off",
   },
   workers: 1,
 });

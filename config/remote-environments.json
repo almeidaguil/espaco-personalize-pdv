@@ -37,17 +37,22 @@
   "vercel": {
     "orgId": "team_jstETBWBHJi0hsir3a3bAkbK",
     "scope": "guilherme-a-s-projects",
-    "projectId": "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
-    "projectName": "roberto-multimarcas-pdv",
+    "projectId": "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+    "projectName": "roberto-multimarcas-pdv-staging",
     "framework": "nextjs",
     "nodeVersion": "22.x",
     "repository": "almeidaguil/espaco-personalize-pdv",
     "repositoryId": 1264018806,
-    "previewSourceRef": "feature/provision-roberto-environments",
+    "sourceRef": "feature/provision-roberto-environments",
     "stagingBranch": "develop",
-    "environment": "preview",
-    "deploymentId": null,
-    "deploymentUrl": null,
-    "gitConnectionAllowed": false
+    "environment": "production",
+    "dedicatedStaging": true,
+    "deploymentProtection": "vercel-authentication",
+    "deploymentId": "dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD",
+    "deploymentUrl": "https://roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app",
+    "siteUrl": "https://roberto-multimarcas-pdv-staging.vercel.app",
+    "gitConnectionAllowed": false,
+    "reservedProductionProjectId": "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+    "reservedProductionProjectName": "roberto-multimarcas-pdv"
   }
 }
