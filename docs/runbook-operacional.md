@@ -136,6 +136,63 @@ Nesta versão não há venda offline.
 4. Se houver caixa pendente de usuário indisponível, executar fechamento
    administrativo após a conferência.
 
+## Provisionamento Controlado Do PR08
+
+Antes de qualquer acesso remoto, execute os dry-runs e revise
+`config/remote-environments.json`:
+
+```powershell
+npm.cmd run ops:verify-target -- --provider supabase --environment legacy-staging --operation read
+npm.cmd run ops:inventory-staging -- --confirm-ref gpywbeoqcovjrfnmbdqx
+npm.cmd run ops:provision-staging
+npm.cmd run ops:provision-vercel -- --phase configure-staging
+npm.cmd run ops:provision-vercel -- --phase deploy-staging
+npm.cmd run ops:provision-vercel -- --phase verify-staging
+```
+
+Regras obrigatórias:
+
+1. Produção legada `ciixpfquwmlsvzleattv` deve estar saudável antes e depois
+   de toda mutação.
+2. A pausa do staging `espaco-personalize-pdv-staging`, ref
+   `gpywbeoqcovjrfnmbdqx`, exige confirmação explícita imediatamente antes da
+   execução; autorização anterior ou genérica não substitui esse checkpoint.
+3. Não excluir projetos. O novo staging parcial é preservado para diagnóstico.
+4. Não usar `db reset` remoto, não aplicar SQL manual e não criar produção no
+   PR08.
+5. O projeto Vercel dedicado `roberto-multimarcas-pdv-staging` deve usar preset Next.js e Node 22.x. Qualquer
+   divergência de conta, project ID, repositório ou framework exige interrupção.
+6. O target técnico Production é permitido somente no projeto dedicado terminado em
+   `-staging`; o projeto reservado `roberto-multimarcas-pdv` deve permanecer sem
+   variáveis, domínios customizados e deployments de qualquer target até o
+   PR09; somente seu domínio padrão `.vercel.app` é esperado. O ambiente lógico
+   autorizado pelo validador continua sendo exclusivamente `staging`.
+7. Tokens, senha do banco e credenciais do admin permanecem somente na sessão.
+
+Depois da criação, registre somente refs/IDs não sensíveis no manifesto,
+execute bootstrap idempotente e verificação:
+
+```powershell
+npm.cmd run ops:bootstrap-staging-admin -- --execute --confirm-ref <novo-staging-ref>
+npm.cmd run ops:verify-staging -- --confirm-ref <novo-staging-ref>
+npm.cmd run ops:provision-vercel -- --phase verify-staging --execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79
+npm.cmd run test:e2e:staging-smoke -- --execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79
+```
+
+O smoke remoto é somente leitura: login, dashboard e rotas protegidas. Ele usa
+um bypass Vercel temporário, mantém SSO habilitado e exige contagem final zero
+de bypasses, mesmo quando o Playwright falha. O comando gerenciado recusa
+bypass preexistente, cria e revoga pela API HTTPS sem segredo em argumentos,
+não propaga o token Vercel ao navegador e desativa traces para não persistir o
+header secreto. Não reutiliza seed/reset E2E local e não cria caixa, produto ou
+venda.
+
+Em falha após pausar o staging legado, preserve evidências. Para restaurá-lo,
+pause primeiro o novo staging, confirme novamente ambos os refs e respeite o
+limite de dois projetos Supabase Free ativos. A produção Vercel legada continua
+sendo o rollback imediato. Consulte [Ambientes](ambientes.md),
+[Supabase CLI](supabase-cli.md) e [Vercel CLI](vercel-cli.md).
+
 ## Smoke Test De Release Ou Primeiro Uso
 
 Execute primeiro em ambiente isolado de homologação com o schema da versão.

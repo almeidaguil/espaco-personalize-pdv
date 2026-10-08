@@ -5,9 +5,9 @@
 O runtime atual opera como loja fisica, com caixas independentes por operador.
 As entregas 1 a 6 estao concluidas e integradas, incluindo PR05 e PR06.
 A entrega 6 removeu o modulo legado do runtime e do schema em 2026-10-06.
-O PR07 entrega seed de tres identidades, concorrencia real e gate local/CI;
-sua revisao, PR e integracao seguem com o controlador. Ambientes (PR08) e
-release (PR09) continuam pendentes.
+O PR07 entregou seed de tres identidades, concorrencia real e gate local/CI e ja
+foi integrado. Ambientes (PR08) estao em execucao e a release (PR09) continua
+pendente.
 
 O detalhamento de tarefas e criterios esta no
 [plano de reestruturacao](plano-reestruturacao-loja-fisica.md). A decisao
@@ -181,15 +181,17 @@ Criterio de pronto:
 
 ## Entrega 8 - Infraestrutura Roberto Multimarcas
 
-Status: pendente (PR08).
+Status: em execucao (PR08).
 
 Objetivo: provisionar ambientes vazios e exclusivos.
 
 Escopo:
 
-- Supabase staging e producao;
-- Vercel `roberto-multimarcas-pdv`;
-- URL publica com a nova marca;
+- Supabase somente de staging; producao nova pertence ao PR09;
+- Vercel `roberto-multimarcas-pdv-staging` dedicado, usando seu ambiente
+  Production exclusivamente como staging no PR08;
+- `roberto-multimarcas-pdv` reservado sem variaveis ou deployments para o PR09;
+- URL estavel de staging validada para homologacao;
 - variaveis por ambiente;
 - bootstrap de admin e vendedores;
 - runbook de validacao e rollback;
@@ -199,7 +201,8 @@ Criterio de pronto:
 
 - quota e eventual custo aprovados;
 - staging novo passa migrations, smoke e E2E;
-- producao permanece desconectada ate a release;
+- projeto dedicado tem somente as tres variaveis de staging e um deployment
+  READY; o projeto reservado para producao permanece vazio;
 - nenhuma credencial aparece no repositorio ou em logs.
 
 ## Entrega 9 - Release

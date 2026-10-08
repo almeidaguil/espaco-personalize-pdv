@@ -1,10 +1,9 @@
 # Plano De Reestruturacao Para Loja Fisica
 
-Estado atual: PR01 a PR06 concluidos e integrados, incluindo PR05 e PR06.
+Estado atual: PR01 a PR07 concluidos e integrados.
 O runtime opera sem eventos, com caixas proprios e relatorios por vendedor/sessao.
-O PR07 entrega QA multioperador e gate local/CI; revisao, checks do PR e
-integracao seguem com o controlador. PR08 (ambientes) e PR09 (release) seguem
-pendentes.
+O PR08 implementa e executa o staging novo sem alterar a producao legada. O
+corte de producao permanece exclusivo do PR09.
 
 ## 1. Objetivo
 
@@ -20,8 +19,9 @@ reconciliacao financeira. Varios vendedores podem operar simultaneamente.
 
 - O modulo de eventos sera removido integralmente da aplicacao.
 - Os dados atuais podem ser descartados porque pertencem a outra operacao.
-- A Roberto Multimarcas usara projetos novos e isolados na Vercel e no
-  Supabase, sujeitos a validacao de quota e custo antes da criacao.
+- A Roberto Multimarcas usara Vercel Hobby, conforme declaracao do proprietario
+  de uso pessoal e nao comercial, e projetos novos e isolados no Supabase,
+  sujeitos a validacao de quota e custo antes da criacao.
 - Os projetos da Espaco Personalize permanecerao intactos ate o corte ser
   validado e o periodo de rollback terminar.
 - Cada vendedor pode ter no maximo um caixa aberto por vez.
@@ -186,15 +186,17 @@ frontend quando esses valores puderem ser derivados no servidor.
 
 Projetos propostos:
 
-- Vercel: `roberto-multimarcas-pdv`.
-- URL de producao esperada: `roberto-multimarcas-pdv.vercel.app`, sujeita a
-  disponibilidade no momento da criacao.
+- Vercel staging: `roberto-multimarcas-pdv-staging`; o ambiente Production
+  desse projeto dedicado representa somente staging no PR08.
+- Vercel producao futura: `roberto-multimarcas-pdv`, reservado sem variaveis ou
+  deployments ate o PR09.
+- URL de staging: `https://roberto-multimarcas-pdv-staging.vercel.app`.
 - Supabase staging: `roberto-multimarcas-pdv-staging`.
 - Supabase producao: `roberto-multimarcas-pdv`.
 
 O endpoint do Supabase usa um project ref aleatorio e nao oferece uma URL de API
-com o nome comercial. O link publico com a marca sera o dominio da aplicacao na
-Vercel; um dominio personalizado podera ser configurado separadamente.
+com o nome comercial. O link publico com a marca sera fornecido pela Vercel no
+corte de producao; um dominio personalizado podera ser configurado separadamente.
 
 Politica de provisionamento:
 
@@ -205,6 +207,8 @@ Politica de provisionamento:
 - manter staging e producao em projetos distintos;
 - aplicar migrations primeiro em staging;
 - conectar producao somente no PR de release;
+- no PR08, permitir Production somente no projeto dedicado terminado em
+  `-staging`; manter o projeto reservado para producao vazio;
 - preservar os projetos antigos sem novas escritas durante a janela de
   rollback;
 - desativar projetos antigos apenas em uma etapa posterior e explicitamente
@@ -402,8 +406,7 @@ e 42 testes E2E sem skips. Nenhum Supabase/Vercel remoto foi acessado ou alterad
 
 ### PR 07 - E2E Multioperador E Concorrencia
 
-Status: implementacao entregue; gates completos registrados na Task 5.
-Revisao independente, checks do PR e integracao pendentes com o controlador.
+Status: concluido e integrado; gates completos registrados na Task 5.
 
 Objetivo: provar os fluxos reais com usuarios independentes antes do reset
 remoto.
@@ -434,37 +437,40 @@ Testes e aceite:
 
 ### PR 08 - Provisionamento E Bootstrap Roberto Multimarcas
 
-Objetivo: criar os ambientes novos e preparar o bootstrap sem alterar os
-projetos legados.
+Objetivo: substituir somente o staging, preparar o projeto Vercel dedicado e
+concluir o bootstrap sem alterar a produção legada.
 
 Tarefas:
 
-- [ ] Validar quota, regiao, tamanho e custo com o responsavel.
-- [ ] Criar projetos Supabase exclusivos de staging e producao.
-- [ ] Criar projeto Vercel `roberto-multimarcas-pdv`.
-- [ ] Validar a URL `roberto-multimarcas-pdv.vercel.app` ou definir alternativa.
-- [ ] Vincular o repositorio GitHub ao novo projeto Vercel.
-- [ ] Criar runbook de provisionamento, backup, validacao e rollback.
-- [ ] Exigir identificacao explicita do projeto antes de qualquer operacao
+- [x] Validar quota, regiao, tamanho e custo com o responsavel.
+- [x] Pausar o staging legado somente após confirmação literal e criar apenas o
+      novo projeto Supabase de staging; produção nova fica para o PR09.
+- [x] Reservar `roberto-multimarcas-pdv` sem variaveis ou deployments.
+- [x] Criar `roberto-multimarcas-pdv-staging` com preset Next.js e Node 22.x.
+- [x] Manter a integracao Git automatica desabilitada durante o PR08.
+- [x] Configurar variaveis somente no staging dedicado e validar a URL estavel.
+- [x] Criar runbook de provisionamento, validacao e rollback.
+- [x] Exigir identificacao explicita do projeto antes de qualquer operacao
       remota.
-- [ ] Implementar modo `dry-run` para as validacoes previas.
-- [ ] Inventariar dados, usuarios e storage que permanecerao nos projetos
+- [x] Implementar modo `dry-run` para as validacoes previas.
+- [x] Inventariar dados, usuarios e storage que permanecerao nos projetos
       legados.
-- [ ] Recriar somente o administrador inicial da Roberto Multimarcas.
-- [ ] Definir o processo seguro para cadastrar vendedores.
-- [ ] Preparar carga inicial de produtos e estoque separadamente.
-- [ ] Validar RLS e RPCs depois do bootstrap.
+- [x] Recriar somente o administrador inicial da Roberto Multimarcas.
+- [x] Definir o processo seguro para cadastrar vendedores sem seed remoto.
+- [x] Manter carga inicial de produtos e estoque fora do bootstrap.
+- [x] Validar RLS e RPCs depois do bootstrap.
 
 Testes e aceite:
 
-- [ ] Banco local reproduz o ambiente novo do zero.
-- [ ] Staging novo e inicializado e aprovado antes de producao.
-- [ ] O procedimento recusa project refs nao autorizados.
-- [ ] Nenhuma credencial e gravada no repositorio ou em logs.
+- [x] Banco local reproduz o ambiente novo do zero.
+- [x] Staging novo inicializado e aprovado por verificacao remota e smoke no
+      projeto Vercel dedicado antes de producao.
+- [x] O procedimento recusa project refs nao autorizados.
+- [x] Nenhuma credencial e gravada no repositorio ou em logs.
 
-Observacao: criacao, alteracao de plano, exclusao ou desativacao de projeto e
-uma etapa operacional que exige confirmacao explicita e verificacao de eventual
-custo. Os projetos antigos nao serao excluidos neste PR.
+Observacao: criação, alteração de plano, exclusão ou pausa/restauração de projeto
+é uma etapa operacional que exige confirmação explícita e verificação de custo.
+Nenhum projeto será excluído e nenhuma produção nova será criada neste PR.
 
 ### PR 09 - Release E Corte De Producao
 
@@ -474,7 +480,7 @@ Tarefas:
 
 - [ ] Congelar alteracoes concorrentes durante a janela de corte.
 - [ ] Registrar backup tecnico dos projetos legados.
-- [ ] Inicializar o novo staging e executar smoke, E2E e reconciliacao.
+- [ ] Revalidar o staging aprovado e executar smoke, E2E e reconciliacao.
 - [ ] Abrir PR de release de `develop` para `main`.
 - [ ] Exigir Quality, E2E Release Gate e commits assinados.
 - [ ] Inicializar a nova producao conforme o runbook aprovado.
@@ -562,8 +568,8 @@ o contrato da reestruturacao:
    compartilhado pela loja.
 6. Os projetos Supabase alvo devem usar `sa-east-1` e o menor tamanho
    disponivel. Nenhum recurso pago pode ser criado sem autorizacao especifica.
-7. A URL inicial sera `roberto-multimarcas-pdv.vercel.app`; um dominio
-   personalizado pode ser associado posteriormente.
+7. A URL de staging sera a URL estavel do projeto Vercel dedicado. A URL de producao e um
+   eventual dominio personalizado pertencem ao PR09.
 
 ## 12. Criterio De Conclusao Da Reestruturacao
 

@@ -12,8 +12,8 @@ dados pessoais ou payloads completos.
 - Logs do servidor em JSON para falhas inesperadas na finalização e no
   cancelamento de venda e no fechamento de caixa.
 - Redação de campos sensíveis pelo logger local.
-- GitHub Actions, Vercel Preview, contrato de banco e E2E Release Gate como
-  sinais de qualidade antes da release.
+- GitHub Actions, deployment Vercel de staging dedicado, contrato de banco e E2E
+  Release Gate como sinais de qualidade antes da release.
 
 Os logs atuais identificam a operação e a falha. Não presumir que todo registro
 já inclua IDs de operador, caixa e venda; usar esses identificadores quando
@@ -35,7 +35,9 @@ Monitorar:
 
 Fontes atuais:
 
-- Vercel Runtime Logs;
+- Vercel Runtime Logs de `roberto-multimarcas-pdv-staging`;
+- Vercel Runtime Logs do projeto legado para a produção enquanto o PR09 não
+  ocorrer;
 - Supabase Logs;
 - GitHub Actions.
 
@@ -60,7 +62,9 @@ sensíveis no texto da mensagem ou em outros campos.
 
 ## Checklist Antes Do Go-Live
 
-- [ ] Confirmar acesso aos logs da Vercel e do Supabase.
+- [ ] Confirmar acesso aos logs dos projetos Vercel novo e legado e do Supabase.
+- [ ] Conferir consumo e limites vigentes do Vercel Hobby e bloquear deployments
+      não essenciais perto do limite.
 - [ ] Executar smoke em ambiente isolado e conferir diagnóstico de falhas.
 - [ ] Definir responsável e canal seguro de acompanhamento de incidentes.
 - [ ] Conferir acesso restrito aos traces e evidências.

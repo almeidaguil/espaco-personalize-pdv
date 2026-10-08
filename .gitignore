@@ -38,6 +38,10 @@ test-results/
 # Vercel
 .vercel/
 
+# Netlify and remote provisioning state
+/.netlify/
+/.provisioning/
+
 # Supabase CLI
 supabase/.temp/
 
@@ -46,4 +50,3 @@ supabase/.temp/
 Thumbs.db
 .idea/
 .vscode/
-.vercel/
