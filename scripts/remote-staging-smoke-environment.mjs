@@ -21,7 +21,12 @@ export function resolveRemoteStagingSmokeEnvironment(environment, manifest) {
   }
 
   const baseUrl = parseUrl(environment.E2E_BASE_URL);
-  const expectedBaseUrl = new URL(manifest.netlify.siteUrl);
+  if (!manifest.vercel.deploymentUrl) {
+    throw new Error(
+      "The Vercel Preview URL must be registered for remote smoke.",
+    );
+  }
+  const expectedBaseUrl = new URL(manifest.vercel.deploymentUrl);
   if (
     baseUrl.protocol !== "https:" ||
     baseUrl.hostname !== expectedBaseUrl.hostname ||
@@ -29,7 +34,7 @@ export function resolveRemoteStagingSmokeEnvironment(environment, manifest) {
     baseUrl.password
   ) {
     throw new Error(
-      "E2E_BASE_URL must use the approved HTTPS Netlify hostname.",
+      "E2E_BASE_URL must use the approved HTTPS Vercel Preview hostname.",
     );
   }
 

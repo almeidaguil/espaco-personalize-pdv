@@ -2,11 +2,11 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Entregar no PR08 um staging vazio e exclusivo da Roberto Multimarcas no Supabase Free, vinculado a deploys não produtivos no Netlify Free, com automação fail-closed, bootstrap de um único administrador e evidências sem segredos.
+**Goal:** Entregar no PR08 um staging vazio e exclusivo da Roberto Multimarcas no Supabase Free, vinculado somente a deployments Vercel Preview, com automação fail-closed, bootstrap de um único administrador e evidências sem segredos.
 
-**Architecture:** Um manifesto versionado define todos os alvos permitidos, enquanto uma política pura valida leitura, mutação, ambiente e confirmação antes de qualquer cliente remoto. Adaptadores pequenos encapsulam Supabase Management API, Supabase CLI e Netlify CLI/API; os orquestradores usam dry-run por padrão, recebem dependências injetáveis para testes e geram somente evidências redigidas. A execução remota é sequencial: reservar o site Netlify, inventariar e pausar apenas o staging legado, criar e migrar o staging novo, bootstrap, configurar deploys não produtivos e executar smoke remoto.
+**Architecture:** Um manifesto versionado define todos os alvos permitidos, enquanto uma política pura valida leitura, mutação, ambiente e confirmação antes de qualquer cliente remoto. Adaptadores pequenos encapsulam Supabase Management API, Supabase CLI e Vercel CLI/API; os orquestradores usam dry-run por padrão, recebem dependências injetáveis para testes e geram somente evidências redigidas. A execução remota é sequencial: inventariar e pausar apenas o staging legado, criar e migrar o staging novo, bootstrap, preparar o projeto Vercel sem Production, configurar Preview e executar smoke remoto.
 
-**Tech Stack:** Node.js 22.23.2, TypeScript, Vitest 4, Supabase CLI 2.105.0, Supabase JS 2.108.1, Netlify CLI 27.11.2, Netlify REST API, Zod 4, Playwright 1.60, Git/GitHub CLI.
+**Tech Stack:** Node.js 22.23.2, TypeScript, Vitest 4, Supabase CLI 2.105.0, Supabase JS 2.108.1, Vercel CLI 62.7.0, Vercel API, Zod 4, Playwright 1.60, Git/GitHub CLI.
 
 **Spec:** `docs/superpowers/specs/2026-10-07-roberto-environments-provisioning-design.md`
 
@@ -20,8 +20,11 @@
 - Não excluir projeto Supabase/Vercel, não resetar banco remoto e não migrar dados da Espaço Personalize.
 - Toda mutação usa dry-run por padrão e exige `--execute` mais confirmação literal do alvo.
 - Segredos entram somente por variáveis do processo ou pelo armazenamento autenticado da CLI; nunca aparecem em Git, arquivos de evidência, saída, erros ou comandos registrados.
-- O Netlify usa `roberto-multimarcas-pdv`, Node `22.23.2`, repositório `almeidaguil/espaco-personalize-pdv` e apenas staging em previews/branch `develop`.
-- O branch produtivo fica apontado para o placeholder inexistente `netlify-production-disabled-pr09` até o PR09; nenhum deploy recebe `--prod` neste PR.
+- O novo projeto Vercel usa `roberto-multimarcas-pdv`, preset Next.js, Node 22.x,
+  repositório `almeidaguil/espaco-personalize-pdv` e apenas Preview/staging no
+  PR08.
+- Nenhuma variável, alias ou deployment de Production é criado no projeto novo;
+  nenhum comando recebe `--prod` e a branch `main` não é publicada neste PR.
 - Commits assinados e Conventional Commits na branch `feature/provision-roberto-environments`; integração apenas por PR para `develop`.
 
 ## Review Focus
@@ -30,7 +33,7 @@
 - Saída de CLI/API contendo token, chave, e-mail ou caminho de Storage deve ser redigida inclusive em erros; cobrir nas Tasks 2 e 3.
 - Falha depois de pausar o staging legado não pode tocar a produção nem excluir automaticamente o projeto novo; cobrir na Task 4.
 - Bootstrap repetido deve reconciliar o mesmo admin, mas recusar usuários extras, senha de teste ou perfil incompatível; cobrir na Task 5.
-- Configuração Netlify deve impedir produção, isolar `develop`/preview em staging e recusar repo, site ou conta divergentes; cobrir na Task 6.
+- Configuração Vercel deve impedir Production, isolar Preview em staging e recusar repositório, projeto ou conta divergentes; cobrir na Task 6.
 
 ---
 
@@ -64,7 +67,7 @@ Expected: FAIL porque o módulo ainda não existe.
 
 - [ ] **Step 3: Criar o manifesto não sensível**
 
-Fixar organização Supabase `wcqoluxxlvglqtebcucz`, refs legados, região `sa-east-1`, alvos novos inicialmente sem ref, repositório GitHub, branches e site Netlify inicialmente sem `siteId`/`accountId`. Não incluir URL assinada, chave ou senha.
+Fixar organização Supabase `wcqoluxxlvglqtebcucz`, refs legados, região `sa-east-1`, alvos novos inicialmente sem ref, repositório GitHub, branches e projeto Vercel inicialmente sem `projectId`/`orgId`. Não incluir URL assinada, chave ou senha.
 
 - [ ] **Step 4: Implementar a política pura e a CLI de verificação**
 
@@ -72,7 +75,7 @@ Operações `read` não exigem confirmação; operações `mutate` exigem `execu
 
 - [ ] **Step 5: Ignorar estado local das ferramentas**
 
-Adicionar `/.netlify/` e `/.provisioning/` ao `.gitignore`, sem ampliar padrões para arquivos versionados. Adicionar `ops:verify-target` ao `package.json`.
+Adicionar `/.vercel/` e `/.provisioning/` ao `.gitignore`, sem ampliar padrões para arquivos versionados. Adicionar `ops:verify-target` ao `package.json`.
 
 - [ ] **Step 6: Verificar testes e formato**
 
@@ -91,30 +94,30 @@ git add config/remote-environments.json scripts/remote-environment-policy.mjs sc
 git commit -S -m "feat(ops): add remote target safety policy"
 ```
 
-### Task 2: Adaptadores autenticados de Supabase e Netlify
+### Task 2: Adaptadores autenticados de Supabase e Vercel
 
 **Files:**
 
 - Create: `scripts/supabase-management-client.mjs`
 - Create: `scripts/supabase-management-client.test.ts`
-- Create: `scripts/netlify-management-client.mjs`
-- Create: `scripts/netlify-management-client.test.ts`
+- Create: `scripts/vercel-management-client.mjs`
+- Create: `scripts/vercel-management-client.test.ts`
 
 **Interfaces:**
 
 - Consumes: `redactSensitiveText` e `createSafeLogger` da Task 1.
 - Produces: `createSupabaseManagementClient({ accessToken, fetch, baseUrl })` com `listProjects`, `getProject`, `createProject`, `pauseProject`, `getAuthConfig`, `updateAuthConfig` e `getApiKeys`.
 - Produces: `parseSupabaseApiKeys(keys): { publishableKey: string; secretKey: string }`, preferindo tipos modernos e aceitando fallback legado.
-- Produces: `createNetlifyManagementClient({ authToken, fetch, baseUrl })` com `getAccount`, `listSites`, `getSite`, `createSite`, `updateSite` e `upsertSiteEnvironmentVariables`.
+- Produces: `createVercelManagementClient({ authToken, fetch, baseUrl })` com leitura da conta, projeto, deployments, variáveis por ambiente e configuração fail-closed de Preview.
 - Produces: `buildSupabaseUrl(projectRef): string`.
 
 - [ ] **Step 1: Escrever testes falhando dos clientes HTTP**
 
-Usar `fetch` falso para fixar métodos, URLs, headers, corpos e tratamento de erro. Cobrir respostas não JSON, timeout/abort, chaves modernas e legadas, site/conta divergente e corpo Netlify com `is_secret: true`, escopo `builds` e contextos `deploy-preview`, `branch-deploy` e `branch` com parâmetro `develop`.
+Usar `fetch` falso para fixar métodos, URLs, headers, corpos e tratamento de erro. Cobrir respostas não JSON, timeout/abort, chaves modernas e legadas, projeto/conta divergente, variável sensível em Preview, ausência de variáveis Production e zero Production Deployments.
 
 - [ ] **Step 2: Confirmar a falha inicial**
 
-Run: `npm.cmd test -- scripts/supabase-management-client.test.ts scripts/netlify-management-client.test.ts`
+Run: `npm.cmd test -- scripts/supabase-management-client.test.ts scripts/vercel-management-client.test.ts`
 
 Expected: FAIL porque os módulos ainda não existem.
 
@@ -122,20 +125,20 @@ Expected: FAIL porque os módulos ainda não existem.
 
 Usar `Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}`, `AbortSignal.timeout`, erros redigidos e nunca serializar `db_pass` ou chaves na saída. A criação recebe `dbPass` em memória e omite tamanho pago, solicitando o menor tamanho gratuito disponível.
 
-- [ ] **Step 4: Implementar o cliente Netlify**
+- [ ] **Step 4: Implementar o cliente Vercel**
 
-Usar `Authorization: Bearer ${NETLIFY_AUTH_TOKEN}`. Enviar variáveis pelo corpo HTTPS da API oficial `accounts/{account_id}/env`, nunca por arquivo `.env` ou argumento da CLI; não retornar valores secretos depois da gravação.
+Usar `Authorization: Bearer ${VERCEL_TOKEN}`. Enviar variáveis pelo corpo HTTPS da API oficial ou pela entrada padrão da CLI, nunca por arquivo `.env` ou argumento; limitar ao ambiente Preview, marcar somente a chave de servidor como sensível e não retornar valores depois da gravação.
 
 - [ ] **Step 5: Verificar os adaptadores**
 
-Run: `npm.cmd test -- scripts/supabase-management-client.test.ts scripts/netlify-management-client.test.ts`
+Run: `npm.cmd test -- scripts/supabase-management-client.test.ts scripts/vercel-management-client.test.ts`
 
 Expected: PASS sem imprimir sentinelas de segredo.
 
 - [ ] **Step 6: Commit**
 
 ```powershell
-git add scripts/supabase-management-client.mjs scripts/supabase-management-client.test.ts scripts/netlify-management-client.mjs scripts/netlify-management-client.test.ts
+git add scripts/supabase-management-client.mjs scripts/supabase-management-client.test.ts scripts/vercel-management-client.mjs scripts/vercel-management-client.test.ts
 git commit -S -m "feat(ops): add remote provider adapters"
 ```
 
@@ -223,7 +226,7 @@ Em execução, pausar somente `gpywbeoqcovjrfnmbdqx`, aguardar a vaga, revalidar
 
 - [ ] **Step 5: Implementar migrations e Auth**
 
-Vincular temporariamente o projeto novo, executar `supabase db push --linked --dry-run` e somente depois `supabase db push --linked`; nunca usar `db reset`. Configurar `site_url`/allowlist com a URL Netlify validada, desabilitar signup público/anônimo e habilitar proteção de senha vazada quando suportada.
+Vincular temporariamente o projeto novo, executar `supabase db push --linked --dry-run` e somente depois `supabase db push --linked`; nunca usar `db reset`. Desabilitar signup público/anônimo e habilitar proteção de senha vazada quando suportada. Configurar `site_url`/allowlist com a URL Vercel Preview exata somente depois de o deployment ter sido criado e validado.
 
 - [ ] **Step 6: Adicionar comando e verificar**
 
@@ -276,7 +279,7 @@ Cobrir ref/hostname divergente, migrations desalinhadas, signup habilitado, tabe
 
 - [ ] **Step 3: Escrever testes falhando do ambiente de smoke remoto**
 
-Exigir `E2E_BASE_URL` HTTPS com hostname Netlify autorizado, credenciais do admin de staging no processo e ref Supabase igual ao manifesto. Recusar localhost, hostname de produção/legado, credenciais E2E locais e qualquer configuração que solicite criação/limpeza de dados.
+Exigir `E2E_BASE_URL` HTTPS com hostname Vercel Preview exato autorizado no manifesto, credenciais do admin de staging no processo e ref Supabase igual ao manifesto. Recusar localhost, hostname de Production/legado, credenciais E2E locais e qualquer configuração que solicite criação/limpeza de dados.
 
 - [ ] **Step 4: Confirmar a falha inicial**
 
@@ -313,66 +316,65 @@ git add scripts/bootstrap-staging-admin.mjs scripts/bootstrap-staging-admin.test
 git commit -S -m "feat(ops): add staging bootstrap and verification"
 ```
 
-### Task 6: Configuração Netlify sem produção
+### Task 6: Configuração Vercel somente Preview
 
 **Files:**
 
-- Create: `netlify.toml`
-- Create: `scripts/provision-netlify-site.mjs`
-- Create: `scripts/provision-netlify-site.test.ts`
+- Create: `scripts/provision-vercel-project.mjs`
+- Create: `scripts/provision-vercel-project.test.ts`
 - Modify: `package.json`
 
 **Interfaces:**
 
-- Consumes: política da Task 1, cliente Netlify da Task 2 e chaves Supabase obtidas em memória.
-- Produces: `runNetlifyProvisioning({ args, manifest, environment, netlifyClient, commandRunner, log }): Promise<NetlifyProvisioningResult>`.
-- Produces: CLI `npm run ops:provision-netlify -- --phase <site|configure-staging> [--execute --confirm-site roberto-multimarcas-pdv]`.
-- Produces: estado não sensível `{ accountId, siteId, siteName, siteUrl, repository, stagingBranch, productionBranch, deployId? }`.
+- Consumes: política da Task 1, cliente Vercel da Task 2 e chaves Supabase obtidas em memória.
+- Produces: `runVercelProvisioning({ args, manifest, environment, vercelClient, commandRunner, log }): Promise<VercelProvisioningResult>`.
+- Produces: CLI `npm run ops:provision-vercel -- --phase <configure-preview|deploy-preview|verify-preview> [--execute --confirm-project <project-id>]`.
+- Produces: estado não sensível `{ orgId, projectId, projectName, previewUrl?, repository, stagingBranch, productionDeployments }`.
 
 - [ ] **Step 1: Escrever testes falhando da configuração**
 
-Cobrir fase inválida, site indisponível, conta/repo/site divergente, dry-run, versão fixa do CLI, criação sem `--prod`, branch produtivo diferente do placeholder, variáveis fora dos três contextos permitidos, ausência de `is_secret`, secret em saída/erro e tentativa de configurar credenciais de produção. A fase `site` não exige chaves Supabase; a fase `configure-staging` exige site já validado e as três variáveis em memória.
+Cobrir fase inválida, conta/projeto divergente, integração Git presente, dry-run, versão fixa do CLI, framework diferente de Next.js, Node diferente de 22.x, tentativa de `--prod`, variável fora de Preview, secret em saída/erro, Production Deployment existente e tentativa de configurar credenciais de Production. `configure-preview` exige projeto validado e as três variáveis em memória; `deploy-preview` e `verify-preview` exigem as variáveis já validadas.
 
 - [ ] **Step 2: Confirmar a falha inicial**
 
-Run: `npm.cmd test -- scripts/provision-netlify-site.test.ts`
+Run: `npm.cmd test -- scripts/provision-vercel-project.test.ts`
 
 Expected: FAIL porque o módulo ainda não existe.
 
-- [ ] **Step 3: Fixar build Netlify**
+- [ ] **Step 3: Fixar build Vercel**
 
-Configurar `npm run build`, diretório gerenciado pelo adaptador Next.js, Node `22.23.2`, npm `10.9.8` e contextos de preview/branch sem valores secretos no `netlify.toml`.
+Configurar preset Next.js, `npm run build`, Node 22.x e npm `10.9.8`. Qualquer configuração versionada de Git deve impedir deploy automático de `main` no PR08 e permitir somente o fluxo Preview aprovado.
 
-- [ ] **Step 4: Implementar criação, vínculo e bloqueio produtivo**
+- [ ] **Step 4: Implementar criação, vínculo e bloqueio de Production**
 
-Executar `npx.cmd netlify-cli@27.11.2` sem instalação global. Criar/vincular somente o site aprovado e o repositório aprovado; configurar `netlify-production-disabled-pr09` como branch produtivo e `develop` como branch permitido. Interromper se a plataforma não puder provar que produção está bloqueada.
+Executar Vercel CLI `62.7.0` somente para inspeção e configuração. Criar o Preview pela API a partir da referência Git aprovada, sem conectar a integração Git; remover e falhar imediatamente se a plataforma classificar a solicitação como Production. Interromper se não for possível provar zero variáveis, aliases e deployments de Production.
 
-- [ ] **Step 5: Implementar variáveis e deploy não produtivo**
+- [ ] **Step 5: Implementar variáveis e deployment Preview**
 
-Enviar `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e `SUPABASE_SECRET_KEY` pela API HTTPS, marcadas como secret quando permitido e limitadas a `deploy-preview`, `branch-deploy` e branch `develop`. Disparar somente deploy de preview/branch.
+Enviar `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e `SUPABASE_SECRET_KEY` pela API HTTPS ou entrada padrão da CLI, limitadas a Preview. Marcar `SUPABASE_SECRET_KEY` como sensível, disparar somente deployment Preview e persistir a URL HTTPS exata para Auth e smoke.
 
 - [ ] **Step 6: Adicionar comando e verificar**
 
-Run: `npm.cmd test -- scripts/provision-netlify-site.test.ts`
+Run: `npm.cmd test -- scripts/provision-vercel-project.test.ts`
 
 Expected: PASS.
 
-Run: `npm.cmd run ops:provision-netlify -- --phase site`
+Run: `npm.cmd run ops:provision-vercel -- --phase configure-preview`
 
-Expected: exit 0 em dry-run, site/repo/branches planejados e nenhuma mutação.
+Expected: exit 0 em dry-run, projeto/ambiente planejados e nenhuma mutação.
 
 - [ ] **Step 7: Commit**
 
 ```powershell
-git add netlify.toml scripts/provision-netlify-site.mjs scripts/provision-netlify-site.test.ts package.json
-git commit -S -m "feat(ops): provision non-production Netlify site"
+git add scripts/provision-vercel-project.mjs scripts/provision-vercel-project.test.ts package.json
+git commit -S -m "feat(ops): provision Vercel preview project"
 ```
 
 ### Task 7: Runbook e gate local antes de infraestrutura
 
 **Files:**
 
-- Create: `docs/netlify-cli.md`
+- Modify: `docs/vercel-cli.md`
 - Modify: `README.md`
 - Modify: `docs/ambientes.md`
 - Modify: `docs/runbook-operacional.md`
@@ -388,19 +390,19 @@ git commit -S -m "feat(ops): provision non-production Netlify site"
 
 - [ ] **Step 1: Documentar pré-requisitos e segredos**
 
-Documentar Node/CLIs, autenticação Netlify, PAT Supabase mínimo, variáveis temporárias, armazenamento da CLI, logout/rotação e proibição de copiar tokens para documentação, issue ou PR.
+Documentar Node/CLIs, autenticação Vercel, PAT Supabase mínimo, variáveis temporárias, armazenamento da CLI, logout/rotação e proibição de copiar tokens para documentação, issue ou PR.
 
 - [ ] **Step 2: Documentar sequência e checkpoints**
 
-Registrar dry-runs, inventário, confirmação literal `gpywbeoqcovjrfnmbdqx`, verificação contínua de `ciixpfquwmlsvzleattv`, criação do staging, bootstrap, Netlify e smoke. Explicitar que site indisponível exige nova aprovação e que produção/`--prod` são proibidos.
+Registrar dry-runs, inventário, confirmação literal `gpywbeoqcovjrfnmbdqx`, verificação contínua de `ciixpfquwmlsvzleattv`, criação do staging, bootstrap, Vercel Preview e smoke. Explicitar que Production/`--prod`, variáveis Production e alias produtivo são proibidos.
 
 - [ ] **Step 3: Documentar falhas, rollback e limite gratuito**
 
-Incluir retomada idempotente, projeto parcial preservado, ordem "pausar novo antes de restaurar legado", nenhum delete automático, limite mensal de 300 créditos Netlify e bloqueio de deploys não essenciais perto do limite.
+Incluir retomada idempotente, projeto parcial preservado, ordem "pausar novo antes de restaurar legado", nenhum delete automático, limites do Vercel Hobby e bloqueio de deploys não essenciais perto do limite.
 
 - [ ] **Step 4: Atualizar contratos e status sem antecipar conclusão**
 
-Trocar instruções futuras de Vercel por Netlify onde o PR08 realmente altera o destino, manter Vercel legado intacto, atualizar `.env.staging.example` e deixar itens remotos pendentes até a execução comprovada.
+Manter o projeto Vercel legado intacto, atualizar `.env.staging.example`, preservar a tentativa Netlify como evidência histórica e deixar itens remotos Vercel pendentes até a execução comprovada.
 
 - [ ] **Step 5: Rodar o gate local completo**
 
@@ -422,7 +424,7 @@ Expected: todos PASS; Supabase local parado ao final; nenhum acesso remoto mutá
 
 - [ ] **Step 6: Auditar segredos e produção fora de escopo**
 
-Run: `git grep -n -E "(SUPABASE_ACCESS_TOKEN|NETLIFY_AUTH_TOKEN|STAGING_ADMIN_PASSWORD|service_role|sb_secret_)" -- ':!docs/superpowers/plans/2026-10-07-roberto-environments-provisioning.md'`
+Run: `git grep -n -E "(SUPABASE_ACCESS_TOKEN|VERCEL_TOKEN|STAGING_ADMIN_PASSWORD|service_role|sb_secret_)" -- ':!docs/superpowers/plans/2026-10-07-roberto-environments-provisioning.md'`
 
 Expected: nenhuma credencial real; somente nomes de variáveis/fixtures deliberadas.
 
@@ -433,7 +435,7 @@ Expected: sem erros.
 - [ ] **Step 7: Commit**
 
 ```powershell
-git add README.md docs/netlify-cli.md docs/ambientes.md docs/runbook-operacional.md docs/checklist-go-live.md docs/observabilidade.md docs/plano-reestruturacao-loja-fisica.md .env.staging.example
+git add README.md docs/vercel-cli.md docs/ambientes.md docs/runbook-operacional.md docs/checklist-go-live.md docs/observabilidade.md docs/plano-reestruturacao-loja-fisica.md .env.staging.example
 git commit -S -m "docs: add PR08 environment runbook"
 ```
 
@@ -450,15 +452,15 @@ git commit -S -m "docs: add PR08 environment runbook"
 **Interfaces:**
 
 - Consumes: toda a automação e runbook das Tasks 1–7.
-- Produces: staging e site efetivamente provisionados, manifesto com IDs não sensíveis e evidência redigida.
+- Produces: staging e projeto Vercel Preview efetivamente provisionados, manifesto com IDs não sensíveis e evidência redigida.
 
 - [ ] **Step 1: Autenticar e executar preflights somente leitura**
 
-Autorizar `npx.cmd netlify-cli@27.11.2 login` se necessário; disponibilizar `SUPABASE_ACCESS_TOKEN` e `NETLIFY_AUTH_TOKEN` somente no processo. Executar os dry-runs `ops:inventory-staging`, `ops:provision-netlify -- --phase site` e `ops:provision-staging`; confirmar conta, plano Free, 300 créditos sem recarga automática, organização, dois projetos ativos e região disponível.
+Autorizar `vercel.cmd login` se necessário; disponibilizar `SUPABASE_ACCESS_TOKEN` e `VERCEL_TOKEN` somente no processo quando a sessão autenticada não for suficiente. Executar os dry-runs `ops:inventory-staging`, `ops:provision-vercel -- --phase configure-preview` e `ops:provision-staging`; confirmar conta pessoal, plano Hobby, declaração de uso pessoal/não comercial, organização, dois projetos Supabase ativos e região disponível.
 
-- [ ] **Step 2: Reservar o site Netlify sem publicar produção**
+- [ ] **Step 2: Preparar o projeto Vercel sem publicar Production**
 
-Executar `ops:provision-netlify -- --phase site` somente para criar/vincular o shell com `--execute --confirm-site roberto-multimarcas-pdv`; verificar nome, conta, URL, repo e branch produtivo bloqueado. Se o nome estiver indisponível, parar e pedir nova decisão. Atualizar imediatamente o manifesto local com `siteId`, `accountId` e URL retornados para que as validações seguintes usem o alvo real.
+O projeto `roberto-multimarcas-pdv` já foi criado e vinculado somente ao diretório local. Validar `projectId`, `orgId`, conta, preset Next.js e Node 22.x antes de qualquer deployment. Comprovar ausência de integração Git e zero Production Deployments, variáveis Production e aliases produtivos. Registrar os IDs não sensíveis no manifesto somente depois da validação.
 
 - [ ] **Step 3: Inventariar o staging legado**
 
@@ -474,15 +476,15 @@ Executar `npm.cmd run ops:provision-staging -- --execute --confirm-legacy-ref gp
 
 - [ ] **Step 6: Registrar IDs não sensíveis**
 
-Atualizar manifesto com ref do staging novo, `siteId`, `accountId` e URL Netlify validados. Não registrar chave, token, senha ou e-mail.
+Atualizar manifesto com ref do staging novo, `projectId`, `orgId` e URL Vercel Preview validados. Não registrar chave, token, senha ou e-mail.
 
 - [ ] **Step 7: Bootstrap do administrador**
 
 Receber `STAGING_ADMIN_EMAIL`, `STAGING_ADMIN_PASSWORD` e `STAGING_ADMIN_FULL_NAME` pelo processo, executar primeiro dry-run e então `--execute --confirm-ref <novo-ref>`. Verificar exatamente um admin e zero registros operacionais.
 
-- [ ] **Step 8: Configurar staging Netlify e deploy**
+- [ ] **Step 8: Configurar staging Vercel e deployment Preview**
 
-Executar novamente `ops:provision-netlify -- --phase configure-staging` para gravar as três variáveis de staging e ativar apenas `develop`/preview. Verificar por metadados que os valores são secretos, production continua sem credenciais e nenhum deploy produtivo existe.
+Executar `ops:provision-vercel -- --phase configure-preview` para gravar as três variáveis de staging somente em Preview e depois `--phase deploy-preview` para criar o deployment sem `--prod`, sempre confirmando literalmente o project ID. Persistir ID/URL retornados e executar `--phase verify-preview`. Verificar por metadados que `SUPABASE_SECRET_KEY` é sensível, Production continua sem credenciais, aliases ou deployments e a produção legada permanece intacta.
 
 - [ ] **Step 9: Executar verificação remota e smoke autenticado**
 
@@ -522,7 +524,7 @@ Expected: cada comando retorna exit 0, Vitest/E2E sem skips inesperados e Supaba
 
 - [ ] **Step 2: Reexecutar checks remotos somente leitura**
 
-Confirmar staging novo saudável, produção legada saudável, staging legado pausado, dois projetos ativos, Netlify Free, branch produtivo bloqueado, deploy `develop` aprovado e zero dados operacionais.
+Confirmar staging novo saudável, produção legada saudável, staging legado pausado, dois projetos Supabase ativos, Vercel Hobby, deployment Preview aprovado, zero Production Deployments/vars/aliases no projeto novo e zero dados operacionais.
 
 - [ ] **Step 3: Solicitar revisão independente**
 

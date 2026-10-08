@@ -2,8 +2,8 @@
 
 Checklist para liberar a operação da loja física Roberto Multimarcas.
 Documenta o runtime atual e o gate multioperador do PR07. PR05 e PR06 foram
-integrados; o provisionamento dos novos ambientes (PR08) e a release (PR09)
-continuam pendentes.
+integrados; o provisionamento dos novos ambientes (PR08) está em execução e a
+release (PR09) continua pendente.
 
 ## Regra De Release
 
@@ -113,7 +113,7 @@ Antes de produzir, conferir:
 - senha administrativa operacional conhecida somente pelos autorizadores;
 - usuários temporários desativados quando não fizerem parte da operação;
 - segredos e senhas expostos durante homologação rotacionados;
-- secrets do GitHub e variáveis do Netlify atualizados após a rotação;
+- secrets do GitHub e variáveis Vercel atualizados após a rotação;
 - arquivos locais com credenciais fora do versionamento.
 
 A `publishable key` é pública. `SUPABASE_SECRET_KEY`, senha do banco, tokens de
@@ -131,23 +131,25 @@ segredos definitivos de produção.
   e registrar a compensação por cancelamento quando aplicável.
 - Não apagar vendas ou movimentações financeiras para limpar relatórios reais.
 
-## 6. Netlify E Promoção
+## 6. Vercel Preview E Promoção
 
 Conferir no projeto que receberá a release:
 
-- conta, site, domínio e ambiente identificados no manifesto;
+- conta, projeto, URL Preview e ambiente identificados no manifesto;
 - repositório conectado exatamente a `almeidaguil/espaco-personalize-pdv`;
-- branch produtiva `netlify-production-disabled-pr09` durante o PR08;
-- única branch permitida `develop`, além de previews não produtivos;
-- `prevent_non_git_prod_deploys` habilitado e nenhum uso de `--prod`;
-- variáveis públicas e privadas de staging restritas a `deploy-preview`,
-  `branch-deploy` e branch `develop`;
+- preset Next.js e Node 22.x confirmados no projeto novo;
+- branch `main` impedida de gerar deployment no projeto novo durante o PR08;
+- somente Preview e a branch `develop` autorizados para staging;
+- nenhum uso de `--prod`, alias produtivo ou Production Deployment;
+- variáveis públicas e privadas de staging restritas ao ambiente Preview;
 - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e
-  `SUPABASE_SECRET_KEY` configuradas;
-- smoke remoto somente leitura aprovado no deploy não produtivo;
-- PR de `develop` para `main` e variáveis de produção continuam bloqueados até
+  `SUPABASE_SECRET_KEY` configuradas, com a chave de servidor sensível;
+- zero variáveis configuradas no ambiente Production do projeto novo;
+- smoke remoto somente leitura aprovado no deployment Preview;
+- PR de `develop` para `main`, variáveis e deployment de Production continuam
+  bloqueados até
   a janela do PR09;
-- deploy sem erros e consumo do plano Free revisado.
+- deployment Preview sem erros e consumo do plano Hobby revisado.
 
 A produção Vercel legada e o Supabase `ciixpfquwmlsvzleattv` permanecem
 intactos durante o PR08. O novo projeto Supabase de produção, variáveis de

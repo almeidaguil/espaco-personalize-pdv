@@ -8,13 +8,20 @@ import {
 } from "./remote-environment-policy.mjs";
 
 const manifestFixture = {
-  netlify: {
-    accountId: null,
-    productionBranch: "netlify-production-disabled-pr09",
+  vercel: {
+    deploymentId: null,
+    deploymentUrl: null,
+    environment: "preview",
+    framework: "nextjs",
+    gitConnectionAllowed: false,
+    nodeVersion: "22.x",
+    orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
+    projectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+    projectName: "roberto-multimarcas-pdv",
+    previewSourceRef: "feature/provision-roberto-environments",
     repository: "almeidaguil/espaco-personalize-pdv",
-    siteId: null,
-    siteName: "roberto-multimarcas-pdv",
-    siteUrl: "https://roberto-multimarcas-pdv.netlify.app",
+    repositoryId: 1264018806,
+    scope: "guilherme-a-s-projects",
     stagingBranch: "develop",
   },
   supabase: {
@@ -71,23 +78,18 @@ describe("parseRemoteEnvironmentManifest", () => {
       region: "sa-east-1",
     });
     expect(manifest.supabase.targets.production.projectRef).toBeNull();
-    expect(manifest.netlify).toMatchObject({
-      accountId: null,
-      productionBranch: "netlify-production-disabled-pr09",
+    expect(manifest.vercel).toMatchObject({
+      environment: "preview",
+      framework: "nextjs",
+      gitConnectionAllowed: false,
+      orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
+      projectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+      projectName: "roberto-multimarcas-pdv",
+      previewSourceRef: "feature/provision-roberto-environments",
       repository: "almeidaguil/espaco-personalize-pdv",
-      siteId: null,
-      siteName: "roberto-multimarcas-pdv",
+      repositoryId: 1264018806,
       stagingBranch: "develop",
     });
-  });
-
-  test("accepts the current Netlify hexadecimal account id", () => {
-    const configuredManifest = structuredClone(manifestFixture);
-    configuredManifest.netlify.accountId = "6ac5be70c558d25c9b304db5";
-
-    const manifest = parseRemoteEnvironmentManifest(configuredManifest);
-
-    expect(manifest.netlify.accountId).toBe("6ac5be70c558d25c9b304db5");
   });
 
   test.each([
@@ -96,8 +98,8 @@ describe("parseRemoteEnvironmentManifest", () => {
       { path: ["supabase", "legacy", "staging", "projectRef"], value: "short" },
     ],
     [
-      "invalid Netlify site id",
-      { path: ["netlify", "siteId"], value: "not-a-uuid" },
+      "invalid Vercel project id",
+      { path: ["vercel", "projectId"], value: "not-a-project-id" },
     ],
   ])("rejects %s", (_name, mutation) => {
     const invalidManifest = structuredClone(manifestFixture) as Record<
@@ -238,24 +240,23 @@ describe("validateRemoteOperation", () => {
     ).toThrow(/legado.*novo staging/i);
   });
 
-  test("authorizes creation of the pending Netlify site by exact name", () => {
+  test("authorizes a Vercel mutation only for the exact project id", () => {
     expect(
       validateRemoteOperation({
-        confirmation: "roberto-multimarcas-pdv",
+        confirmation: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
         environment: "staging",
         execute: true,
         manifest,
         operation: "mutate",
-        provider: "netlify",
+        provider: "vercel",
         target: {
-          accountId: null,
-          hostname: "roberto-multimarcas-pdv.netlify.app",
-          siteId: null,
-          siteName: "roberto-multimarcas-pdv",
+          orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
+          projectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+          projectName: "roberto-multimarcas-pdv",
         },
       }),
     ).toMatchObject({
-      identifier: "roberto-multimarcas-pdv",
+      identifier: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
       result: "authorized",
     });
   });

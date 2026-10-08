@@ -4,7 +4,14 @@ import manifestFixture from "../config/remote-environments.json";
 import { parseRemoteEnvironmentManifest } from "./remote-environment-policy.mjs";
 import { runSupabaseStagingProvisioning } from "./provision-supabase-staging.mjs";
 
-const manifest = parseRemoteEnvironmentManifest(manifestFixture);
+const manifest = parseRemoteEnvironmentManifest({
+  ...manifestFixture,
+  vercel: {
+    ...manifestFixture.vercel,
+    deploymentId: "dpl_preview123",
+    deploymentUrl: "https://roberto-preview.vercel.app",
+  },
+});
 const newProjectRef = "qrstabcdefghijklmnop";
 const databasePassword = "database-password-sentinel-Aa1!";
 const now = new Date("2026-10-07T12:00:00.000Z");
@@ -196,8 +203,8 @@ describe("runSupabaseStagingProvisioning", () => {
         external_email_enabled: true,
         password_hibp_enabled: true,
         password_min_length: 14,
-        site_url: "https://roberto-multimarcas-pdv.netlify.app",
-        uri_allow_list: "https://roberto-multimarcas-pdv.netlify.app/**",
+        site_url: "https://roberto-preview.vercel.app",
+        uri_allow_list: "https://roberto-preview.vercel.app/**",
       },
     );
     expect(events).toEqual([
@@ -299,8 +306,8 @@ describe("runSupabaseStagingProvisioning", () => {
       external_anonymous_users_enabled: false,
       external_email_enabled: true,
       password_min_length: 14,
-      site_url: "https://roberto-multimarcas-pdv.netlify.app",
-      uri_allow_list: "https://roberto-multimarcas-pdv.netlify.app/**",
+      site_url: "https://roberto-preview.vercel.app",
+      uri_allow_list: "https://roberto-preview.vercel.app/**",
     });
   });
 });
@@ -379,10 +386,13 @@ function createManagementClient({
       legacyPaused = true;
       return null;
     }),
-    updateAuthConfig: vi.fn(async (projectRef: string) => {
-      events.push(`auth:${projectRef}`);
-      return { disable_signup: true };
-    }),
+    updateAuthConfig: vi.fn(
+      async (projectRef: string, configuration: Record<string, unknown>) => {
+        void configuration;
+        events.push(`auth:${projectRef}`);
+        return { disable_signup: true };
+      },
+    ),
     updateDatabasePassword: vi.fn(async () => ({ message: "updated" })),
   };
 }

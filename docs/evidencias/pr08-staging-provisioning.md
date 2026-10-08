@@ -31,7 +31,7 @@ não são registrados neste documento.
 | `sale_items`      |        24 |
 | `payments`        |        24 |
 
-## Netlify
+## Tentativa Netlify Descartada
 
 Validação concluída em `2026-10-07T11:14:28.6376212Z`.
 
@@ -48,28 +48,65 @@ Validação concluída em `2026-10-07T11:14:28.6376212Z`.
 - Deploys produtivos fora do Git: bloqueados.
 - Deploy executado: nenhum nesta etapa.
 
+Esse site deixou de ser o alvo do PR08 antes da configuração de variáveis ou
+de qualquer deploy. O registro acima é preservado como evidência histórica; ele
+não descreve o runtime alvo atual. Nenhuma exclusão remota foi autorizada.
+
 Durante a primeira tentativa, a API criou o shell e recusou ativar a proteção
 antes do vínculo ao repositório. O shell foi preservado, identificado pelo ID
 acima e recuperado somente após validação de conta, nome, ausência de vínculo e
 confirmação literal do ID. A automação passou a ordenar criação, vínculo e
 proteção, com cobertura automatizada para recuperação explícita.
 
+## Pivot Para Vercel Hobby
+
+O proprietário declarou que o uso é pessoal e não comercial e aprovou o Vercel
+Hobby como novo destino. Preflight somente leitura executado em
+`2026-10-07T19:53:05.8854578Z`:
+
+- projeto novo: `roberto-multimarcas-pdv`;
+- project ID: `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`;
+- org ID: `team_jstETBWBHJi0hsir3a3bAkbK`;
+- deployments encontrados: zero;
+- Production Deployment criado: não;
+- configuração inicial encontrada: framework `Other` e Node `24.x`;
+- configuração corrigida e revalidada: framework `Next.js` e Node `22.x`;
+- três variáveis gravadas somente em Preview; `SUPABASE_SECRET_KEY` marcada
+  como Sensitive e Production sem variáveis.
+
+O projeto novo será usado somente para Preview no PR08. Variáveis, aliases,
+deployment de Production e `--prod` continuam proibidos. A produção Vercel e o
+Supabase legados permanecem intactos.
+
+Quatro tentativas pela CLI foram classificadas incorretamente como Production
+pela Vercel, apesar da ausência de `--prod`; todas falharam no build antes de
+publicar o runtime porque variáveis Preview não são injetadas em Production.
+Cada deployment falho foi removido pelo ID exato e a consulta final voltou a
+mostrar zero deployments de Production. O comportamento coincide com a
+[ocorrência aberta na CLI da Vercel](https://github.com/vercel/vercel/issues/17069).
+O fluxo CLI foi abandonado e substituído por criação via API a partir da
+referência Git aprovada, com remoção automática e falha fechada se o alvo vier
+classificado como Production.
+
 ## Estado Do Checkpoint
 
-- Dry-runs Supabase e Netlify: aprovados.
+- Dry-runs Supabase: aprovados. O dry-run Netlify permanece apenas como
+  evidência da tentativa descartada.
 - Inventário redigido: aprovado.
-- Site Netlify não produtivo: criado, vinculado e validado.
+- Site Netlify: criado e vinculado, sem deploy ou variáveis; não é mais o alvo.
 - Staging legado Supabase: pausado, estado `INACTIVE`.
 - Produção legada Supabase: ativa, saudável e inalterada.
 - Novo staging Supabase: criado, saudável e com migrations aplicadas em
   `2026-10-07T16:37:23.6584486Z`.
-- Auth do novo staging: signup público e anônimo desativados, senha mínima de 14
-  caracteres e URL/allowlist restritas ao site Netlify aprovado.
+- Auth do novo staging: signup público e anônimo desativados e senha mínima de
+  14 caracteres; URL/allowlist ainda apontam para a tentativa Netlify e devem ser
+  atualizadas para a URL Vercel Preview exata antes do smoke.
 - Proteção HaveIBeenPwned: indisponível no plano Free; a API respondeu `402` e a
   automação aplicou somente o fallback explicitamente permitido.
 - Bootstrap do administrador: concluído em `2026-10-07T19:35:24.8780997Z`, com
   exatamente um usuário e perfil `admin`; e-mail e credencial não registrados.
-- Variáveis Netlify, deploy não produtivo e smoke: pendentes.
+- Vercel: framework/Node e variáveis Preview concluídos; deployment Preview via
+  referência Git, reconciliação do Auth e smoke permanecem pendentes.
 
 Na primeira retomada, o Node 22 no Windows recusou executar `npx.cmd` diretamente
 com `spawnSync` e retornou `EINVAL`. Um executor compartilhado passou a usar o

@@ -170,7 +170,12 @@ export async function runSupabaseStagingProvisioning({
     "Supabase migration push failed.",
   );
 
-  const siteUrl = manifest.netlify.siteUrl.replace(/\/$/, "");
+  if (!manifest.vercel.deploymentUrl) {
+    throw new Error(
+      "The Vercel Preview URL must be persisted before configuring Auth.",
+    );
+  }
+  const siteUrl = manifest.vercel.deploymentUrl.replace(/\/$/, "");
   const authConfiguration = {
     disable_signup: true,
     external_anonymous_users_enabled: false,
@@ -184,8 +189,8 @@ export async function runSupabaseStagingProvisioning({
     await managementClient.updateAuthConfig(targetRef, authConfiguration);
   } catch (error) {
     if (!isUnsupportedLeakedPasswordProtection(error)) throw error;
-    const { password_hibp_enabled: _unsupported, ...freePlanConfiguration } =
-      authConfiguration;
+    const freePlanConfiguration = { ...authConfiguration };
+    delete freePlanConfiguration.password_hibp_enabled;
     await managementClient.updateAuthConfig(targetRef, freePlanConfiguration);
   }
 

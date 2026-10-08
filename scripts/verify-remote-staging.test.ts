@@ -29,7 +29,7 @@ describe("verifyRemoteStaging", () => {
   test.each([
     [
       "missing target ref",
-      parseRemoteEnvironmentManifest(manifestFixture),
+      createManifestWithoutStagingRef(),
       /staging project ref/i,
     ],
     [
@@ -174,6 +174,11 @@ describe("verifyRemoteStaging", () => {
 function createManifest(hostname = `${projectRef}.supabase.co`) {
   const value = {
     ...manifestFixture,
+    vercel: {
+      ...manifestFixture.vercel,
+      deploymentId: "dpl_preview123",
+      deploymentUrl: "https://roberto-preview.vercel.app",
+    },
     supabase: {
       ...manifestFixture.supabase,
       targets: {
@@ -189,9 +194,16 @@ function createManifest(hostname = `${projectRef}.supabase.co`) {
   return parseRemoteEnvironmentManifest(value);
 }
 
+function createManifestWithoutStagingRef() {
+  const value = structuredClone(manifest);
+  value.supabase.targets.staging.projectRef = null;
+  value.supabase.targets.staging.hostname = null;
+  return parseRemoteEnvironmentManifest(value);
+}
+
 function createManagementClient(
   options: {
-    authConfig?: Record<string, boolean | number>;
+    authConfig?: Record<string, boolean | number | string>;
     grants?: Record<string, boolean>[];
     schema?: { rpcs: string[]; tables: string[] };
     secret?: string;
@@ -203,6 +215,8 @@ function createManagementClient(
       external_anonymous_users_enabled: false,
       password_hibp_enabled: true,
       password_min_length: 14,
+      site_url: "https://roberto-preview.vercel.app",
+      uri_allow_list: "https://roberto-preview.vercel.app/**",
     },
     grants = [
       { payments_insert: false, sale_items_insert: false, sales_insert: false },

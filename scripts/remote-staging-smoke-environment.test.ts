@@ -7,7 +7,7 @@ import { resolveRemoteStagingSmokeEnvironment } from "./remote-staging-smoke-env
 const projectRef = "qrstabcdefghijklmnop";
 const manifest = createManifest();
 const validEnvironment = {
-  E2E_BASE_URL: "https://roberto-multimarcas-pdv.netlify.app",
+  E2E_BASE_URL: "https://roberto-preview.vercel.app",
   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "publishable-key-sentinel",
   NEXT_PUBLIC_SUPABASE_URL: `https://${projectRef}.supabase.co`,
   STAGING_ADMIN_EMAIL: "owner@roberto-multimarcas.test",
@@ -19,7 +19,7 @@ describe("resolveRemoteStagingSmokeEnvironment", () => {
     expect(
       resolveRemoteStagingSmokeEnvironment(validEnvironment, manifest),
     ).toEqual({
-      baseUrl: "https://roberto-multimarcas-pdv.netlify.app",
+      baseUrl: "https://roberto-preview.vercel.app",
       email: "owner@roberto-multimarcas.test",
       password: "Strong-staging-password-2026!",
       publishableKey: "publishable-key-sentinel",
@@ -28,10 +28,10 @@ describe("resolveRemoteStagingSmokeEnvironment", () => {
   });
 
   test.each([
-    [{ E2E_BASE_URL: "http://localhost:3000" }, /HTTPS Netlify hostname/i],
+    [{ E2E_BASE_URL: "http://localhost:3000" }, /HTTPS Vercel Preview/i],
     [
       { E2E_BASE_URL: "https://legacy-project.vercel.app" },
-      /HTTPS Netlify hostname/i,
+      /HTTPS Vercel Preview/i,
     ],
     [
       { NEXT_PUBLIC_SUPABASE_URL: "https://gpywbeoqcovjrfnmbdqx.supabase.co" },
@@ -62,10 +62,13 @@ describe("resolveRemoteStagingSmokeEnvironment", () => {
   });
 
   test("rejects a manifest without the provisioned staging ref", () => {
+    const missingTarget = structuredClone(manifest);
+    missingTarget.supabase.targets.staging.projectRef = null;
+    missingTarget.supabase.targets.staging.hostname = null;
     expect(() =>
       resolveRemoteStagingSmokeEnvironment(
         validEnvironment,
-        parseRemoteEnvironmentManifest(manifestFixture),
+        parseRemoteEnvironmentManifest(missingTarget),
       ),
     ).toThrow(/staging project ref/i);
   });
@@ -74,6 +77,11 @@ describe("resolveRemoteStagingSmokeEnvironment", () => {
 function createManifest() {
   const value = {
     ...manifestFixture,
+    vercel: {
+      ...manifestFixture.vercel,
+      deploymentId: "dpl_preview123",
+      deploymentUrl: "https://roberto-preview.vercel.app",
+    },
     supabase: {
       ...manifestFixture.supabase,
       targets: {

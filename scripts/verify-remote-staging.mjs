@@ -93,11 +93,19 @@ export async function verifyRemoteStaging({
   assertSchemaContract(openApi);
 
   const authConfig = await managementClient.getAuthConfig(target.projectRef);
+  if (!manifest.vercel.deploymentUrl) {
+    throw new Error("The Vercel Preview URL is not registered.");
+  }
+  const expectedSiteUrl = manifest.vercel.deploymentUrl.replace(/\/$/, "");
   if (
     authConfig.disable_signup !== true ||
-    authConfig.external_anonymous_users_enabled !== false
+    authConfig.external_anonymous_users_enabled !== false ||
+    authConfig.site_url?.replace(/\/$/, "") !== expectedSiteUrl ||
+    authConfig.uri_allow_list !== `${expectedSiteUrl}/**`
   ) {
-    throw new Error("Public signup or anonymous users are enabled.");
+    throw new Error(
+      "Public signup, anonymous users, or Vercel Preview Auth URLs are divergent.",
+    );
   }
 
   const session = await anonymousClient.authenticate();

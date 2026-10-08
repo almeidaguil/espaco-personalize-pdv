@@ -354,8 +354,8 @@ function createKnownGitHubReader(manifest) {
     async getRepository() {
       return {
         defaultBranchRef: { name: "main" },
-        nameWithOwner: manifest.netlify.repository,
-        url: `https://github.com/${manifest.netlify.repository}`,
+        nameWithOwner: manifest.vercel.repository,
+        url: `https://github.com/${manifest.vercel.repository}`,
         visibility: "PUBLIC",
       };
     },
@@ -374,9 +374,9 @@ function createKnownVercelReader(manifest) {
     async getProject() {
       return {
         framework: "nextjs",
-        id: null,
-        name: "espaco-personalize-pdv",
-        repository: manifest.netlify.repository,
+        id: manifest.vercel.projectId,
+        name: manifest.vercel.projectName,
+        repository: manifest.vercel.repository,
       };
     },
   };

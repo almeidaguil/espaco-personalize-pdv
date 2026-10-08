@@ -34,13 +34,20 @@
       }
     }
   },
-  "netlify": {
-    "accountId": "6ac5be70c558d25c9b304db5",
-    "siteId": "cf55faf1-cf67-4120-a2f4-23eb5600e6c7",
-    "siteName": "roberto-multimarcas-pdv",
-    "siteUrl": "https://roberto-multimarcas-pdv.netlify.app",
+  "vercel": {
+    "orgId": "team_jstETBWBHJi0hsir3a3bAkbK",
+    "scope": "guilherme-a-s-projects",
+    "projectId": "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+    "projectName": "roberto-multimarcas-pdv",
+    "framework": "nextjs",
+    "nodeVersion": "22.x",
     "repository": "almeidaguil/espaco-personalize-pdv",
+    "repositoryId": 1264018806,
+    "previewSourceRef": "feature/provision-roberto-environments",
     "stagingBranch": "develop",
-    "productionBranch": "netlify-production-disabled-pr09"
+    "environment": "preview",
+    "deploymentId": null,
+    "deploymentUrl": null,
+    "gitConnectionAllowed": false
   }
 }

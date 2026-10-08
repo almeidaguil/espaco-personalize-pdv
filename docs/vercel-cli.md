@@ -1,64 +1,116 @@
 # Vercel CLI
 
-Este projeto usa o Vercel CLI para vincular o repositorio, sincronizar variaveis
-de ambiente, executar validacoes locais e gerenciar deploys.
+Runbook do Vercel para o staging da Roberto Multimarcas. O proprietário
+declarou uso pessoal e não comercial para o plano Hobby. Durante o PR08 o
+projeto novo recebe somente configuração e deployment Preview; Production
+permanece exclusiva do ambiente legado até o corte aprovado do PR09.
 
-## Instalacao Local Da Maquina
+## Versão E Autenticação
 
-O CLI foi instalado globalmente no Node.js 22 gerenciado pelo NVM:
+Use a versão validada no projeto:
 
 ```powershell
-npm.cmd install --global vercel@latest
 vercel.cmd --version
 ```
 
-Ao trocar a versao ativa do Node.js no NVM, pode ser necessario instalar o CLI
-novamente nessa versao. O projeto usa a versao definida em `.nvmrc`.
-
-## Autenticacao
-
-Use o fluxo OAuth oficial no navegador:
+Versão esperada: `62.7.0`, executada com Node.js `22.23.2`. Se for necessário
+autenticar novamente, use o fluxo OAuth oficial e confirme a identidade:
 
 ```powershell
 vercel.cmd login
 vercel.cmd whoami
 ```
 
-A sessao e armazenada no perfil local do usuario. Nao grave tokens da Vercel em
-arquivos versionados.
+A sessão fica no perfil local. Não copie tokens para arquivos versionados,
+documentação, issue, PR ou argumentos registrados. Automações não interativas
+podem receber `VERCEL_TOKEN` somente no processo e devem removê-lo ao final.
 
-## Vinculo Com O Projeto
+## Alvos Do PR08
 
-O login nao vincula automaticamente este repositorio a um projeto da Vercel.
-Esse vinculo sera feito quando o ambiente remoto estiver definido:
+- produção legada: projeto Vercel `espaco-personalize-pdv`, intacto;
+- staging novo: projeto Vercel `roberto-multimarcas-pdv`;
+- project ID novo: `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`;
+- org ID: `team_jstETBWBHJi0hsir3a3bAkbK`;
+- Supabase de staging: `otsxpchqtfypxgzjzrxs`;
+- Supabase de produção: continua `ciixpfquwmlsvzleattv` no legado.
 
-```powershell
-vercel.cmd link
-```
+O diretório `.vercel/` gerado pelo vínculo local permanece ignorado pelo Git.
+Os IDs não são segredos, mas todo comando mutável deve compará-los com o
+manifesto antes de prosseguir.
 
-O diretorio `.vercel/` gerado pelo vinculo e ignorado pelo Git.
+## Preflight Obrigatório
 
-## Ambientes Remotos
-
-- `Production` usa a branch `main` e o Supabase de producao.
-- `Preview` da branch `develop` usa o Supabase de staging.
-- `Development` nao possui credenciais remotas; use o Supabase CLI local.
-- Valores reais devem ser configurados na Vercel e nunca commitados.
-
-Depois do vinculo, copie variaveis para arquivos locais ignorados somente quando
-necessario:
+Execute inspeções somente leitura antes de qualquer configuração:
 
 ```powershell
-vercel.cmd env pull .env.staging.local --environment preview --git-branch develop
-vercel.cmd env pull .env.production.local --environment production
+vercel.cmd project inspect roberto-multimarcas-pdv
+vercel.cmd ls roberto-multimarcas-pdv
 ```
 
-O Next.js nao possui um `NODE_ENV=staging` nativo. Prefira testar staging pela
-URL de Preview da Vercel, evitando executar o aplicativo local contra dados
-remotos desnecessariamente.
+O primeiro preflight encontrou o projeto sem deployments, mas ainda com
+framework `Other` e Node `24.x`. Corrija e revalide para preset Next.js e Node
+22.x antes do primeiro Preview. Interrompa em caso de divergência de conta,
+project ID, repositório, framework ou versão de Node.
 
-## CI/CD
+## Restrições De Production
 
-Automacoes nao devem usar uma sessao pessoal interativa. Quando necessario,
-configure `VERCEL_TOKEN` como secret no provedor de CI e rotacione o token antes
-da entrega de producao.
+No PR08 é proibido:
+
+- executar `vercel --prod`;
+- criar ou atualizar variável no ambiente Production;
+- associar alias ou domínio produtivo a um Preview;
+- publicar a branch `main` pelo projeto novo;
+- promover um Preview para Production;
+- alterar ou excluir o projeto Vercel legado.
+
+Antes de conectar o repositório, impeça deploy automático de `main` e confirme
+que a integração permitirá somente o fluxo Preview aprovado. O domínio principal
+`roberto-multimarcas-pdv.vercel.app` não deve ser tratado como staging enquanto
+não houver um deployment de Production no PR09.
+
+## Variáveis De Preview
+
+Configure somente o ambiente Preview:
+
+```txt
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+SUPABASE_SECRET_KEY=
+```
+
+Os valores entram pela API HTTPS ou entrada padrão da CLI, nunca em linha de
+comando ou arquivo versionado. `SUPABASE_SECRET_KEY` deve ser sensível. Depois da
+gravação, confira apenas nomes, ambiente e metadados; não leia ou imprima os
+valores.
+
+## Deployment E Validação
+
+O provisionador deve executar primeiro em dry-run:
+
+```powershell
+npm.cmd run ops:provision-vercel -- --phase deploy-preview
+npm.cmd run ops:provision-vercel -- --phase configure-preview
+```
+
+Na execução autorizada, o provisionador cria o deployment a partir da referência
+Git aprovada pela API, sem conectar a integração Git e sem informar `target`.
+Se a Vercel classificar a operação como Production, o artefato é removido e a
+execução falha fechada. Registre a URL HTTPS exata do Preview, atualize o
+`site_url` e a allowlist do Supabase de staging e execute o smoke somente
+leitura contra essa URL.
+
+Ao final, comprove por metadados:
+
+- deployment com ambiente `Preview`;
+- projeto, conta e repositório iguais ao manifesto;
+- variáveis presentes somente em Preview;
+- zero Production Deployments, variáveis Production e aliases produtivos;
+- projeto Vercel e Supabase legados de produção intactos.
+
+## Falhas E Retomada
+
+Em qualquer divergência, pare sem promover ou excluir recursos. Preserve o
+Preview parcial para diagnóstico e retome apenas etapas idempotentes depois de
+corrigir o manifesto ou a configuração. A tentativa Netlify anterior permanece
+registrada somente como evidência histórica; nenhuma exclusão remota faz parte
+deste PR.

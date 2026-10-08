@@ -26,8 +26,8 @@ identifica o responsavel pela sessao autenticada. Consulte o
 - Husky
 - Commitlint
 - GitHub Actions
-- Netlify (novo runtime, a partir do PR08)
-- Vercel (produção legada preservada até o corte do PR09)
+- Vercel (Preview novo no PR08 e produção legada preservada até o corte do
+  PR09)
 
 ## Ambiente Local
 
@@ -60,10 +60,11 @@ npm.cmd ci
 ## Ambientes E Fluxo Git
 
 - Desenvolvimento local usa `.env.local` e o Supabase CLI local.
-- Staging usa a branch `develop`, deploy não produtivo no Netlify e um projeto
-  Supabase isolado.
+- Staging usa a branch `develop`, deploy Preview no projeto Vercel
+  `roberto-multimarcas-pdv` e um projeto Supabase isolado.
 - Durante o PR08, a produção usa `main`, Vercel legado e o Supabase legado;
-  o novo ambiente de produção será criado somente no corte aprovado do PR09.
+  o projeto Vercel novo não recebe variáveis, alias ou deployment de Production,
+  e o novo banco de produção será criado somente no corte aprovado do PR09.
 - Arquivos com valores reais são locais ou gerenciados pelo provedor e nunca
   são versionados.
 - Commits diretos na `main` sao proibidos. O fluxo oficial e
@@ -87,6 +88,5 @@ promocao de migrations e processo de release.
 - [Plano de preparacao do ambiente](docs/plano-preparacao-ambiente.md)
 - [Ambientes](docs/ambientes.md)
 - [Supabase CLI](docs/supabase-cli.md)
-- [Netlify CLI](docs/netlify-cli.md)
 - [Vercel CLI](docs/vercel-cli.md)
 - [Git e GitHub](docs/git-github.md)

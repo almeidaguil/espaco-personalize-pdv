@@ -74,12 +74,11 @@ function resolveTarget(manifest, options) {
     };
   }
 
-  if (options.provider === "netlify") {
+  if (options.provider === "vercel") {
     return {
-      accountId: options.accountId ?? manifest.netlify.accountId,
-      hostname: options.hostname ?? new URL(manifest.netlify.siteUrl).hostname,
-      siteId: options.siteId ?? manifest.netlify.siteId,
-      siteName: options.siteName ?? manifest.netlify.siteName,
+      orgId: options.orgId ?? manifest.vercel.orgId,
+      projectId: options.projectId ?? manifest.vercel.projectId,
+      projectName: options.projectName ?? manifest.vercel.projectName,
     };
   }
 

@@ -25,7 +25,7 @@
     "test:e2e:staging-smoke": "playwright test --config playwright.remote-staging.config.ts",
     "ops:bootstrap-staging-admin": "node scripts/bootstrap-staging-admin.mjs",
     "ops:inventory-staging": "node scripts/inventory-supabase-project.mjs",
-    "ops:provision-netlify": "node scripts/provision-netlify-site.mjs",
+    "ops:provision-vercel": "node scripts/provision-vercel-project.mjs",
     "ops:provision-staging": "node scripts/provision-supabase-staging.mjs",
     "ops:verify-target": "node scripts/verify-remote-target.mjs",
     "ops:verify-staging": "node scripts/verify-remote-staging.mjs",

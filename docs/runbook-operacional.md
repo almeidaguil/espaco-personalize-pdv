@@ -145,7 +145,7 @@ Antes de qualquer acesso remoto, execute os dry-runs e revise
 npm.cmd run ops:verify-target -- --provider supabase --environment legacy-staging --operation read
 npm.cmd run ops:inventory-staging -- --confirm-ref gpywbeoqcovjrfnmbdqx
 npm.cmd run ops:provision-staging
-npm.cmd run ops:provision-netlify -- --phase site
+npm.cmd run ops:provision-vercel -- --phase deploy-preview
 ```
 
 Regras obrigatórias:
@@ -158,9 +158,11 @@ Regras obrigatórias:
 3. Não excluir projetos. O novo staging parcial é preservado para diagnóstico.
 4. Não usar `db reset` remoto, não aplicar SQL manual e não criar produção no
    PR08.
-5. Site Netlify indisponível ou produção não comprovadamente bloqueada exige
-   interrupção e nova aprovação.
-6. Tokens, senha do banco e credenciais do admin permanecem somente na sessão.
+5. O projeto Vercel novo deve usar preset Next.js e Node 22.x. Qualquer
+   divergência de conta, project ID, repositório ou framework exige interrupção.
+6. O PR08 proíbe `--prod`, variáveis de Production, alias produtivo e deployment
+   da branch `main` no projeto novo.
+7. Tokens, senha do banco e credenciais do admin permanecem somente na sessão.
 
 Depois da criação, registre somente refs/IDs não sensíveis no manifesto,
 execute bootstrap idempotente e verificação:
@@ -168,7 +170,7 @@ execute bootstrap idempotente e verificação:
 ```powershell
 npm.cmd run ops:bootstrap-staging-admin -- --execute --confirm-ref <novo-staging-ref>
 npm.cmd run ops:verify-staging -- --confirm-ref <novo-staging-ref>
-npm.cmd run ops:provision-netlify -- --phase configure-staging --execute --confirm-site roberto-multimarcas-pdv
+npm.cmd run ops:provision-vercel -- --phase configure-preview --execute --confirm-project roberto-multimarcas-pdv
 npm.cmd run test:e2e:staging-smoke
 ```
 
@@ -179,7 +181,7 @@ Em falha após pausar o staging legado, preserve evidências. Para restaurá-lo,
 pause primeiro o novo staging, confirme novamente ambos os refs e respeite o
 limite de dois projetos Supabase Free ativos. A produção Vercel legada continua
 sendo o rollback imediato. Consulte [Ambientes](ambientes.md),
-[Supabase CLI](supabase-cli.md) e [Netlify CLI](netlify-cli.md).
+[Supabase CLI](supabase-cli.md) e [Vercel CLI](vercel-cli.md).
 
 ## Smoke Test De Release Ou Primeiro Uso
 

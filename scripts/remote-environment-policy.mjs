@@ -4,11 +4,8 @@ import { z } from "zod";
 
 const projectRefSchema = z.string().regex(/^[a-z]{20}$/);
 const nullableProjectRefSchema = projectRefSchema.nullable();
-const uuidSchema = z.string().uuid();
-const nullableUuidSchema = uuidSchema.nullable();
-const nullableNetlifyAccountIdSchema = z
-  .union([uuidSchema, z.string().regex(/^[a-f0-9]{24}$/)])
-  .nullable();
+const vercelOrgIdSchema = z.string().regex(/^team_[A-Za-z0-9]+$/);
+const vercelProjectIdSchema = z.string().regex(/^prj_[A-Za-z0-9]+$/);
 
 const supabaseProjectSchema = z.object({
   hostname: z.string().regex(/^[a-z]{20}\.supabase\.co$/),
@@ -28,13 +25,26 @@ const supabaseTargetSchema = z.object({
 });
 
 const remoteEnvironmentManifestSchema = z.object({
-  netlify: z.object({
-    accountId: nullableNetlifyAccountIdSchema,
-    productionBranch: z.string().min(1),
+  vercel: z.object({
+    deploymentId: z
+      .string()
+      .regex(/^dpl_[A-Za-z0-9]+$/)
+      .nullable(),
+    deploymentUrl: z
+      .url()
+      .refine((value) => value.startsWith("https://"))
+      .nullable(),
+    environment: z.literal("preview"),
+    framework: z.literal("nextjs"),
+    gitConnectionAllowed: z.literal(false),
+    nodeVersion: z.literal("22.x"),
+    orgId: vercelOrgIdSchema,
+    projectId: vercelProjectIdSchema,
+    projectName: z.string().regex(/^[a-z0-9-]+$/),
+    previewSourceRef: z.string().regex(/^feature\/[a-z0-9-]+$/),
     repository: z.string().regex(/^[^/]+\/[^/]+$/),
-    siteId: nullableUuidSchema,
-    siteName: z.string().regex(/^[a-z0-9-]+$/),
-    siteUrl: z.url().refine((value) => value.startsWith("https://")),
+    repositoryId: z.number().int().positive(),
+    scope: z.string().regex(/^[a-z0-9-]+$/),
     stagingBranch: z.string().min(1),
   }),
   supabase: z.object({
@@ -87,8 +97,8 @@ export function validateRemoteOperation({
   const validatedTarget =
     provider === "supabase"
       ? validateSupabaseTarget(parsedManifest, environment, target)
-      : provider === "netlify"
-        ? validateNetlifyTarget(parsedManifest, environment, target)
+      : provider === "vercel"
+        ? validateVercelTarget(parsedManifest, environment, target)
         : null;
 
   if (!validatedTarget) {
@@ -169,25 +179,25 @@ function resolveSupabaseEnvironment(manifest, environment) {
   return null;
 }
 
-function validateNetlifyTarget(manifest, environment, target) {
+function validateVercelTarget(manifest, environment, target) {
   if (environment !== "staging" && environment !== "production") {
     return null;
   }
 
-  const expectedHostname = new URL(manifest.netlify.siteUrl).hostname;
   const expectedValues = {
-    accountId: manifest.netlify.accountId,
-    hostname: expectedHostname,
-    siteId: manifest.netlify.siteId,
-    siteName: manifest.netlify.siteName,
+    orgId: manifest.vercel.orgId,
+    projectId: manifest.vercel.projectId,
+    projectName: manifest.vercel.projectName,
   };
 
   assertExactTarget(expectedValues, target);
 
   return {
-    hostname: expectedHostname,
-    identifier: manifest.netlify.siteId ?? manifest.netlify.siteName,
-    name: manifest.netlify.siteName,
+    hostname: manifest.vercel.deploymentUrl
+      ? new URL(manifest.vercel.deploymentUrl).hostname
+      : null,
+    identifier: manifest.vercel.projectId,
+    name: manifest.vercel.projectName,
   };
 }
 

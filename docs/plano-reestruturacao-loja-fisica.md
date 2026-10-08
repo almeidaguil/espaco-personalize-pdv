@@ -19,8 +19,9 @@ reconciliacao financeira. Varios vendedores podem operar simultaneamente.
 
 - O modulo de eventos sera removido integralmente da aplicacao.
 - Os dados atuais podem ser descartados porque pertencem a outra operacao.
-- A Roberto Multimarcas usara Netlify Free e projetos novos e isolados no
-  Supabase, sujeitos a validacao de quota e custo antes da criacao.
+- A Roberto Multimarcas usara Vercel Hobby, conforme declaracao do proprietario
+  de uso pessoal e nao comercial, e projetos novos e isolados no Supabase,
+  sujeitos a validacao de quota e custo antes da criacao.
 - Os projetos da Espaco Personalize permanecerao intactos ate o corte ser
   validado e o periodo de rollback terminar.
 - Cada vendedor pode ter no maximo um caixa aberto por vez.
@@ -185,15 +186,16 @@ frontend quando esses valores puderem ser derivados no servidor.
 
 Projetos propostos:
 
-- Netlify: `roberto-multimarcas-pdv`.
-- URL esperada: `roberto-multimarcas-pdv.netlify.app`, sujeita a
-  disponibilidade no momento da criacao.
+- Vercel: `roberto-multimarcas-pdv`, usado somente para Preview no PR08.
+- URL de staging: URL Vercel Preview exata registrada depois do primeiro
+  deployment aprovado; o dominio principal do projeto nao sera usado antes do
+  PR09.
 - Supabase staging: `roberto-multimarcas-pdv-staging`.
 - Supabase producao: `roberto-multimarcas-pdv`.
 
 O endpoint do Supabase usa um project ref aleatorio e nao oferece uma URL de API
-com o nome comercial. O link publico com a marca sera o dominio da aplicacao no
-Netlify; um dominio personalizado podera ser configurado separadamente.
+com o nome comercial. O link publico com a marca sera fornecido pela Vercel no
+corte de producao; um dominio personalizado podera ser configurado separadamente.
 
 Politica de provisionamento:
 
@@ -204,8 +206,8 @@ Politica de provisionamento:
 - manter staging e producao em projetos distintos;
 - aplicar migrations primeiro em staging;
 - conectar producao somente no PR de release;
-- no PR08, permitir apenas previews e `develop`, com a branch produtiva
-  `netlify-production-disabled-pr09`;
+- no PR08, permitir somente Preview e `develop`, sem variaveis, aliases ou
+  deployment de Production e sem uso de `--prod`;
 - preservar os projetos antigos sem novas escritas durante a janela de
   rollback;
 - desativar projetos antigos apenas em uma etapa posterior e explicitamente
@@ -403,8 +405,7 @@ e 42 testes E2E sem skips. Nenhum Supabase/Vercel remoto foi acessado ou alterad
 
 ### PR 07 - E2E Multioperador E Concorrencia
 
-Status: implementacao entregue; gates completos registrados na Task 5.
-Revisao independente, checks do PR e integracao pendentes com o controlador.
+Status: concluido e integrado; gates completos registrados na Task 5.
 
 Objetivo: provar os fluxos reais com usuarios independentes antes do reset
 remoto.
@@ -435,25 +436,26 @@ Testes e aceite:
 
 ### PR 08 - Provisionamento E Bootstrap Roberto Multimarcas
 
-Objetivo: substituir somente o staging, criar o site Netlify não produtivo e
-preparar o bootstrap sem alterar a produção legada.
+Objetivo: substituir somente o staging, preparar o projeto Vercel para Preview e
+concluir o bootstrap sem alterar a produção legada.
 
 Tarefas:
 
-- [ ] Validar quota, regiao, tamanho e custo com o responsavel.
-- [ ] Pausar o staging legado somente após confirmação literal e criar apenas o
+- [x] Validar quota, regiao, tamanho e custo com o responsavel.
+- [x] Pausar o staging legado somente após confirmação literal e criar apenas o
       novo projeto Supabase de staging; produção nova fica para o PR09.
-- [ ] Criar o site Netlify `roberto-multimarcas-pdv` sem publicação produtiva.
-- [ ] Validar a URL `roberto-multimarcas-pdv.netlify.app` ou parar para nova
-      aprovação se o nome estiver indisponível.
-- [ ] Vincular o repositorio GitHub ao novo site Netlify.
+- [x] Criar o projeto Vercel `roberto-multimarcas-pdv` sem nenhum deployment.
+- [ ] Corrigir o projeto para preset Next.js e Node 22.x e comprovar zero
+      variaveis, aliases e deployments de Production.
+- [ ] Vincular o repositorio GitHub com a branch `main` bloqueada no projeto novo.
+- [ ] Configurar variaveis somente em Preview e validar a URL exata do deployment.
 - [x] Criar runbook de provisionamento, validacao e rollback.
 - [x] Exigir identificacao explicita do projeto antes de qualquer operacao
       remota.
 - [x] Implementar modo `dry-run` para as validacoes previas.
-- [ ] Inventariar dados, usuarios e storage que permanecerao nos projetos
+- [x] Inventariar dados, usuarios e storage que permanecerao nos projetos
       legados.
-- [ ] Recriar somente o administrador inicial da Roberto Multimarcas.
+- [x] Recriar somente o administrador inicial da Roberto Multimarcas.
 - [x] Definir o processo seguro para cadastrar vendedores sem seed remoto.
 - [x] Manter carga inicial de produtos e estoque fora do bootstrap.
 - [ ] Validar RLS e RPCs depois do bootstrap.
@@ -461,7 +463,8 @@ Tarefas:
 Testes e aceite:
 
 - [x] Banco local reproduz o ambiente novo do zero.
-- [ ] Staging novo e inicializado e aprovado antes de producao.
+- [ ] Staging novo inicializado e aprovado por verificacao remota e smoke no
+      Vercel Preview antes de producao.
 - [x] O procedimento recusa project refs nao autorizados.
 - [x] Nenhuma credencial e gravada no repositorio ou em logs.
 
@@ -477,7 +480,7 @@ Tarefas:
 
 - [ ] Congelar alteracoes concorrentes durante a janela de corte.
 - [ ] Registrar backup tecnico dos projetos legados.
-- [ ] Inicializar o novo staging e executar smoke, E2E e reconciliacao.
+- [ ] Revalidar o staging aprovado e executar smoke, E2E e reconciliacao.
 - [ ] Abrir PR de release de `develop` para `main`.
 - [ ] Exigir Quality, E2E Release Gate e commits assinados.
 - [ ] Inicializar a nova producao conforme o runbook aprovado.
@@ -565,8 +568,8 @@ o contrato da reestruturacao:
    compartilhado pela loja.
 6. Os projetos Supabase alvo devem usar `sa-east-1` e o menor tamanho
    disponivel. Nenhum recurso pago pode ser criado sem autorizacao especifica.
-7. A URL inicial sera `roberto-multimarcas-pdv.netlify.app`; um dominio
-   personalizado pode ser associado posteriormente.
+7. A URL de staging sera uma URL Vercel Preview validada. A URL de producao e um
+   eventual dominio personalizado pertencem ao PR09.
 
 ## 12. Criterio De Conclusao Da Reestruturacao
 

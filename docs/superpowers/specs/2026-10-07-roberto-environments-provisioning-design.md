@@ -2,7 +2,7 @@
 
 **Data:** 7 de outubro de 2026
 
-**Status:** desenho aprovado
+**Status:** desenho aprovado e revisado para Vercel Hobby
 
 **Escopo:** PR08 — provisionamento e bootstrap da Roberto Multimarcas
 
@@ -13,9 +13,9 @@ interromper a aplicação legada durante o PR08 e sem expor credenciais. O PR08
 entrega um novo staging funcional, o projeto de hospedagem preparado e um
 procedimento seguro e reproduzível para o corte de produção no PR09.
 
-O sistema continuará privado e será operado pelo proprietário da loja. A
-hospedagem alvo será Netlify Free, escolhido após a decisão de não contratar um
-plano pago da Vercel. O banco continuará no Supabase Free.
+O sistema continuará privado e será operado pelo proprietário da loja, que
+declarou uso pessoal e não comercial para fins de enquadramento no Vercel Hobby.
+A hospedagem alvo será Vercel Hobby e o banco continuará no Supabase Free.
 
 ## 2. Restrições Aprovadas
 
@@ -51,12 +51,13 @@ cota e podem ser restaurados pelo período oferecido pela plataforma.
 ### Hospedagem
 
 O projeto Vercel legado `espaco-personalize-pdv` permanecerá intacto durante o
-PR08. O novo destino será um site Netlify Free chamado
-`roberto-multimarcas-pdv`, sujeito à disponibilidade no momento da criação.
+PR08. O novo projeto Vercel `roberto-multimarcas-pdv` será usado exclusivamente
+para Preview no PR08. Criar o contêiner do projeto não autoriza criar deployment,
+alias ou variáveis no ambiente Production.
 
 O repositório GitHub `almeidaguil/espaco-personalize-pdv` é público e será a
-origem dos deploys. Ainda não existe autenticação Netlify configurada na máquina;
-o acesso deverá ser autorizado pelo proprietário antes do provisionamento.
+origem dos deploys. O acesso Vercel deve ser autorizado pelo proprietário e cada
+operação deve validar o projeto e a conta antes de alterar o ambiente remoto.
 
 ## 4. Estratégia De Substituição Sem Custo
 
@@ -75,9 +76,10 @@ substituição será escalonada.
 7. Aplicar a cadeia imutável de migrations no novo staging, sem `db reset` remoto.
 8. Criar somente o administrador inicial de homologação.
 9. Validar schema, grants, RLS, RPCs e smoke autenticado.
-10. Criar e vincular o site Netlify `roberto-multimarcas-pdv`.
-11. Configurar deploys de preview e da branch `develop` contra o novo staging.
-12. Manter a publicação de produção bloqueada até o PR09.
+10. Criar e vincular o projeto Vercel `roberto-multimarcas-pdv` sem deployment de
+    Production.
+11. Configurar somente Preview e a branch `develop` contra o novo staging.
+12. Manter variáveis, alias e publicação de Production bloqueados até o PR09.
 
 Ao final do PR08 haverá dois projetos ativos: produção legada e staging novo.
 
@@ -90,7 +92,7 @@ Durante uma janela de corte aprovada:
 3. Pausar a produção legada.
 4. Criar `roberto-multimarcas-pdv` em `sa-east-1`.
 5. Aplicar migrations, criar o administrador real e cadastrar os dados iniciais.
-6. Configurar as variáveis de produção do Netlify.
+6. Configurar as variáveis de Production do novo projeto Vercel.
 7. Publicar, executar smoke, reconciliar e monitorar.
 8. Restaurar a produção legada somente se o critério de rollback for acionado;
    nesse caso, o novo projeto correspondente deverá ser pausado primeiro para
@@ -174,29 +176,30 @@ O bootstrap remoto será separado da seed E2E local. Ele deverá:
 
 A conta de produção não será criada por esse fluxo no PR08.
 
-### 5.6 Netlify
+### 5.6 Vercel
 
-O site Netlify deverá:
+O novo projeto Vercel deverá:
 
-- usar o nome `roberto-multimarcas-pdv`, ou parar para nova aprovação se o nome
-  estiver indisponível;
-- conectar o repositório público autorizado;
-- usar Node.js 22 conforme `.nvmrc` e `package.json`;
+- usar o nome `roberto-multimarcas-pdv` e a conta pessoal aprovada;
+- permanecer distinto do projeto legado `espaco-personalize-pdv`;
+- conectar somente o repositório público autorizado, depois de comprovar as
+  proteções contra Production;
+- usar o preset Next.js e Node.js 22 conforme `.nvmrc` e `package.json`;
 - executar o build oficial do projeto;
-- configurar as três variáveis Supabase por escopo, sem copiá-las para arquivos
-  versionados;
-- apontar preview/develop somente para staging;
-- manter o deploy de produção privado ou bloqueado até o PR09;
-- manter recarga automática ou qualquer forma de cobrança desativada;
-- documentar o limite mensal e o procedimento quando os créditos se aproximarem
-  do esgotamento.
+- configurar as três variáveis Supabase somente em Preview, sem copiá-las para
+  arquivos versionados e marcando a chave de servidor como sensível;
+- apontar Preview e `develop` somente para o staging Supabase;
+- não configurar variáveis de Production, não executar `--prod`, não associar
+  alias produtivo e não publicar a branch `main` no PR08;
+- validar que a conta permanece no plano Hobby e interromper antes de qualquer
+  recurso ou mudança de plano que possa gerar cobrança.
 
 O projeto Vercel legado não será excluído ou alterado no PR08.
 
 ## 6. Fluxo De Dados E Segredos
 
 ```text
-Supabase CLI/Netlify CLI
+Supabase CLI/Vercel CLI
         |
         | metadados não sensíveis
         v
@@ -228,9 +231,10 @@ orientar logout ou rotação posterior.
 - Migration com falha: interromper bootstrap e deploy; não aplicar correções
   manuais fora de migration.
 - Bootstrap incompatível: não sobrescrever usuário; exigir intervenção.
-- Deploy com falha: manter site privado e a produção legada ativa.
-- Limite do Netlify próximo do fim: bloquear deploys não essenciais e avaliar o
-  consumo antes de publicar novamente.
+- Deploy Preview com falha: preservar evidências, não promover e manter a
+  produção legada ativa.
+- Limite do Vercel Hobby próximo do fim: bloquear deploys não essenciais e
+  avaliar o consumo antes de publicar novamente.
 
 ## 8. Testes E Evidências
 
@@ -252,7 +256,7 @@ orientar logout ou rotação posterior.
 - tabelas, índices, constraints, grants, policies e RPCs esperados;
 - signup público bloqueado e administrador inicial autenticando;
 - escrita financeira direta bloqueada;
-- smoke de login, dashboard e rotas protegidas no deploy Netlify;
+- smoke de login, dashboard e rotas protegidas no deployment Vercel Preview;
 - nenhum operador, caixa, venda ou produto criado pelo bootstrap;
 - evidência redigida anexada ao PR sem credenciais.
 
@@ -293,8 +297,8 @@ Essas ações pertencem ao PR09 ou exigem autorização específica posterior.
   migrations;
 - somente o administrador inicial presente após o bootstrap;
 - RLS, grants e RPCs validados no ambiente novo;
-- site Netlify criado, vinculado e usando staging nos deploys não produtivos;
-- publicação de produção bloqueada;
+- projeto Vercel criado, vinculado e usando staging somente em Preview;
+- zero variáveis, aliases ou deployments de Production no projeto novo;
 - comandos mutáveis protegidos por dry-run, allowlist e confirmação literal;
 - nenhuma credencial ou dado pessoal presente em Git, logs ou artefatos;
 - gates locais e do GitHub aprovados;
