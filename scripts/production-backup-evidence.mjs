@@ -151,15 +151,29 @@ export async function readAndValidateProductionBackupEvidence({
   const absolutePath = assertAuthorizedPath(filePath);
   let evidence;
   try {
-    evidence = validateEvidenceShape(
-      JSON.parse(await readFile(absolutePath, "utf8")),
-    );
+    evidence = JSON.parse(await readFile(absolutePath, "utf8"));
   } catch (error) {
     if (error instanceof Error && /hash/i.test(error.message)) throw error;
     throw new Error("Invalid production backup evidence file.");
   }
 
-  const capturedAt = new Date(evidence.capturedAt).getTime();
+  return validateProductionBackupEvidence({
+    evidence,
+    manifest,
+    maximumAgeMs,
+    now,
+  });
+}
+
+export function validateProductionBackupEvidence({
+  evidence,
+  manifest,
+  maximumAgeMs,
+  now,
+}) {
+  const validatedEvidence = validateEvidenceShape(evidence);
+
+  const capturedAt = new Date(validatedEvidence.capturedAt).getTime();
   const currentTime =
     now instanceof Date ? now.getTime() : new Date(now).getTime();
   if (!Number.isFinite(maximumAgeMs) || maximumAgeMs <= 0) {
@@ -174,16 +188,17 @@ export async function readAndValidateProductionBackupEvidence({
 
   const expected = manifest.supabase.legacy.production;
   if (
-    evidence.source.organizationId !== manifest.supabase.organization.id ||
-    evidence.source.projectRef !== expected.projectRef ||
-    evidence.source.name !== expected.name ||
-    evidence.source.region !== expected.region ||
-    evidence.source.hostname !== expected.hostname
+    validatedEvidence.source.organizationId !==
+      manifest.supabase.organization.id ||
+    validatedEvidence.source.projectRef !== expected.projectRef ||
+    validatedEvidence.source.name !== expected.name ||
+    validatedEvidence.source.region !== expected.region ||
+    validatedEvidence.source.hostname !== expected.hostname
   ) {
     throw new Error("Production backup evidence source identity is divergent.");
   }
 
-  return evidence;
+  return validatedEvidence;
 }
 
 function validateEvidenceShape(evidence) {

@@ -28,6 +28,7 @@
     "ops:inventory-production": "node scripts/inventory-production.mjs",
     "ops:inventory-staging": "node scripts/inventory-supabase-project.mjs",
     "ops:provision-vercel": "node scripts/provision-vercel-project.mjs",
+    "ops:provision-production": "node scripts/provision-supabase-production.mjs",
     "ops:provision-staging": "node scripts/provision-supabase-staging.mjs",
     "ops:verify-target": "node scripts/verify-remote-target.mjs",
     "ops:verify-staging": "node scripts/verify-remote-staging.mjs",

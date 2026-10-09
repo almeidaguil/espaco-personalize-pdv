@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 
 import { afterEach, describe, expect, test } from "vitest";
 
+import * as productionBackupEvidence from "./production-backup-evidence.mjs";
 import {
   createProductionBackupEvidence,
   readAndValidateProductionBackupEvidence,
@@ -121,6 +122,19 @@ describe("writeProductionBackupEvidence", () => {
 });
 
 describe("readAndValidateProductionBackupEvidence", () => {
+  test("validates an in-memory evidence with the same age and identity rules", () => {
+    const evidence = createProductionBackupEvidence(validInput());
+
+    expect(
+      productionBackupEvidence.validateProductionBackupEvidence({
+        evidence,
+        manifest,
+        maximumAgeMs: 60 * 60 * 1_000,
+        now: new Date("2026-10-08T12:30:00.000Z"),
+      }),
+    ).toEqual(evidence);
+  });
+
   test("rejects tampering, stale and future evidence", async () => {
     await mkdir(authorizedDirectory, { recursive: true });
     const outputPath = join(authorizedDirectory, "production-backup.json");
