@@ -14,6 +14,8 @@ const sourceRef = "feature/production-cutover";
 const commitSha = "a".repeat(40);
 const projectRef = "abcdefghijklmnopqrst";
 const secretKey = "supabase-service-secret-sentinel";
+const environmentFingerprint =
+  "d53319153bfd2b1d5a4391e8f6a7fdd5c986c819a9d3bcce34a128a24ca0489a";
 
 describe("runVercelProductionProvisioning", () => {
   test("audits the exact empty reserved project without any mutation", async () => {
@@ -199,6 +201,7 @@ describe("runVercelProductionProvisioning", () => {
         pr09: "true",
         roberto_commit_sha: commitSha,
         roberto_environment: "production",
+        roberto_environment_fingerprint: environmentFingerprint,
         roberto_source_ref: sourceRef,
       },
       orgId,
@@ -206,6 +209,13 @@ describe("runVercelProductionProvisioning", () => {
       ref: commitSha,
       repositoryId: 1264018806,
     });
+    expect(client.upsertProjectEnvironmentVariable).toHaveBeenCalledTimes(3);
+    expect(client.upsertProjectEnvironmentVariable).toHaveBeenCalledWith(
+      expect.objectContaining({
+        key: "SUPABASE_SECRET_KEY",
+        value: secretKey,
+      }),
+    );
     expect(result).toMatchObject({
       commitSha,
       deploymentId: "dpl_Production123",
@@ -379,6 +389,7 @@ describe("runVercelProductionProvisioning", () => {
         pr09: "true",
         roberto_commit_sha: mainSha,
         roberto_environment: "production",
+        roberto_environment_fingerprint: environmentFingerprint,
         roberto_source_ref: "main",
       },
       uid: "dpl_MainProduction456",
@@ -622,6 +633,7 @@ function readyDeployment(override: Record<string, unknown> = {}) {
       pr09: "true",
       roberto_commit_sha: commitSha,
       roberto_environment: "production",
+      roberto_environment_fingerprint: environmentFingerprint,
       roberto_source_ref: sourceRef,
     },
     name: projectName,

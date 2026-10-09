@@ -11,6 +11,7 @@ import {
   resolveRemoteTarget,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
+import { createProductionEnvironmentFingerprint } from "./production-environment-fingerprint.mjs";
 import { createVercelManagementClient } from "./vercel-management-client.mjs";
 import { runCliCommand } from "./run-cli-command.mjs";
 
@@ -141,11 +142,17 @@ export async function runVercelProductionProvisioning({
   if (options.phase === "deploy") {
     assertStatePhase(state, ["vercel-configured", "verified"]);
     assertCutoverStateTarget(state, manifest, target);
-    const source = await assertDeploymentSource(
+    const baseSource = await assertDeploymentSource(
       options,
       target,
       resolveSourceCommit,
     );
+    const productionValues = readProductionVariables(environment, manifest);
+    const source = {
+      ...baseSource,
+      environmentFingerprint:
+        createProductionEnvironmentFingerprint(productionValues),
+    };
     await auditReservedProject(client, target, {
       requireFirstUse: false,
       requireNoDeployments: false,
@@ -179,6 +186,16 @@ export async function runVercelProductionProvisioning({
         }
       } else if (listed.length !== 0) {
         throw new Error("An unrelated production deployment already exists.");
+      }
+      for (const variable of variables) {
+        await client.upsertProjectEnvironmentVariable({
+          key: variable.key,
+          orgId: target.orgId,
+          projectId: target.projectId,
+          targetEnvironment: target.deploymentEnvironment,
+          type: variable.type,
+          value: productionValues[variable.key],
+        });
       }
       const created = await client.createGitDeployment({
         environment: target.deploymentEnvironment,
@@ -229,10 +246,16 @@ export async function runVercelProductionProvisioning({
     deploymentEnvironment: target.deploymentEnvironment,
   });
   const facts = readStateFacts(state, "deployment-ready");
-  const source =
+  const baseSource =
     state.phase === "verified" && options.sourceRef && options.commitSha
       ? await assertDeploymentSource(options, target, resolveSourceCommit)
       : { commitSha: facts.commitSha, sourceRef: facts.sourceRef };
+  const source = {
+    ...baseSource,
+    environmentFingerprint: createProductionEnvironmentFingerprint(
+      readProductionVariables(environment, manifest),
+    ),
+  };
   const deployment =
     state.phase === "verified" && options.sourceRef && options.commitSha
       ? await findExistingDeployment(client, target, source)
@@ -504,6 +527,7 @@ function deploymentMetadata(source) {
     pr09: "true",
     roberto_commit_sha: source.commitSha,
     roberto_environment: "production",
+    roberto_environment_fingerprint: source.environmentFingerprint,
     roberto_source_ref: source.sourceRef,
   };
 }
@@ -539,6 +563,9 @@ function deploymentMatchesSource(deployment, source, target) {
   return (
     metadata.roberto_source_ref === source.sourceRef &&
     metadata.roberto_commit_sha === source.commitSha &&
+    (!source.environmentFingerprint ||
+      metadata.roberto_environment_fingerprint ===
+        source.environmentFingerprint) &&
     gitSource.ref === source.commitSha &&
     gitSource.sha === source.commitSha &&
     gitSource.repoId === target.repositoryId
@@ -575,7 +602,10 @@ function assertProductionDeployment(deployment, target, source) {
   const metadata = deployment.meta ?? {};
   if (
     metadata.pr09 !== "true" ||
-    metadata.roberto_environment !== "production"
+    metadata.roberto_environment !== "production" ||
+    (source.environmentFingerprint &&
+      metadata.roberto_environment_fingerprint !==
+        source.environmentFingerprint)
   ) {
     throw new Error("Production deployment metadata is divergent.");
   }
