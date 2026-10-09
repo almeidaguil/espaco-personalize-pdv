@@ -6,6 +6,7 @@ import { pathToFileURL } from "node:url";
 import {
   loadRemoteEnvironmentManifest,
   redactSensitiveText,
+  resolveRemoteTarget,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
 import { createSupabaseManagementClient } from "./supabase-management-client.mjs";
@@ -177,12 +178,16 @@ export async function runSupabaseStagingProvisioning({
     "Supabase migration push failed.",
   );
 
-  if (!manifest.vercel.siteUrl) {
+  const vercelTarget = resolveRemoteTarget(manifest, {
+    environment: "staging",
+    provider: "vercel",
+  });
+  if (!vercelTarget.siteUrl) {
     throw new Error(
       "The Vercel staging URL must be persisted before configuring Auth.",
     );
   }
-  const siteUrl = manifest.vercel.siteUrl.replace(/\/$/, "");
+  const siteUrl = vercelTarget.siteUrl.replace(/\/$/, "");
   const authConfiguration = {
     disable_signup: true,
     external_anonymous_users_enabled: false,

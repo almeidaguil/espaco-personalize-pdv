@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "supabase": {
     "organization": {
       "id": "wcqoluxxlvglqtebcucz",
@@ -37,22 +37,38 @@
   "vercel": {
     "orgId": "team_jstETBWBHJi0hsir3a3bAkbK",
     "scope": "guilherme-a-s-projects",
-    "projectId": "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
-    "projectName": "roberto-multimarcas-pdv-staging",
     "framework": "nextjs",
     "nodeVersion": "22.x",
     "repository": "almeidaguil/espaco-personalize-pdv",
     "repositoryId": 1264018806,
-    "sourceRef": "feature/provision-roberto-environments",
-    "stagingBranch": "develop",
-    "environment": "production",
-    "dedicatedStaging": true,
-    "deploymentProtection": "vercel-authentication",
-    "deploymentId": "dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD",
-    "deploymentUrl": "https://roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app",
-    "siteUrl": "https://roberto-multimarcas-pdv-staging.vercel.app",
     "gitConnectionAllowed": false,
-    "reservedProductionProjectId": "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
-    "reservedProductionProjectName": "roberto-multimarcas-pdv"
+    "targets": {
+      "staging": {
+        "projectId": "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+        "projectName": "roberto-multimarcas-pdv-staging",
+        "sourceRef": "feature/provision-roberto-environments",
+        "allowedSourceRefs": ["feature/provision-roberto-environments"],
+        "releaseBranch": "develop",
+        "environment": "production",
+        "dedicatedStaging": true,
+        "deploymentProtection": "vercel-authentication",
+        "deploymentId": "dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD",
+        "deploymentUrl": "https://roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app",
+        "siteUrl": "https://roberto-multimarcas-pdv-staging.vercel.app"
+      },
+      "production": {
+        "projectId": "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+        "projectName": "roberto-multimarcas-pdv",
+        "sourceRef": "feature/production-cutover",
+        "allowedSourceRefs": ["feature/production-cutover", "main"],
+        "releaseBranch": "main",
+        "environment": "production",
+        "dedicatedStaging": false,
+        "deploymentProtection": "application-auth",
+        "deploymentId": null,
+        "deploymentUrl": null,
+        "siteUrl": "https://roberto-multimarcas-pdv.vercel.app"
+      }
+    }
   }
 }

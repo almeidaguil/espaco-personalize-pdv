@@ -5,6 +5,7 @@ import { createVercelManagementClient } from "./vercel-management-client.mjs";
 import {
   createSafeLogger,
   loadRemoteEnvironmentManifest,
+  resolveRemoteTarget,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
 
@@ -28,9 +29,16 @@ export async function runVercelProvisioning({
   wait = waitForPolling,
 }) {
   const options = parseArguments(args);
-  const target = manifest.vercel;
+  const target = resolveRemoteTarget(manifest, {
+    environment: "staging",
+    provider: "vercel",
+  });
+  const productionTarget = resolveRemoteTarget(manifest, {
+    environment: "production",
+    provider: "vercel",
+  });
   const baseResult = {
-    environment: target.environment,
+    environment: target.deploymentEnvironment,
     orgId: target.orgId,
     projectId: target.projectId,
     projectName: target.projectName,
@@ -48,13 +56,17 @@ export async function runVercelProvisioning({
     return result;
   }
 
-  assertDedicatedStagingTarget(target);
+  assertDedicatedStagingTarget(target, productionTarget);
   authorizeMutation(manifest, options.confirmation);
   if (!vercelClient) throw new Error("VERCEL_TOKEN is required.");
 
   const project = await vercelClient.getProject(target.projectId, target.orgId);
   assertProject(project, target);
-  await assertReservedProductionProjectIsEmpty(vercelClient, target);
+  await assertReservedProductionProjectIsEmpty(
+    vercelClient,
+    target,
+    productionTarget,
+  );
   await assertExpectedStagingDeployments(vercelClient, target);
 
   const sensitiveValues = variables
@@ -76,7 +88,7 @@ export async function runVercelProvisioning({
         key: variable.key,
         orgId: target.orgId,
         projectId: target.projectId,
-        targetEnvironment: target.environment,
+        targetEnvironment: target.deploymentEnvironment,
         type: variable.type,
         value: values[variable.key],
       });
@@ -149,7 +161,11 @@ function parseArguments(args) {
 }
 
 function authorizeMutation(manifest, confirmation) {
-  if (confirmation !== manifest.vercel.projectId) {
+  const target = resolveRemoteTarget(manifest, {
+    environment: "staging",
+    provider: "vercel",
+  });
+  if (confirmation !== target.projectId) {
     throw new Error("Remote mutation requires confirmação literal do projeto.");
   }
   validateRemoteOperation({
@@ -160,19 +176,19 @@ function authorizeMutation(manifest, confirmation) {
     operation: "mutate",
     provider: "vercel",
     target: {
-      orgId: manifest.vercel.orgId,
-      projectId: manifest.vercel.projectId,
-      projectName: manifest.vercel.projectName,
+      orgId: target.orgId,
+      projectId: target.projectId,
+      projectName: target.projectName,
     },
   });
 }
 
-function assertDedicatedStagingTarget(target) {
+function assertDedicatedStagingTarget(target, productionTarget) {
   if (
     target.dedicatedStaging !== true ||
-    target.environment !== "production" ||
+    target.deploymentEnvironment !== "production" ||
     !target.projectName.endsWith("-staging") ||
-    target.projectId === target.reservedProductionProjectId
+    target.projectId === productionTarget.projectId
   ) {
     throw new Error(
       "Vercel target is not the approved dedicated staging project.",
@@ -201,14 +217,18 @@ function assertProject(project, target) {
   }
 }
 
-async function assertReservedProductionProjectIsEmpty(client, target) {
+async function assertReservedProductionProjectIsEmpty(
+  client,
+  target,
+  productionTarget,
+) {
   const project = await client.getProject(
-    target.reservedProductionProjectId,
+    productionTarget.projectId,
     target.orgId,
   );
   if (
-    project?.id !== target.reservedProductionProjectId ||
-    project?.name !== target.reservedProductionProjectName ||
+    project?.id !== productionTarget.projectId ||
+    project?.name !== productionTarget.projectName ||
     project?.link
   ) {
     throw new Error("The reserved production project identity is divergent.");
@@ -216,25 +236,19 @@ async function assertReservedProductionProjectIsEmpty(client, target) {
 
   const [deploymentResponse, environmentResponse, domainResponse] =
     await Promise.all([
-      client.listProjectDeployments(
-        target.reservedProductionProjectId,
-        target.orgId,
-      ),
+      client.listProjectDeployments(productionTarget.projectId, target.orgId),
       client.listProjectEnvironmentVariables(
-        target.reservedProductionProjectId,
+        productionTarget.projectId,
         target.orgId,
       ),
-      client.listProjectDomains(
-        target.reservedProductionProjectId,
-        target.orgId,
-      ),
+      client.listProjectDomains(productionTarget.projectId, target.orgId),
     ]);
   if (
     (deploymentResponse?.deployments ?? []).length !== 0 ||
     (environmentResponse?.envs ?? []).length !== 0 ||
     !hasOnlyDefaultVercelDomain(
       domainResponse?.domains ?? [],
-      target.reservedProductionProjectName,
+      productionTarget.projectName,
     )
   ) {
     throw new Error("The reserved production project is not empty.");
@@ -296,7 +310,7 @@ function assertStagingEnvironmentVariableEntries(entries, target) {
       entry.type !== expected.type ||
       !Array.isArray(entry.target) ||
       entry.target.length !== 1 ||
-      entry.target[0] !== target.environment ||
+      entry.target[0] !== target.deploymentEnvironment ||
       entry.gitBranch
     ) {
       throw new Error(

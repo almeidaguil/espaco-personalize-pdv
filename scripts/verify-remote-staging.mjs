@@ -6,6 +6,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import {
   loadRemoteEnvironmentManifest,
+  resolveRemoteTarget,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
 import {
@@ -99,10 +100,14 @@ export async function verifyRemoteStaging({
   assertSchemaContract(openApi);
 
   const authConfig = await managementClient.getAuthConfig(target.projectRef);
-  if (!manifest.vercel.siteUrl) {
+  const vercelTarget = resolveRemoteTarget(manifest, {
+    environment: "staging",
+    provider: "vercel",
+  });
+  if (!vercelTarget.siteUrl) {
     throw new Error("The Vercel staging URL is not registered.");
   }
-  const expectedSiteUrl = manifest.vercel.siteUrl.replace(/\/$/, "");
+  const expectedSiteUrl = vercelTarget.siteUrl.replace(/\/$/, "");
   if (
     authConfig.disable_signup !== true ||
     authConfig.external_anonymous_users_enabled !== false ||

@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import {
   loadRemoteEnvironmentManifest,
+  resolveRemoteTarget,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
 import {
@@ -370,12 +371,16 @@ function createKnownGitHubReader(manifest) {
 }
 
 function createKnownVercelReader(manifest) {
+  const target = resolveRemoteTarget(manifest, {
+    environment: "staging",
+    provider: "vercel",
+  });
   return {
     async getProject() {
       return {
         framework: "nextjs",
-        id: manifest.vercel.projectId,
-        name: manifest.vercel.projectName,
+        id: target.projectId,
+        name: target.projectName,
         repository: manifest.vercel.repository,
       };
     },
