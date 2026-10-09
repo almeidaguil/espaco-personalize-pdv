@@ -13,6 +13,25 @@ export function createVercelManagementClient({
   }
 
   const request = createRequest({ authToken, baseUrl, fetch });
+  const createGitDeployment = ({
+    environment,
+    metadata,
+    orgId,
+    projectId,
+    projectName = null,
+    ref,
+    repositoryId,
+  }) =>
+    request(`/v13/deployments?teamId=${encodeURIComponent(orgId)}`, {
+      body: {
+        gitSource: { ref, repoId: repositoryId, type: "github" },
+        meta: metadata,
+        ...(projectName ? { name: projectName } : {}),
+        project: projectId,
+        target: environment,
+      },
+      method: "POST",
+    });
 
   return {
     createAutomationBypass: ({ orgId, projectId, secret }) =>
@@ -24,6 +43,7 @@ export function createVercelManagementClient({
           sensitiveValues: [secret],
         },
       ),
+    createGitDeployment,
     createStagingDeployment: ({
       branch,
       orgId,
@@ -31,19 +51,18 @@ export function createVercelManagementClient({
       projectName,
       repositoryId,
     }) =>
-      request(`/v13/deployments?teamId=${encodeURIComponent(orgId)}`, {
-        body: {
-          gitSource: { ref: branch, repoId: repositoryId, type: "github" },
-          meta: {
-            dedicated_staging: "true",
-            pr08: "true",
-            roberto_environment: "staging",
-          },
-          name: projectName,
-          project: projectId,
-          target: "production",
+      createGitDeployment({
+        environment: "production",
+        metadata: {
+          dedicated_staging: "true",
+          pr08: "true",
+          roberto_environment: "staging",
         },
-        method: "POST",
+        orgId,
+        projectId,
+        projectName,
+        ref: branch,
+        repositoryId,
       }),
     deleteDeployment: (deploymentId, orgId) =>
       request(

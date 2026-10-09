@@ -6,6 +6,46 @@ const orgId = "team_jstETBWBHJi0hsir3a3bAkbK";
 const projectId = "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79";
 
 describe("createVercelManagementClient", () => {
+  test("creates a generic Git deployment with the exact ref, environment and metadata", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ id: "dpl_production123" }));
+    const client = createVercelManagementClient({
+      authToken: "vercel-token-sentinel",
+      fetch,
+    });
+
+    await client.createGitDeployment({
+      environment: "production",
+      metadata: {
+        roberto_commit_sha: "a".repeat(40),
+        roberto_environment: "production",
+        roberto_source_ref: "feature/production-cutover",
+      },
+      orgId,
+      projectId,
+      ref: "feature/production-cutover",
+      repositoryId: 1264018806,
+    });
+
+    const [url, options] = fetch.mock.calls[0];
+    expect(url).toBe(`https://api.vercel.com/v13/deployments?teamId=${orgId}`);
+    expect(JSON.parse(options.body)).toEqual({
+      gitSource: {
+        ref: "feature/production-cutover",
+        repoId: 1264018806,
+        type: "github",
+      },
+      meta: {
+        roberto_commit_sha: "a".repeat(40),
+        roberto_environment: "production",
+        roberto_source_ref: "feature/production-cutover",
+      },
+      project: projectId,
+      target: "production",
+    });
+  });
+
   test("scopes project reads to the approved organization", async () => {
     const fetch = vi.fn().mockResolvedValue(jsonResponse({ id: projectId }));
     const client = createVercelManagementClient({
