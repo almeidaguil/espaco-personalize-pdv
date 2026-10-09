@@ -48,6 +48,7 @@ export async function runBootstrapProductionAdminCli(
   if (!state || !["database-ready", "admin-ready"].includes(state.phase)) {
     throw new Error("Production bootstrap requires database-ready state.");
   }
+  assertStateProjectRef(state, target.projectRef);
 
   const adminApi =
     dependencies.adminApi ??
@@ -88,6 +89,17 @@ export async function runBootstrapProductionAdminCli(
   }
   log(result);
   return result;
+}
+
+function assertStateProjectRef(state, projectRef) {
+  const requiredPhases = ["production-created", "database-ready"];
+  const divergent = requiredPhases.find((phase) => {
+    const entry = state.history?.find((item) => item.phase === phase);
+    return entry?.facts?.projectRef !== projectRef;
+  });
+  if (divergent) {
+    throw new Error("Production cutover state project ref is divergent.");
+  }
 }
 
 function parseArguments(argv) {

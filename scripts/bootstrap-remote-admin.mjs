@@ -26,6 +26,11 @@ export async function bootstrapRemoteAdmin({
   sensitiveValues = /** @type {string[]} */ ([]),
 }) {
   const validatedCredentials = validateCredentials(credentials, environment);
+  const secrets = [
+    validatedCredentials.email,
+    validatedCredentials.password,
+    ...sensitiveValues,
+  ];
   const target = resolveRemoteTarget(manifest, {
     environment,
     provider: "supabase",
@@ -48,7 +53,11 @@ export async function bootstrapRemoteAdmin({
     },
   });
 
-  let users = await adminApi.listUsers();
+  let users = await callAdminApi(
+    () => adminApi.listUsers(),
+    `Unable to inspect the ${environment} administrator.`,
+    secrets,
+  );
   assertUserSet(users, validatedCredentials, environment);
   const existingUser = users[0];
   if (!execute) {
@@ -65,48 +74,65 @@ export async function bootstrapRemoteAdmin({
   let user = existingUser;
   let created = false;
   if (user) {
-    const profile = await adminApi.getProfile(user.id);
+    const profile = await callAdminApi(
+      () => adminApi.getProfile(user.id),
+      `Unable to inspect the ${environment} administrator.`,
+      secrets,
+    );
     if (!isCompatibleProfile(profile, user.id, validatedCredentials)) {
       throw new Error(
         `The existing ${environment} user has an incompatible admin profile.`,
       );
     }
   } else {
-    try {
-      user = await adminApi.createUser({
-        email: validatedCredentials.email,
-        email_confirm: true,
-        password: validatedCredentials.password,
-        user_metadata: {
+    user = await callAdminApi(
+      () =>
+        adminApi.createUser({
+          email: validatedCredentials.email,
+          email_confirm: true,
+          password: validatedCredentials.password,
+          user_metadata: {
+            full_name: validatedCredentials.fullName,
+            role: "admin",
+          },
+        }),
+      `Unable to create the ${environment} administrator.`,
+      secrets,
+    );
+    await callAdminApi(
+      () => adminApi.getProfile(user.id),
+      `Unable to inspect the ${environment} administrator.`,
+      secrets,
+    );
+    await callAdminApi(
+      () =>
+        adminApi.upsertProfile({
+          email: validatedCredentials.email,
           full_name: validatedCredentials.fullName,
+          id: user.id,
           role: "admin",
-        },
-      });
-    } catch (error) {
-      redactSensitiveText(error, [
-        validatedCredentials.email,
-        validatedCredentials.password,
-        ...sensitiveValues,
-      ]);
-      throw new Error(`Unable to create the ${environment} administrator.`);
-    }
-    await adminApi.getProfile(user.id);
-    await adminApi.upsertProfile({
-      email: validatedCredentials.email,
-      full_name: validatedCredentials.fullName,
-      id: user.id,
-      role: "admin",
-    });
+        }),
+      `Unable to reconcile the ${environment} administrator.`,
+      secrets,
+    );
     created = true;
   }
 
-  const profile = await adminApi.getProfile(user.id);
+  const profile = await callAdminApi(
+    () => adminApi.getProfile(user.id),
+    `Unable to inspect the ${environment} administrator.`,
+    secrets,
+  );
   if (!isCompatibleProfile(profile, user.id, validatedCredentials)) {
     throw new Error(`The ${environment} admin postcondition is divergent.`);
   }
 
   if (requireEmptyOperationalData) {
-    users = await adminApi.listUsers();
+    users = await callAdminApi(
+      () => adminApi.listUsers(),
+      `Unable to inspect the ${environment} administrator.`,
+      secrets,
+    );
     assertUserSet(users, validatedCredentials, environment);
     if (users.length !== 1 || users[0].id !== user.id) {
       throw new Error(`The ${environment} admin postcondition is divergent.`);
@@ -114,7 +140,11 @@ export async function bootstrapRemoteAdmin({
     if (typeof adminApi.getPostcondition !== "function") {
       throw new Error("Production admin postcondition reader is required.");
     }
-    const postcondition = await adminApi.getPostcondition();
+    const postcondition = await callAdminApi(
+      () => adminApi.getPostcondition(),
+      "Unable to verify the production admin postcondition.",
+      secrets,
+    );
     if (
       postcondition?.adminCount !== 1 ||
       postcondition?.operatorCount !== 0 ||
@@ -229,4 +259,13 @@ async function countRows(supabase, table, equality) {
   const { count, error } = await query;
   if (error || count === null) throw new Error(`Unable to count ${table}.`);
   return count;
+}
+
+async function callAdminApi(operation, publicMessage, sensitiveValues) {
+  try {
+    return await operation();
+  } catch (error) {
+    redactSensitiveText(error, sensitiveValues);
+    throw new Error(publicMessage);
+  }
 }

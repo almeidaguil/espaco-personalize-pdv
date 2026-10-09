@@ -131,6 +131,38 @@ describe("bootstrapRemoteAdmin", () => {
     expect(message).not.toContain(password);
     expect(message).not.toContain(token);
   });
+
+  test.each(["listUsers", "getProfile", "upsertProfile"] as const)(
+    "sanitizes %s provider failures",
+    async (method) => {
+      const sentinel = `${email} ${password} service-key-sentinel`;
+      const adminApi = createAdminApi();
+      if (method === "getProfile") {
+        adminApi.listUsers.mockResolvedValue([{ email, id: userId }]);
+      }
+      adminApi[method].mockRejectedValue(new Error(sentinel));
+
+      let message = "";
+      try {
+        await bootstrapRemoteAdmin({
+          adminApi,
+          confirmation: "otsxpchqtfypxgzjzrxs",
+          credentials: { email, fullName, password },
+          environment: "staging",
+          execute: true,
+          logger: vi.fn(),
+          manifest: manifestFixture,
+          sensitiveValues: ["service-key-sentinel"],
+        });
+      } catch (error) {
+        message = error instanceof Error ? error.message : String(error);
+      }
+
+      expect(message).not.toContain(email);
+      expect(message).not.toContain(password);
+      expect(message).not.toContain("service-key-sentinel");
+    },
+  );
 });
 
 function createAdminApi({

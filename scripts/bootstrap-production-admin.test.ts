@@ -76,6 +76,15 @@ describe("runBootstrapProductionAdminCli", () => {
     expect(adminApi.createUser).not.toHaveBeenCalled();
   });
 
+  test("rejects cutover state recorded for another production ref", async () => {
+    const adminApi = createAdminApi();
+    const state = databaseReadyState("zyxwvutsrqponmlkjihg");
+
+    await expect(runCli({ adminApi, state })).rejects.toThrow(/state.*ref/i);
+    expect(adminApi.listUsers).not.toHaveBeenCalled();
+    expect(adminApi.createUser).not.toHaveBeenCalled();
+  });
+
   test("prints help without loading credentials or providers", async () => {
     const loadManifest = vi.fn();
     const log = vi.fn();
@@ -92,7 +101,7 @@ function runCli({
   adminApi,
   argv = ["--execute", "--confirm-ref", projectRef],
   recordPhase = vi.fn(),
-  state = { history: [], phase: "database-ready" },
+  state = databaseReadyState(projectRef),
 }: {
   adminApi: ReturnType<typeof createAdminApi>;
   argv?: string[];
@@ -112,6 +121,16 @@ function runCli({
     log: vi.fn(),
     recordPhase,
   });
+}
+
+function databaseReadyState(ref: string) {
+  return {
+    history: [
+      { facts: { projectRef: ref }, phase: "production-created" },
+      { facts: { projectRef: ref }, phase: "database-ready" },
+    ],
+    phase: "database-ready",
+  };
 }
 
 function persistedManifest() {
