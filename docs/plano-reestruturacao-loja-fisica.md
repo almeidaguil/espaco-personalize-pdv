@@ -188,9 +188,10 @@ Projetos propostos:
 
 - Vercel staging: `roberto-multimarcas-pdv-staging`; o ambiente Production
   desse projeto dedicado representa somente staging no PR08.
-- Vercel producao futura: `roberto-multimarcas-pdv`, reservado sem variaveis ou
-  deployments ate o PR09.
+- Vercel producao: `roberto-multimarcas-pdv`, reservado para o corte controlado
+  do PR09 e independente do staging.
 - URL de staging: `https://roberto-multimarcas-pdv-staging.vercel.app`.
+- URL de producao: `https://roberto-multimarcas-pdv.vercel.app`.
 - Supabase staging: `roberto-multimarcas-pdv-staging`.
 - Supabase producao: `roberto-multimarcas-pdv`.
 
@@ -206,13 +207,14 @@ Politica de provisionamento:
 - gerar senhas novas e nunca reutilizar credenciais da operacao anterior;
 - manter staging e producao em projetos distintos;
 - aplicar migrations primeiro em staging;
-- conectar producao somente no PR de release;
+- conectar producao somente no PR09-A, depois da pausa autorizada do legado;
 - no PR08, permitir Production somente no projeto dedicado terminado em
   `-staging`; manter o projeto reservado para producao vazio;
-- preservar os projetos antigos sem novas escritas durante a janela de
-  rollback;
-- desativar projetos antigos apenas em uma etapa posterior e explicitamente
-  autorizada.
+- manter no maximo dois projetos Supabase Free ativos: staging e uma producao;
+- preservar a producao legada pausada por 30 dias como rollback;
+- nunca excluir, restaurar ou reinicializar projeto remoto automaticamente;
+- criar somente o administrador no bootstrap; vendedores, produtos e estoque
+  inicial serao cadastrados manualmente pelo sistema.
 
 ## 7. Estrategia De Entrega
 
@@ -474,30 +476,55 @@ Nenhum projeto será excluído e nenhuma produção nova será criada neste PR.
 
 ### PR 09 - Release E Corte De Producao
 
-Objetivo: publicar o novo modelo com verificacao ponta a ponta.
+Objetivo: preparar, cortar e publicar a primeira producao Roberto Multimarcas
+com verificacao ponta a ponta, banco operacional vazio e rollback preservado.
+
+O trabalho e separado em:
+
+- **PR09-A:** `feature/production-cutover` para `develop`; implementacao,
+  revisao, gates, confirmacao literal, provisionamento controlado, deploy
+  provisorio e verificacao remota;
+- **PR09-B:** `develop` para `main`; release do mesmo conteudo revisado, deploy
+  do commit assinado de `main`, nova verificacao e monitoramento.
 
 Tarefas:
 
 - [ ] Congelar alteracoes concorrentes durante a janela de corte.
-- [ ] Registrar backup tecnico dos projetos legados.
-- [ ] Revalidar o staging aprovado e executar smoke, E2E e reconciliacao.
-- [ ] Abrir PR de release de `develop` para `main`.
-- [ ] Exigir Quality, E2E Release Gate e commits assinados.
-- [ ] Inicializar a nova producao conforme o runbook aprovado.
-- [ ] Criar admin e vendedores reais sem expor senhas.
-- [ ] Cadastrar produtos e estoque inicial.
-- [ ] Executar venda, cancelamento, fechamento e relatorio de verificacao.
-- [ ] Monitorar logs e erros depois do corte.
-- [ ] Manter o ambiente legado disponivel apenas para rollback durante o prazo
-      aprovado.
+- [ ] Registrar inventario tecnico recente da producao legada, sem dados
+      pessoais ou segredos.
+- [ ] Revalidar staging, producao legada, cota gratuita e projeto Vercel vazio.
+- [ ] Solicitar imediatamente antes da pausa a confirmacao literal definida no
+      runbook; nenhuma aprovacao anterior substitui esse checkpoint.
+- [ ] Pausar somente a producao legada e confirmar `INACTIVE` antes de criar.
+- [ ] Criar a producao Roberto em `sa-east-1`, persistir ref/hostname validados
+      e aplicar migrations apenas depois do dry-run.
+- [ ] Configurar Auth e criar somente um administrador, mantendo zero
+      operadores e banco operacional vazio.
+- [ ] Configurar exatamente tres variaveis Vercel e publicar o commit assinado
+      autorizado, sem Vercel Authentication ou bypass em producao.
+- [ ] Executar verificacao remota, smoke somente leitura e monitoramento de 30
+      minutos no PR09-A.
+- [ ] Integrar o PR09-A em `develop` com Quality, Database contract e E2E
+      Release Gate verdes.
+- [ ] Abrir o PR09-B de `develop` para `main`, publicar o commit resultante e
+      repetir verificacao, smoke e monitoramento.
+- [ ] Manter a producao legada pausada por 30 dias, sem exclusao automatica.
+- [ ] Depois do corte tecnico, cadastrar vendedores, produtos e estoque inicial
+      manualmente pelo sistema.
+- [ ] Validar venda, cancelamento, fechamento e relatorio; depois validar dois
+      operadores reais em caixas simultaneos.
 
 Testes e aceite:
 
+- [ ] Producao possui exatamente um admin, nenhum outro usuario e nenhum dado
+      operacional antes da preparacao manual.
+- [ ] Staging e producao usam projetos Supabase e Vercel independentes.
+- [ ] Nenhum segredo, e-mail pessoal ou evidencia local foi versionado.
 - [ ] Um operador abre, vende, fecha e reabre no mesmo dia.
 - [ ] Dois vendedores operam caixas simultaneamente sem mistura financeira.
 - [ ] Relatorio consolidado confere com as sessoes individuais.
 - [ ] Estoque confere depois de venda e cancelamento.
-- [ ] Quality e E2E permanecem verdes depois do deploy.
+- [ ] Quality, Database contract e E2E permanecem verdes depois dos deploys.
 
 ## 9. Matriz Minima De Testes
 

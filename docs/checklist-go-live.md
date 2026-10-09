@@ -1,9 +1,9 @@
 # Checklist De Go-Live
 
 Checklist para liberar a operação da loja física Roberto Multimarcas.
-Documenta o runtime atual e o gate multioperador do PR07. PR05 e PR06 foram
-integrados; o provisionamento dos novos ambientes (PR08) está em execução e a
-release (PR09) continua pendente.
+O staging foi provisionado no PR08. O corte técnico de produção e a liberação
+operacional pertencem ao PR09 e permanecem pendentes até que cada evidência
+remota seja capturada. Banco criado não significa loja liberada.
 
 ## Regra De Release
 
@@ -12,9 +12,10 @@ release (PR09) continua pendente.
 3. Executar o gate E2E em ambiente isolado e o smoke do
    [Runbook operacional](runbook-operacional.md).
 4. Conferir banco, acessos, configuração de ambientes e segredos.
-5. Abrir PR de release de `develop` para `main` e revisar o diff.
-6. Publicar somente após aprovação dos gates e da preparação operacional.
-7. Conferir produção e registrar a release.
+5. Concluir o PR09-A em `develop`, com corte provisório e evidência aprovados.
+6. Abrir o PR09-B de `develop` para `main` e revisar o diff.
+7. Publicar somente o commit assinado resultante de `main`.
+8. Repetir verificação, smoke e monitoramento antes da liberação operacional.
 
 ## 1. Qualidade E Banco Local
 
@@ -99,15 +100,16 @@ project ref, o backup e a sequência de promoção conforme
 - Manter migrations históricas imutáveis.
 - Não executar reset remoto como parte do teste local.
 
-Qualquer reset remoto exige confirmação explícita do ambiente e validação do
-project ref imediatamente antes da execução. O bootstrap dos ambientes novos
-continua no PR08; o corte de produção continua no PR09.
+Não existe reset remoto no PR09. O provisionamento de produção executa dry-run
+de migration antes do push real e bloqueia diante de divergência. Restore,
+delete e SQL manual também são proibidos pela automação.
 
 ## 4. Acessos E Segredos
 
-Antes de produzir, conferir:
+No corte técnico, conferir:
 
-- admin oficial ativo e operadores reais cadastrados;
+- exatamente um admin oficial e nenhum outro usuário;
+- banco operacional vazio, sem produtos, estoque, caixas ou vendas;
 - signup público desabilitado conforme a política do projeto;
 - `leaked password protection` habilitada no Supabase Auth;
 - senha administrativa operacional conhecida somente pelos autorizadores;
@@ -115,6 +117,9 @@ Antes de produzir, conferir:
 - segredos e senhas expostos durante homologação rotacionados;
 - secrets do GitHub e variáveis Vercel atualizados após a rotação;
 - arquivos locais com credenciais fora do versionamento.
+
+Antes da liberação operacional, cadastrar vendedores reais manualmente pelo
+sistema, entregar acessos por canal seguro e validar duas sessões independentes.
 
 A `publishable key` é pública. `SUPABASE_SECRET_KEY`, senha do banco, tokens de
 deploy e senhas operacionais são privados. Não usar valores de homologação como
@@ -124,40 +129,70 @@ segredos definitivos de produção.
 
 - Executar QA em ambiente isolado; guardar evidências antes do reset local.
 - Não levar produtos, vendas ou caixas de teste para a base de entrega.
-- Preparar somente admin, operadores, produtos e saldo inicial reais no ambiente
-  de produção, conforme o procedimento de bootstrap aprovado.
+- O bootstrap prepara somente o administrador; não criar vendedores por seed.
+- Cadastrar vendedores, produtos e saldo inicial manualmente pela aplicação
+  depois que o corte técnico estiver verificado.
 - Conferir ausência de caixas de teste abertos e usuários temporários ativos.
 - Se uma operação de teste controlado ocorrer em produção, preservar o histórico
   e registrar a compensação por cancelamento quando aplicável.
 - Não apagar vendas ou movimentações financeiras para limpar relatórios reais.
 
-## 6. Vercel Staging E Promoção
+## 6. Corte Técnico PR09-A
 
-Conferir no projeto que receberá a release:
+Todos os itens começam pendentes e só podem ser marcados com saída real e
+redigida registrada em [PR09 - corte de produção](evidencias/pr09-production-cutover.md):
 
-- conta, projetos, URL estável e ambiente identificados no manifesto;
-- preset Next.js e Node 22.x confirmados no projeto dedicado
-  `roberto-multimarcas-pdv-staging`;
-- `Production` do projeto dedicado identificado exclusivamente como staging;
-- projeto reservado `roberto-multimarcas-pdv` com zero variáveis e deployments;
-- branch `main` impedida de publicar durante o PR08;
-- variáveis públicas e privadas restritas ao projeto dedicado;
-- `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e
-  `SUPABASE_SECRET_KEY` configuradas, com a chave de servidor sensível;
-- exatamente três variáveis em Production do staging dedicado e nenhuma em Preview;
-- smoke remoto somente leitura aprovado, SSO preservado e bypass temporário revogado;
-- PR de `develop` para `main`, variáveis e deployment de Production continuam
-  bloqueados até
-  a janela do PR09;
-- deployment de staging `READY` e consumo do plano Hobby revisado.
+- [ ] Branch `feature/production-cutover` e commit assinado congelados.
+- [ ] Gates locais completos e checks do PR09-A verdes.
+- [ ] Staging legado `gpywbeoqcovjrfnmbdqx` confirmado `INACTIVE`.
+- [ ] Staging Roberto `otsxpchqtfypxgzjzrxs` confirmado `ACTIVE_HEALTHY`.
+- [ ] Produção legada `ciixpfquwmlsvzleattv` confirmada `ACTIVE_HEALTHY`.
+- [ ] Projeto Vercel `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` confirmado vazio.
+- [ ] Inventário recente, hash íntegro e origem legada exata confirmados.
+- [ ] Organização, ref, topologia, evidência e rollback apresentados ao dono.
+- [ ] Confirmação literal nova recebida imediatamente antes da pausa:
 
-A produção Vercel legada e o Supabase `ciixpfquwmlsvzleattv` permanecem
-intactos durante o PR08. O novo projeto Supabase de produção, variáveis de
-produção e publicação em `main` pertencem exclusivamente ao PR09.
+```text
+CONFIRMO PAUSAR A PRODUÇÃO LEGADA espaco-personalize-pdv DA ORGANIZAÇÃO wcqoluxxlvglqtebcucz, REF ciixpfquwmlsvzleattv
+```
 
-## 7. Smoke Manual Após Deploy
+- [ ] Produção legada chegou a `INACTIVE`; staging Roberto permaneceu saudável.
+- [ ] Vaga gratuita confirmada antes da criação da produção Roberto.
+- [ ] Produção Roberto criada somente em `sa-east-1`; identidade completa validada.
+- [ ] Novo ref/hostname persistidos em commit assinado antes das migrations.
+- [ ] Migration dry-run e push real aprovados; Auth exato validado.
+- [ ] Bootstrap resultou em um admin, zero operadores e banco vazio.
+- [ ] Vercel recebeu exatamente três variáveis `Production`, com secret sensível.
+- [ ] Deployment provisório do SHA autorizado ficou `READY` e sem bypass/proteção.
+- [ ] Verificação remota e smoke autenticado somente leitura aprovados.
+- [ ] Logs e disponibilidade observados por 30 minutos, sem lacunas.
+- [ ] PR09-A revisado, checks repetidos e mergeado em `develop` pelo fluxo oficial.
 
-Com o responsável operacional, executar teste controlado e guardar evidências:
+Qualquer identidade divergente, evidência inválida, cota indisponível, criação
+parcial, falha de migration/Auth/bootstrap/deploy/smoke/check/monitoramento ou
+segredo em saída interrompe o corte. Preserve o estado; não delete, restaure ou
+reinicialize projeto automaticamente.
+
+## 7. Release PR09-B
+
+- [ ] PR de `develop` para `main` contém somente mudanças já revisadas.
+- [ ] Quality, Database contract e E2E Release Gate verdes, sem bypass.
+- [ ] Merge produz commit assinado e compatível com histórico linear.
+- [ ] Audit Vercel permite `main` e confirma as três variáveis inalteradas.
+- [ ] Deploy final usa o SHA assinado resultante de `main`.
+- [ ] Gate final recebeu deployment ID, URL imutável, `source-ref main` e o
+      mesmo SHA assinado, sem reescrever manifesto ou estado versionado.
+- [ ] Fingerprint das três variáveis do deployment corresponde à URL e às
+      chaves lidas do Supabase de produção, sem expor seus valores.
+- [ ] Deployment, alias, banco, admin único e banco vazio foram revalidados.
+- [ ] Smoke somente leitura e monitoramento de 30 minutos aprovados.
+- [ ] Produção legada permanece pausada e preservada por 30 dias.
+
+## 8. Preparação E Smoke Operacional
+
+Somente depois do corte técnico, cadastrar vendedores, produtos e estoque
+inicial manualmente pelo sistema. Com o responsável, executar teste controlado
+e guardar evidências:
 
 1. Fazer login e conferir painel e PWA.
 2. Conferir produto real e saldo.
@@ -168,13 +203,15 @@ Com o responsável operacional, executar teste controlado e guardar evidências:
 7. Reabrir no mesmo dia para validar nova sessão e fechar novamente.
 8. Conferir `/reports`, filtros e CSV.
 9. Confirmar acesso aos logs de runtime.
+10. Com dois vendedores reais e navegadores separados, abrir caixas simultâneos,
+    vender sem mistura financeira e conferir o relatório consolidado/individual.
 
 Se algum passo falhar, bloquear a liberação operacional, corrigir em
 `feature/*` a partir de `develop` e repetir a validação. O smoke completo e a
 validação com usuários separados estão no
 [Runbook operacional](runbook-operacional.md).
 
-## 8. Primeiro Dia E Acompanhamento
+## 9. Primeiro Dia E Acompanhamento
 
 - Definir admins, operadores e responsável pela conferência financeira.
 - Entregar acessos por canal seguro e conferir login em celular e desktop.
@@ -187,7 +224,16 @@ validação com usuários separados estão no
   conforme [Observabilidade](observabilidade.md).
 - Registrar incidentes com horário e IDs técnicos, sem credenciais.
 
-## 9. Critério De Liberação
+## 10. Rollback E Critério De Liberação
+
+Antes de escritas reais, o rollback exige bloquear o novo ambiente, pausar o
+novo Supabase, revalidar o ref legado, obter nova autorização e restaurar o
+legado manualmente. Depois de escritas, interrompa operações, preserve ambos os
+estados e faça reconciliação manual; não apague histórico financeiro.
+
+O legado permanece pausado por 30 dias. Não há exclusão automática ou agendada;
+qualquer descarte futuro exige outra autorização explícita com organização,
+nome e ref.
 
 A operação só pode ser liberada após checks e gate E2E aprovados, ambiente correto,
 acessos reais, estoque preparado, segredos revisados, smoke validado e responsável
