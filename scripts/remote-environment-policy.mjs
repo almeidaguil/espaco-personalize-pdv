@@ -6,26 +6,34 @@ const projectRefSchema = z.string().regex(/^[a-z]{20}$/);
 const nullableProjectRefSchema = projectRefSchema.nullable();
 const vercelOrgIdSchema = z.string().regex(/^team_[A-Za-z0-9]+$/);
 const vercelProjectIdSchema = z.string().regex(/^prj_[A-Za-z0-9]+$/);
+const sourceRefSchema = z
+  .string()
+  .regex(/^(?:feature\/[a-z0-9-]+|develop|main)$/);
 
-const supabaseProjectSchema = z.object({
-  hostname: z.string().regex(/^[a-z]{20}\.supabase\.co$/),
-  name: z.string().min(1),
-  projectRef: projectRefSchema,
-  region: z.string().min(1),
-});
+const supabaseProjectSchema = z
+  .object({
+    hostname: z.string().regex(/^[a-z]{20}\.supabase\.co$/),
+    name: z.string().min(1),
+    projectRef: projectRefSchema,
+    region: z.string().min(1),
+  })
+  .strict();
 
-const supabaseTargetSchema = z.object({
-  hostname: z
-    .string()
-    .regex(/^[a-z]{20}\.supabase\.co$/)
-    .nullable(),
-  name: z.string().min(1),
-  projectRef: nullableProjectRefSchema,
-  region: z.literal("sa-east-1"),
-});
+const supabaseTargetSchema = z
+  .object({
+    hostname: z
+      .string()
+      .regex(/^[a-z]{20}\.supabase\.co$/)
+      .nullable(),
+    name: z.string().min(1),
+    projectRef: nullableProjectRefSchema,
+    region: z.literal("sa-east-1"),
+  })
+  .strict();
 
-const remoteEnvironmentManifestSchema = z.object({
-  vercel: z.object({
+const vercelTargetBaseSchema = z
+  .object({
+    allowedSourceRefs: z.array(sourceRefSchema).min(1),
     deploymentId: z
       .string()
       .regex(/^dpl_[A-Za-z0-9]+$/)
@@ -34,45 +42,96 @@ const remoteEnvironmentManifestSchema = z.object({
       .url()
       .refine((value) => value.startsWith("https://"))
       .nullable(),
-    dedicatedStaging: z.literal(true),
-    deploymentProtection: z.literal("vercel-authentication"),
     environment: z.literal("production"),
-    framework: z.literal("nextjs"),
-    gitConnectionAllowed: z.literal(false),
-    nodeVersion: z.literal("22.x"),
-    orgId: vercelOrgIdSchema,
     projectId: vercelProjectIdSchema,
     projectName: z.string().regex(/^[a-z0-9-]+$/),
-    reservedProductionProjectId: vercelProjectIdSchema,
-    reservedProductionProjectName: z.string().regex(/^[a-z0-9-]+$/),
-    repository: z.string().regex(/^[^/]+\/[^/]+$/),
-    repositoryId: z.number().int().positive(),
-    siteUrl: z
-      .url()
-      .refine(
-        (value) =>
-          value === "https://roberto-multimarcas-pdv-staging.vercel.app",
-      ),
-    scope: z.string().regex(/^[a-z0-9-]+$/),
-    sourceRef: z.string().regex(/^feature\/[a-z0-9-]+$/),
-    stagingBranch: z.string().min(1),
-  }),
-  supabase: z.object({
-    legacy: z.object({
-      production: supabaseProjectSchema,
-      staging: supabaseProjectSchema,
-    }),
-    organization: z.object({
-      id: z.string().regex(/^[a-z]{20}$/),
-      name: z.string().min(1),
-    }),
-    targets: z.object({
-      production: supabaseTargetSchema,
-      staging: supabaseTargetSchema,
-    }),
-  }),
-  version: z.literal(1),
+    releaseBranch: z.enum(["develop", "main"]),
+    siteUrl: z.url().refine((value) => value.startsWith("https://")),
+    sourceRef: sourceRefSchema,
+  })
+  .strict()
+  .superRefine((target, context) => {
+    if (!target.allowedSourceRefs.includes(target.sourceRef)) {
+      context.addIssue({
+        code: "custom",
+        message: "sourceRef must be explicitly allowed",
+        path: ["sourceRef"],
+      });
+    }
+  });
+
+const vercelStagingTargetSchema = vercelTargetBaseSchema.safeExtend({
+  dedicatedStaging: z.literal(true),
+  deploymentProtection: z.literal("vercel-authentication"),
+  projectName: z.string().regex(/^[a-z0-9-]+-staging$/),
+  releaseBranch: z.literal("develop"),
+  siteUrl: z.literal("https://roberto-multimarcas-pdv-staging.vercel.app"),
 });
+
+const vercelProductionTargetSchema = vercelTargetBaseSchema.safeExtend({
+  dedicatedStaging: z.literal(false),
+  deploymentProtection: z.literal("application-auth"),
+  projectName: z.literal("roberto-multimarcas-pdv"),
+  releaseBranch: z.literal("main"),
+  siteUrl: z.literal("https://roberto-multimarcas-pdv.vercel.app"),
+});
+
+const remoteEnvironmentManifestSchema = z
+  .object({
+    vercel: z
+      .object({
+        framework: z.literal("nextjs"),
+        gitConnectionAllowed: z.literal(false),
+        nodeVersion: z.literal("22.x"),
+        orgId: vercelOrgIdSchema,
+        repository: z.string().regex(/^[^/]+\/[^/]+$/),
+        repositoryId: z.number().int().positive(),
+        scope: z.string().regex(/^[a-z0-9-]+$/),
+        targets: z
+          .object({
+            production: vercelProductionTargetSchema,
+            staging: vercelStagingTargetSchema,
+          })
+          .strict(),
+      })
+      .strict(),
+    supabase: z
+      .object({
+        legacy: z
+          .object({
+            production: supabaseProjectSchema,
+            staging: supabaseProjectSchema,
+          })
+          .strict(),
+        organization: z
+          .object({
+            id: z.string().regex(/^[a-z]{20}$/),
+            name: z.string().min(1),
+          })
+          .strict(),
+        targets: z
+          .object({
+            production: supabaseTargetSchema,
+            staging: supabaseTargetSchema,
+          })
+          .strict(),
+      })
+      .strict(),
+    version: z.literal(2),
+  })
+  .strict()
+  .superRefine((manifest, context) => {
+    if (
+      manifest.vercel.targets.production.projectId ===
+      manifest.vercel.targets.staging.projectId
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "Vercel targets must use different projects",
+        path: ["vercel", "targets"],
+      });
+    }
+  });
 
 export async function loadRemoteEnvironmentManifest(filePath) {
   const contents = await readFile(filePath, "utf8");
@@ -87,6 +146,57 @@ export function parseRemoteEnvironmentManifest(value) {
   }
 
   return result.data;
+}
+
+export function resolveRemoteTarget(manifest, { environment, provider }) {
+  const parsedManifest = parseRemoteEnvironmentManifest(manifest);
+
+  if (provider === "supabase") {
+    const target = resolveSupabaseEnvironment(parsedManifest, environment);
+    if (!target) {
+      throw new Error("Unsupported remote provider or environment.");
+    }
+
+    return Object.freeze({
+      environment,
+      hostname: target.hostname,
+      identifier: target.projectRef ?? target.name,
+      name: target.name,
+      organizationId: parsedManifest.supabase.organization.id,
+      projectRef: target.projectRef,
+      provider,
+      region: target.region,
+    });
+  }
+
+  if (
+    provider === "vercel" &&
+    ["staging", "production"].includes(environment)
+  ) {
+    const common = {
+      framework: parsedManifest.vercel.framework,
+      gitConnectionAllowed: parsedManifest.vercel.gitConnectionAllowed,
+      nodeVersion: parsedManifest.vercel.nodeVersion,
+      orgId: parsedManifest.vercel.orgId,
+      repository: parsedManifest.vercel.repository,
+      repositoryId: parsedManifest.vercel.repositoryId,
+      scope: parsedManifest.vercel.scope,
+    };
+    const target = parsedManifest.vercel.targets[environment];
+
+    return Object.freeze({
+      ...common,
+      ...target,
+      allowedSourceRefs: Object.freeze([...target.allowedSourceRefs]),
+      deploymentEnvironment: target.environment,
+      environment,
+      identifier: target.projectId,
+      logicalEnvironment: environment,
+      provider,
+    });
+  }
+
+  throw new Error("Unsupported remote provider or environment.");
 }
 
 export function validateRemoteOperation({
@@ -137,9 +247,13 @@ export function validateRemoteOperation({
 }
 
 function validateSupabaseTarget(manifest, environment, target) {
-  const expected = resolveSupabaseEnvironment(manifest, environment);
-
-  if (!expected) {
+  let expected;
+  try {
+    expected = resolveRemoteTarget(manifest, {
+      environment,
+      provider: "supabase",
+    });
+  } catch {
     return null;
   }
 
@@ -156,7 +270,7 @@ function validateSupabaseTarget(manifest, environment, target) {
   const expectedValues = {
     hostname: expected.hostname,
     name: expected.name,
-    organizationId: manifest.supabase.organization.id,
+    organizationId: expected.organizationId,
     projectRef: expected.projectRef,
   };
 
@@ -190,24 +304,30 @@ function resolveSupabaseEnvironment(manifest, environment) {
 }
 
 function validateVercelTarget(manifest, environment, target) {
-  if (environment !== "staging") {
+  let expected;
+  try {
+    expected = resolveRemoteTarget(manifest, {
+      environment,
+      provider: "vercel",
+    });
+  } catch {
     return null;
   }
 
   const expectedValues = {
-    orgId: manifest.vercel.orgId,
-    projectId: manifest.vercel.projectId,
-    projectName: manifest.vercel.projectName,
+    orgId: expected.orgId,
+    projectId: expected.projectId,
+    projectName: expected.projectName,
   };
 
   assertExactTarget(expectedValues, target);
 
   return {
-    hostname: manifest.vercel.deploymentUrl
-      ? new URL(manifest.vercel.deploymentUrl).hostname
+    hostname: expected.deploymentUrl
+      ? new URL(expected.deploymentUrl).hostname
       : null,
-    identifier: manifest.vercel.projectId,
-    name: manifest.vercel.projectName,
+    identifier: expected.projectId,
+    name: expected.projectName,
   };
 }
 

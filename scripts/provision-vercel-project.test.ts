@@ -4,11 +4,13 @@ import remoteEnvironmentManifest from "../config/remote-environments.json";
 import { runVercelProvisioning } from "./provision-vercel-project.mjs";
 
 const manifest = structuredClone(remoteEnvironmentManifest);
+const stagingTarget = manifest.vercel.targets.staging;
+const productionTarget = manifest.vercel.targets.production;
 const project = {
   framework: "nextjs",
-  id: manifest.vercel.projectId,
+  id: stagingTarget.projectId,
   link: null,
-  name: manifest.vercel.projectName,
+  name: stagingTarget.projectName,
   nodeVersion: "22.x",
   protectionBypass: {},
   ssoProtection: { deploymentType: "all_except_custom_domains" },
@@ -89,14 +91,14 @@ describe("runVercelProvisioning", () => {
 
   test("rejects a non-dedicated project and deployments in the reserved production project", async () => {
     const unsafeManifest = structuredClone(manifest);
-    unsafeManifest.vercel.dedicatedStaging = false as true;
+    unsafeManifest.vercel.targets.staging.dedicatedStaging = false as true;
     await expect(execute({ manifestOverride: unsafeManifest })).rejects.toThrow(
-      /dedicated staging/i,
+      /manifest|dedicated staging/i,
     );
 
     const reservedDeploymentClient = createClient({
       deploymentsByProject: {
-        [manifest.vercel.reservedProductionProjectId]: {
+        [productionTarget.projectId]: {
           deployments: [{ uid: "dpl_real_prod" }],
         },
       },
@@ -111,7 +113,7 @@ describe("runVercelProvisioning", () => {
       "environment variable",
       {
         environmentVariablesByProject: {
-          [manifest.vercel.reservedProductionProjectId]: {
+          [productionTarget.projectId]: {
             envs: [
               { key: "UNEXPECTED", target: ["preview"], type: "encrypted" },
             ],
@@ -123,7 +125,7 @@ describe("runVercelProvisioning", () => {
       "custom domain",
       {
         domainsByProject: {
-          [manifest.vercel.reservedProductionProjectId]: {
+          [productionTarget.projectId]: {
             domains: [{ name: "reserved.example.test" }],
           },
         },
@@ -140,8 +142,8 @@ describe("runVercelProvisioning", () => {
 
   test("rejects a divergent reserved production project identity", async () => {
     const projectsById = defaultProjects();
-    projectsById[manifest.vercel.reservedProductionProjectId] = {
-      ...projectsById[manifest.vercel.reservedProductionProjectId],
+    projectsById[productionTarget.projectId] = {
+      ...projectsById[productionTarget.projectId],
       name: "wrong-production-project",
     };
 
@@ -167,8 +169,8 @@ describe("runVercelProvisioning", () => {
     ).not.toHaveBeenCalled();
 
     const projectsById = defaultProjects();
-    projectsById[manifest.vercel.projectId] = {
-      ...projectsById[manifest.vercel.projectId],
+    projectsById[stagingTarget.projectId] = {
+      ...projectsById[stagingTarget.projectId],
       protectionBypass: { temporary: { scope: "automation-bypass" } },
     };
     await expect(
@@ -180,7 +182,7 @@ describe("runVercelProvisioning", () => {
     const client = createClient({
       deployment: readyDeployment(),
       deploymentsByProject: {
-        [manifest.vercel.projectId]: { deployments: [] },
+        [stagingTarget.projectId]: { deployments: [] },
       },
     });
     const result = await execute({
@@ -192,8 +194,8 @@ describe("runVercelProvisioning", () => {
     expect(client.createStagingDeployment).toHaveBeenCalledWith({
       branch: "feature/provision-roberto-environments",
       orgId: manifest.vercel.orgId,
-      projectId: manifest.vercel.projectId,
-      projectName: manifest.vercel.projectName,
+      projectId: stagingTarget.projectId,
+      projectName: stagingTarget.projectName,
       repositoryId: 1264018806,
     });
     expect(result).toMatchObject({
@@ -213,14 +215,14 @@ describe("runVercelProvisioning", () => {
   test("verifies the persisted staging deployment and its metadata", async () => {
     const client = createClient({
       deployment: readyDeployment({
-        uid: manifest.vercel.deploymentId,
+        uid: stagingTarget.deploymentId,
         url: "roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app",
       }),
     });
     const result = await execute({ client, phase: "verify-staging" });
 
     expect(result).toMatchObject({
-      deploymentId: manifest.vercel.deploymentId,
+      deploymentId: stagingTarget.deploymentId,
       siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
     });
   });
@@ -241,7 +243,7 @@ function readyDeployment(override: Partial<Deployment> = {}): Deployment {
       pr08: "true",
       roberto_environment: "staging",
     },
-    name: manifest.vercel.projectName,
+    name: stagingTarget.projectName,
     readyState: "READY",
     target: "production",
     uid: "dpl_staging123",
@@ -255,8 +257,14 @@ function manifestWithoutDeployment() {
     ...structuredClone(manifest),
     vercel: {
       ...structuredClone(manifest.vercel),
-      deploymentId: null,
-      deploymentUrl: null,
+      targets: {
+        ...structuredClone(manifest.vercel.targets),
+        staging: {
+          ...structuredClone(stagingTarget),
+          deploymentId: null,
+          deploymentUrl: null,
+        },
+      },
     },
   } as unknown as typeof manifest;
 }
@@ -283,9 +291,8 @@ function createClient({
       Promise.resolve(
         deploymentsByProject[projectId] ?? {
           deployments:
-            projectId === manifest.vercel.projectId &&
-            manifest.vercel.deploymentId
-              ? [{ uid: manifest.vercel.deploymentId }]
+            projectId === stagingTarget.projectId && stagingTarget.deploymentId
+              ? [{ uid: stagingTarget.deploymentId }]
               : [],
         },
       ),
@@ -294,10 +301,10 @@ function createClient({
       Promise.resolve(
         domainsByProject[projectId] ?? {
           domains:
-            projectId === manifest.vercel.reservedProductionProjectId
+            projectId === productionTarget.projectId
               ? [
                   {
-                    name: `${manifest.vercel.reservedProductionProjectName}.vercel.app`,
+                    name: `${productionTarget.projectName}.vercel.app`,
                   },
                 ]
               : [],
@@ -309,7 +316,7 @@ function createClient({
       .mockImplementation((projectId: string) =>
         Promise.resolve(
           environmentVariablesByProject[projectId] ??
-            (projectId === manifest.vercel.projectId
+            (projectId === stagingTarget.projectId
               ? environmentVariables
               : { envs: [] }),
         ),
@@ -332,11 +339,11 @@ function createClient({
 
 function defaultProjects(): Record<string, Project> {
   return {
-    [manifest.vercel.projectId]: structuredClone(project),
-    [manifest.vercel.reservedProductionProjectId]: {
+    [stagingTarget.projectId]: structuredClone(project),
+    [productionTarget.projectId]: {
       ...structuredClone(project),
-      id: manifest.vercel.reservedProductionProjectId,
-      name: manifest.vercel.reservedProductionProjectName,
+      id: productionTarget.projectId,
+      name: productionTarget.projectName,
     },
   };
 }
@@ -373,7 +380,7 @@ type ExecuteOptions = {
 
 function execute({
   client = createClient(),
-  confirmation = manifest.vercel.projectId,
+  confirmation = stagingTarget.projectId,
   environment = stagingEnvironment(),
   manifestOverride = manifest,
   phase = "configure-staging",

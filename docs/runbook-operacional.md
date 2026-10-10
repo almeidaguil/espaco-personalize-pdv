@@ -193,6 +193,229 @@ limite de dois projetos Supabase Free ativos. A produção Vercel legada continu
 sendo o rollback imediato. Consulte [Ambientes](ambientes.md),
 [Supabase CLI](supabase-cli.md) e [Vercel CLI](vercel-cli.md).
 
+## Corte De Produção Do PR09
+
+O PR09 é dividido em duas entregas. O PR09-A prepara os comandos na branch
+`feature/production-cutover`, executa o corte remoto autorizado, valida um
+deployment provisório e entra em `develop` por pull request. O PR09-B é o pull
+request de `develop` para `main`, seguido do deploy e da verificação do commit
+assinado resultante de `main`.
+
+Nenhuma etapa abaixo autoriza antecipadamente uma mutação remota. Execute um
+checkpoint por vez, confira a saída real e atualize
+[a evidência do PR09](evidencias/pr09-production-cutover.md) sem segredos.
+
+### 1. Preflight Somente Leitura
+
+1. Congelar mudanças concorrentes e confirmar a branch/commit assinados.
+2. Confirmar checks locais e do PR09-A verdes.
+3. Revalidar o manifesto, a organização Supabase
+   `wcqoluxxlvglqtebcucz`, o projeto Vercel
+   `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` e a região `sa-east-1`.
+4. Confirmar a topologia: staging legado `INACTIVE`, staging Roberto
+   `ACTIVE_HEALTHY`, produção legada `ACTIVE_HEALTHY`, produção Roberto ausente
+   e projeto Vercel reservado ainda vazio.
+5. Carregar credenciais apenas do Windows Credential Manager para variáveis
+   temporárias da sessão. Nunca copie os valores para o comando ou documento.
+6. Executar os dry-runs:
+
+```powershell
+npm.cmd run ops:verify-target -- --provider supabase --environment legacy-production --operation read
+npm.cmd run ops:inventory-production -- --output .provisioning/production-backup/production-backup.json
+npm.cmd run ops:provision-production -- --inventory .provisioning/production-backup/production-backup.json
+npm.cmd run ops:provision-vercel-production -- --phase audit
+```
+
+O `audit` inicial da Vercel é estritamente somente leitura e pode ser executado
+antes de existir estado de cutover. Nessa fase ele exige que o projeto reservado
+esteja vazio; as fases `configure` e `deploy` continuam bloqueadas até o estado
+correspondente do corte.
+
+O inventário é somente leitura e precisa identificar a produção legada exata.
+Antes da pausa, confira origem, hash, integridade e idade máxima de uma hora da
+evidência. Ela registra schema, migrations, contagens, Auth e Storage sem dados
+de linhas, e-mails, hashes de senha ou objetos.
+
+### 2. Autorização Explícita Da Pausa
+
+Imediatamente antes da pausa, apresente ao proprietário organização, nome, ref,
+região, topologia ativa, hash/idade da evidência e o rollback. Solicite esta
+frase exata, sem aceitar aprovação anterior, abreviada ou genérica:
+
+```text
+CONFIRMO PAUSAR A PRODUÇÃO LEGADA espaco-personalize-pdv DA ORGANIZAÇÃO wcqoluxxlvglqtebcucz, REF ciixpfquwmlsvzleattv
+```
+
+Sem essa confirmação nova, pare. Depois de recebê-la, execute uma única vez:
+
+```powershell
+npm.cmd run ops:provision-production -- --inventory .provisioning/production-backup/production-backup.json --execute --confirm-legacy-ref ciixpfquwmlsvzleattv --confirm-target-name roberto-multimarcas-pdv
+```
+
+O provisionador deve pausar somente `ciixpfquwmlsvzleattv`, esperar
+`INACTIVE`, confirmar que o staging continua saudável e só então criar
+`roberto-multimarcas-pdv` em `sa-east-1`. Se qualquer identidade ou estado
+divergir, interrompa sem tentar corrigir pelo painel.
+
+### 3. Persistência E Banco Novo
+
+1. Validar organização, nome, novo ref, região e hostname retornados.
+2. Persistir apenas o ref e hostname comprovados em
+   `config/remote-environments.json`.
+3. Executar os testes dirigidos e criar commit assinado antes de continuar.
+4. Retomar com o ref persistido:
+
+```powershell
+npm.cmd run ops:provision-production -- --inventory .provisioning/production-backup/production-backup.json --execute --confirm-target-ref <production-ref>
+```
+
+Se a criação remota concluir, mas o polling ou a gravação local falhar, use esse
+mesmo comando com o ref exato observado. O provisionador reconcilia
+organização, nome, região, hostname e ref, registra `production-created` e não
+cria um segundo projeto. Depois de `legacy-paused`, a evidência pode ter mais de
+uma hora, mas deve ser exatamente o mesmo artefato registrado: origem,
+`capturedAt` e SHA-256 divergentes bloqueiam a retomada.
+
+Esse passo executa `supabase db push --linked --dry-run` antes do push real e
+configura o Auth. Signup público deve permanecer desabilitado, a senha mínima
+deve ter 14 caracteres, proteção contra senhas vazadas deve estar ativa e a URL
+de site deve ser exatamente `https://roberto-multimarcas-pdv.vercel.app`.
+
+Nunca execute `supabase db reset`, SQL manual, restore ou delete em projeto
+remoto. Em falha de migration, preserve o projeto parcial e o estado retomável.
+
+### 4. Administrador Único E Banco Vazio
+
+Carregue e-mail, nome e senha somente do Credential Manager para
+`PRODUCTION_ADMIN_EMAIL`, `PRODUCTION_ADMIN_FULL_NAME` e
+`PRODUCTION_ADMIN_PASSWORD`, sem exibi-los. Execute:
+
+```powershell
+npm.cmd run ops:bootstrap-production-admin -- --execute --confirm-ref <production-ref>
+```
+
+O resultado aceitável é exatamente um perfil `admin`, zero operadores e zero
+linhas operacionais. Usuário extra, papel divergente, e-mail diferente ou dado
+operacional existente bloqueiam o corte; não sobrescreva nem limpe registros.
+
+### 5. Vercel De Produção
+
+O alvo exclusivo é `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`. Configure exatamente
+as três variáveis de produção, mantendo `SUPABASE_SECRET_KEY` sensível, e
+publique somente o commit assinado autorizado:
+
+```powershell
+npm.cmd run ops:provision-vercel-production -- --phase audit --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
+npm.cmd run ops:provision-vercel-production -- --phase configure --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
+npm.cmd run ops:provision-vercel-production -- --phase deploy --source-ref feature/production-cutover --commit-sha <signed-commit-sha> --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
+npm.cmd run ops:provision-vercel-production -- --phase verify --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
+```
+
+Exija preset Next.js, Node.js 22.x, deployment `READY`, URL imutável, alias
+estável e ausência de Vercel Authentication e bypass. Não altere o staging nem
+o projeto Vercel legado e não crie domínio customizado.
+
+### 6. Verificação, Smoke E Monitoramento
+
+Execute a verificação remota e o smoke autenticado somente leitura:
+
+```powershell
+npm.cmd run ops:verify-production -- --confirm-ref <production-ref>
+npm.cmd run test:e2e:production-smoke
+```
+
+O smoke cobre redirecionamento sem sessão, login do administrador e navegação
+por dashboard, produtos, PDV, caixa, vendas, estoque e relatórios. Ele não cria
+produto, estoque, caixa, venda, pagamento ou cancelamento, não cria bypass e não
+usa variáveis `STAGING_*`.
+
+Após cada deploy provisório ou final, observe por 30 minutos consecutivos:
+
+- disponibilidade da URL estável e da URL imutável;
+- logs de runtime e falhas de autenticação;
+- erros críticos `sale.create.failed`, `sale.cancel.failed` e
+  `cash.close.failed`;
+- correspondência entre deployment, commit e manifesto.
+
+Registre verificações no início, a cada cinco minutos e ao fim. Qualquer lacuna
+de monitoramento, resposta incompleta ou estado desconhecido é falha e bloqueia
+merge, release ou liberação operacional.
+
+No PR09-B, repita audit, deploy, verificação, smoke e monitoramento usando
+`--source-ref main` e o SHA assinado resultante do merge, sem alterar as três
+variáveis. Não promova `main` enquanto o estado remoto for desconhecido.
+
+O deploy final não altera o manifesto nem o estado terminal do deploy
+provisório. Capture `deploymentId` e `deploymentUrl` retornados pelo Vercel e
+execute o gate read-only ligado explicitamente ao SHA de `main`:
+
+```powershell
+npm.cmd run ops:provision-vercel-production -- --phase deploy --source-ref main --commit-sha <signed-main-sha> --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
+npm.cmd run ops:provision-vercel-production -- --phase verify --source-ref main --commit-sha <signed-main-sha>
+$env:PRODUCTION_BASE_URL = "<immutable-main-deployment-url>"
+npm.cmd run ops:verify-production -- --confirm-ref <production-ref> --deployment-id <main-deployment-id> --deployment-url <immutable-main-deployment-url> --source-ref main --commit-sha <signed-main-sha>
+npm.cmd run test:e2e:production-smoke -- --deployment-id <main-deployment-id> --deployment-url <immutable-main-deployment-url> --source-ref main --commit-sha <signed-main-sha>
+```
+
+O verificador resolve `origin/main`, confere o source Git e o alias no Vercel e
+recalcula em memória o fingerprint da URL e das duas chaves obtidas diretamente
+do Supabase de produção. Divergência entre esse fingerprint e a metadata do
+deployment bloqueia o release; valores e chaves nunca são registrados.
+
+### 7. Condições De Parada
+
+Pare imediatamente se ocorrer qualquer item:
+
+- organização, nome, ref, região, hostname, project ID ou commit divergente;
+- evidência ausente, adulterada ou com origem incorreta; antes da pausa, também
+  com mais de uma hora;
+- staging Roberto ou produção legada sem estado saudável antes da pausa;
+- produção legada sem chegar a `INACTIVE` ou cota gratuita sem vaga;
+- projeto desconhecido ativo ou mais de dois projetos Supabase ativos;
+- criação parcial, migration dry-run/real, Auth ou bootstrap com falha;
+- Vercel reservado não vazio antes da configuração ou com proteção divergente;
+- variável extra, deployment sem `READY`, alias divergente ou bypass ativo;
+- verificação, smoke, checks, assinatura ou monitoramento com falha;
+- qualquer segredo ou e-mail pessoal aparecendo em saída persistida.
+
+Preserve o estado parcial e as evidências redigidas. A automação não deve
+excluir, restaurar, reinicializar nem improvisar correções remotas.
+
+### 8. Rollback Manual
+
+Antes de qualquer produto, estoque, caixa ou venda real:
+
+1. bloquear acesso ao ambiente novo;
+2. pausar manualmente o Supabase novo para liberar a cota;
+3. revalidar a produção legada `espaco-personalize-pdv`, organização
+   `wcqoluxxlvglqtebcucz` e ref `ciixpfquwmlsvzleattv`;
+4. solicitar outra autorização explícita para a restauração;
+5. restaurar manualmente o legado pelo procedimento do provedor;
+6. validar Auth, API e aplicação legada antes de liberar acesso;
+7. preservar a produção nova para diagnóstico e registrar o incidente.
+
+Depois de escritas operacionais, interrompa novas operações e preserve os dois
+estados. Inventarie as escritas na produção nova e decida a reconciliação
+manualmente antes de restaurar o legado. Não apague histórico financeiro.
+
+A produção legada permanece pausada por 30 dias. Ao fim da janela, nenhuma
+exclusão é automática: organização, nome e ref exigem nova autorização literal.
+
+### 9. Preparação Operacional Posterior
+
+O corte técnico termina com somente o administrador e o banco operacional
+vazio. O proprietário cadastra manualmente pela aplicação, nesta ordem:
+
+1. vendedores e acessos individuais;
+2. produtos;
+3. estoque inicial;
+4. primeiro caixa e fluxo controlado de venda/cancelamento;
+5. conferência de estoque, fechamento e relatório.
+
+Depois que existirem duas contas reais, valide dois operadores em navegadores
+separados, com caixas simultâneos e isolamento financeiro. Essa validação é
+obrigatória para declarar concluído o primeiro marco operacional da loja.
+
 ## Smoke Test De Release Ou Primeiro Uso
 
 Execute primeiro em ambiente isolado de homologação com o schema da versão.

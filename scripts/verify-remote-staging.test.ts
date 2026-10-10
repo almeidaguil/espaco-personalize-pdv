@@ -198,10 +198,11 @@ describe("verifyRemoteStaging", () => {
         commandRunner: createCommandRunner(),
         linkedProjectRef: projectRef,
         localMigrations: migrationIds,
-        managementClient: createManagementClient(),
+        managementClient: createManagementClient({ operationalRowCount: 1 }),
         manifest,
       }),
     ).rejects.toThrow(/unexpected operational data/i);
+    expect(dataClient.countRows).not.toHaveBeenCalled();
   });
 
   test.each([
@@ -322,9 +323,15 @@ function createManifest(hostname = `${projectRef}.supabase.co`) {
     ...manifestFixture,
     vercel: {
       ...manifestFixture.vercel,
-      deploymentId: "dpl_preview123",
-      deploymentUrl: "https://roberto-preview.vercel.app",
-      siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
+      targets: {
+        ...manifestFixture.vercel.targets,
+        staging: {
+          ...manifestFixture.vercel.targets.staging,
+          deploymentId: "dpl_preview123",
+          deploymentUrl: "https://roberto-preview.vercel.app",
+          siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
+        },
+      },
     },
     supabase: {
       ...manifestFixture.supabase,
@@ -352,6 +359,8 @@ function createManagementClient(
   options: {
     authConfig?: Record<string, boolean | number | string>;
     grants?: Record<string, boolean>[];
+    operationalRowCount?: number;
+    policyContractMatches?: boolean;
     rlsSummary?: Record<string, number>;
     schema?: { rpcs: string[]; tables: string[] };
     secret?: string;
@@ -370,6 +379,8 @@ function createManagementClient(
     grants = [
       { payments_insert: false, sale_items_insert: false, sales_insert: false },
     ],
+    operationalRowCount = 0,
+    policyContractMatches = true,
     rlsSummary = {
       rls_enabled_table_count: 8,
       table_count: 8,
@@ -390,7 +401,11 @@ function createManagementClient(
     getDatabaseOpenApi: vi.fn().mockResolvedValue(toOpenApi(schema)),
     runReadOnlyQuery: vi.fn(async (_projectRef, { query }) => {
       if (query.includes("pg_catalog.pg_class")) return [rlsSummary];
+      if (query.includes("policy_contract_matches"))
+        return [{ policy_contract_matches: policyContractMatches }];
       if (query.includes("auth.users")) return [userSummary];
+      if (query.includes("operational_row_count"))
+        return [{ operational_row_count: operationalRowCount }];
       return grants;
     }),
   };

@@ -4,6 +4,7 @@ import manifestFixture from "../config/remote-environments.json";
 import { runManagedRemoteStagingSmoke } from "./run-remote-staging-smoke.mjs";
 
 const bypassSecret = "0123456789abcdef0123456789abcdef";
+const stagingTarget = manifestFixture.vercel.targets.staging;
 
 describe("runManagedRemoteStagingSmoke", () => {
   test("creates one temporary bypass, runs the smoke and removes it", async () => {
@@ -23,12 +24,12 @@ describe("runManagedRemoteStagingSmoke", () => {
 
     expect(protectionClient.createAutomationBypass).toHaveBeenCalledWith({
       orgId: manifestFixture.vercel.orgId,
-      projectId: manifestFixture.vercel.projectId,
+      projectId: stagingTarget.projectId,
       secret: bypassSecret,
     });
     expect(protectionClient.revokeAutomationBypass).toHaveBeenCalledWith({
       orgId: manifestFixture.vercel.orgId,
-      projectId: manifestFixture.vercel.projectId,
+      projectId: stagingTarget.projectId,
       secret: bypassSecret,
     });
     expect(runCommand).toHaveBeenCalledTimes(1);
@@ -168,12 +169,12 @@ describe("runManagedRemoteStagingSmoke", () => {
 });
 
 function executeArguments() {
-  return ["--execute", "--confirm-project", manifestFixture.vercel.projectId];
+  return ["--execute", "--confirm-project", stagingTarget.projectId];
 }
 
 function validEnvironment() {
   return {
-    E2E_BASE_URL: manifestFixture.vercel.siteUrl,
+    E2E_BASE_URL: stagingTarget.siteUrl,
     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "publishable-key-sentinel",
     NEXT_PUBLIC_SUPABASE_URL: `https://${manifestFixture.supabase.targets.staging.projectRef}.supabase.co`,
     STAGING_ADMIN_EMAIL: "owner@roberto-multimarcas.test",
