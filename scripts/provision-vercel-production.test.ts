@@ -37,6 +37,21 @@ describe("runVercelProductionProvisioning", () => {
     expect(client.mutations).toHaveLength(0);
   });
 
+  test("accepts Vercel's empty protection bypass sentinel", async () => {
+    const client = createClient({
+      project: { protectionBypass: { "": null } },
+    });
+
+    const result = await run({
+      client,
+      options: { phase: "audit" },
+      state: null,
+    });
+
+    expect(result).toMatchObject({ mode: "audited", phase: "audit" });
+    expect(client.mutations).toHaveLength(0);
+  });
+
   test("keeps configure and deploy gated by cutover state", async () => {
     const configureClient = createClient();
     await expect(run({ client: configureClient, state: null })).rejects.toThrow(
@@ -78,7 +93,7 @@ describe("runVercelProductionProvisioning", () => {
       "protection bypass",
       {
         project: {
-          protectionBypass: { temporary: { scope: "automation-bypass" } },
+          protectionBypass: { "automation-secret-sentinel": null },
         },
       },
       /bypass/i,

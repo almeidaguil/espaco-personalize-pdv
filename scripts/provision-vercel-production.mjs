@@ -408,7 +408,10 @@ async function auditReservedProject(
   ) {
     throw new Error("Production has incompatible deployment protection.");
   }
-  if (Object.keys(project?.protectionBypass ?? {}).length !== 0) {
+  const hasActiveProtectionBypass = Object.entries(
+    project?.protectionBypass ?? {},
+  ).some(([secret, value]) => secret !== "" || value !== null);
+  if (hasActiveProtectionBypass) {
     throw new Error("Production has an active protection bypass.");
   }
 

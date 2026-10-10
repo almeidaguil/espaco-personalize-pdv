@@ -2,9 +2,9 @@
 
 ## Estado Do Documento
 
-Template criado na fase local da Task 8. Nenhum comando remoto abaixo é
-declarado executado. Todo resultado começa como `PENDENTE` e só pode ser alterado
-depois da captura da saída real, redigida e associada ao mesmo commit/ambiente.
+Template criado na fase local da Task 8 e atualizado somente depois da captura
+de saídas reais e redigidas. Resultados ainda não observados permanecem como
+`PENDENTE`.
 
 Este arquivo nunca deve conter token, chave, senha, e-mail do administrador,
 conteúdo de linhas, hash de senha ou valor de variável de ambiente.
@@ -13,14 +13,14 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 
 | Item                       | Valor esperado                                                           | Resultado observado |
 | -------------------------- | ------------------------------------------------------------------------ | ------------------- |
-| Organização Supabase       | `wcqoluxxlvglqtebcucz`                                                   | `PENDENTE`          |
-| Staging legado             | `espaco-personalize-pdv-staging` / `gpywbeoqcovjrfnmbdqx` / `us-west-2`  | `PENDENTE`          |
-| Staging Roberto            | `roberto-multimarcas-pdv-staging` / `otsxpchqtfypxgzjzrxs` / `sa-east-1` | `PENDENTE`          |
-| Produção legada            | `espaco-personalize-pdv` / `ciixpfquwmlsvzleattv` / `us-west-2`          | `PENDENTE`          |
+| Organização Supabase       | `wcqoluxxlvglqtebcucz`                                                   | `CONFIRMADO`        |
+| Staging legado             | `espaco-personalize-pdv-staging` / `gpywbeoqcovjrfnmbdqx` / `us-west-2`  | `CONFIRMADO`        |
+| Staging Roberto            | `roberto-multimarcas-pdv-staging` / `otsxpchqtfypxgzjzrxs` / `sa-east-1` | `CONFIRMADO`        |
+| Produção legada            | `espaco-personalize-pdv` / `ciixpfquwmlsvzleattv` / `us-west-2`          | `CONFIRMADO`        |
 | Produção Roberto           | `roberto-multimarcas-pdv` / ref `PENDENTE` / `sa-east-1`                 | `PENDENTE`          |
-| Organização Vercel         | `team_jstETBWBHJi0hsir3a3bAkbK`                                          | `PENDENTE`          |
-| Projeto Vercel de produção | `roberto-multimarcas-pdv` / `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`           | `PENDENTE`          |
-| URL estável                | `https://roberto-multimarcas-pdv.vercel.app`                             | `PENDENTE`          |
+| Organização Vercel         | `team_jstETBWBHJi0hsir3a3bAkbK`                                          | `CONFIRMADO`        |
+| Projeto Vercel de produção | `roberto-multimarcas-pdv` / `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`           | `CONFIRMADO`        |
+| URL estável                | `https://roberto-multimarcas-pdv.vercel.app`                             | `CONFIRMADO`        |
 
 ## Git E Pull Requests
 
@@ -43,10 +43,10 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 
 | Comando                                                | Resultado                    | Data/hora (`America/Sao_Paulo`) |
 | ------------------------------------------------------ | ---------------------------- | ------------------------------- |
-| `npm.cmd run format:check`                             | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
-| `npm.cmd run lint`                                     | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
-| `npm.cmd run type-check`                               | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
-| `npm.cmd test`                                         | `APROVADO` (124/124; 669)    | `2026-10-10 03:49:51 -03:00`    |
+| `npm.cmd run format:check`                             | `APROVADO`                   | `2026-10-10 08:43:45 -03:00`    |
+| `npm.cmd run lint`                                     | `APROVADO`                   | `2026-10-10 08:43:45 -03:00`    |
+| `npm.cmd run type-check`                               | `APROVADO`                   | `2026-10-10 08:43:45 -03:00`    |
+| `npm.cmd test`                                         | `APROVADO` (124/124; 670)    | `2026-10-10 08:43:45 -03:00`    |
 | `npm.cmd run test:no-event-legacy`                     | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
 | `npm.cmd run test:db`                                  | `APROVADO` (upgrade PR05)    | `2026-10-10 03:33:11 -03:00`    |
 | `npm.cmd run build`                                    | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
@@ -77,19 +77,27 @@ npm.cmd run ops:provision-vercel-production -- --phase audit
 O audit Vercel deste preflight não depende de estado de cutover e deve apenas
 confirmar, sem mutações, que o projeto reservado continua vazio.
 
-| Evidência remota                                | Resultado  |
-| ----------------------------------------------- | ---------- |
-| Staging legado `INACTIVE`                       | `PENDENTE` |
-| Staging Roberto `ACTIVE_HEALTHY`                | `PENDENTE` |
-| Produção legada `ACTIVE_HEALTHY`                | `PENDENTE` |
-| Produção Roberto ausente                        | `PENDENTE` |
-| Vercel reservado com zero variáveis/deployments | `PENDENTE` |
-| Projetos Supabase ativos antes da pausa         | `PENDENTE` |
-| Inventário: caminho local autorizado            | `PENDENTE` |
-| Inventário: origem exata                        | `PENDENTE` |
-| Inventário: timestamp/idade                     | `PENDENTE` |
-| Inventário: SHA-256                             | `PENDENTE` |
-| Inventário: validação de integridade            | `PENDENTE` |
+| Evidência remota                                | Resultado                                                          |
+| ----------------------------------------------- | ------------------------------------------------------------------ |
+| Staging legado `INACTIVE`                       | `CONFIRMADO`                                                       |
+| Staging Roberto `ACTIVE_HEALTHY`                | `CONFIRMADO`                                                       |
+| Produção legada `ACTIVE_HEALTHY`                | `CONFIRMADO`                                                       |
+| Produção Roberto ausente                        | `CONFIRMADO`                                                       |
+| Vercel reservado com zero variáveis/deployments | `CONFIRMADO`; proteção incompatível bloqueia o audit               |
+| Projetos Supabase ativos antes da pausa         | `2`                                                                |
+| Inventário: caminho local autorizado            | `.provisioning/production-backup/production-backup.json`           |
+| Inventário: origem exata                        | `ciixpfquwmlsvzleattv` / `espaco-personalize-pdv`                  |
+| Inventário: timestamp/idade                     | `2026-10-10T07:06:51.217Z`; válido no preflight                    |
+| Inventário: SHA-256                             | `134ebfb8061b1cbd615e230c95f74a22f186561bea57f3c4a1f96b29efd13bde` |
+| Inventário: validação de integridade            | `APROVADO` pelo dry-run Supabase                                   |
+
+O preflight de 2026-10-10 não realizou mutações. O projeto Vercel reservado
+continua com zero variáveis e zero deployments, mas a API reportou Vercel
+Authentication como `all_except_custom_domains`. Esse estado é incompatível
+com o login próprio da aplicação e interrompe o corte. A mesma API representa
+a ausência de bypass com o sentinela vazio `{"": null}`; o auditor ganhou uma
+regressão para aceitar somente esse sentinela e continuar rejeitando qualquer
+identificador real de bypass.
 
 ## Fase 2 - Confirmação E Pausa
 
