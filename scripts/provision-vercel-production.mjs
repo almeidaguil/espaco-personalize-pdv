@@ -63,23 +63,25 @@ export async function runVercelProductionProvisioning({
   if (!client) throw new Error("VERCEL_TOKEN is required.");
 
   if (options.phase === "audit") {
-    assertStatePhase(state, [
-      "admin-ready",
-      "vercel-configured",
-      "deployment-ready",
-      "verified",
-    ]);
-    assertCutoverStateTarget(state, manifest, target);
+    if (state) {
+      assertStatePhase(state, [
+        "admin-ready",
+        "vercel-configured",
+        "deployment-ready",
+        "verified",
+      ]);
+      assertCutoverStateTarget(state, manifest, target);
+    }
     const entries = await auditReservedProject(client, target, {
-      requireFirstUse: state.phase === "admin-ready",
+      requireFirstUse: !state || state.phase === "admin-ready",
     });
-    if (state.phase !== "admin-ready") {
+    if (state && state.phase !== "admin-ready") {
       assertVariableEntries(entries, {
         allowMissing: false,
         deploymentEnvironment: target.deploymentEnvironment,
       });
     }
-    if (["deployment-ready", "verified"].includes(state.phase)) {
+    if (state && ["deployment-ready", "verified"].includes(state.phase)) {
       await assertPersistedDeployment(client, target, state);
     }
     const result = { ...baseResult, mode: "audited", phase: "audit" };
@@ -202,6 +204,7 @@ export async function runVercelProductionProvisioning({
         metadata: deploymentMetadata(source),
         orgId: target.orgId,
         projectId: target.projectId,
+        projectName: target.projectName,
         ref: source.commitSha,
         repositoryId: target.repositoryId,
       });

@@ -10,7 +10,10 @@ import {
   loadProductionCutoverState,
   recordProductionCutoverPhase,
 } from "./production-cutover-state.mjs";
-import { resolveRemoteProductionSmokeEnvironment } from "./remote-production-smoke-environment.mjs";
+import {
+  productionReleaseDeploymentEnvironment,
+  resolveRemoteProductionSmokeEnvironment,
+} from "./remote-production-smoke-environment.mjs";
 import { runCliCommand } from "./run-cli-command.mjs";
 import { createVercelManagementClient } from "./vercel-management-client.mjs";
 import { readProductionDeploymentTarget } from "./verify-remote-production.mjs";
@@ -94,7 +97,11 @@ export async function runManagedRemoteProductionSmoke({
 
   const smoke = await runPlaywright({
     config: "playwright.remote-production.config.ts",
-    environment: { ...environment, ...smokeEnvironment },
+    environment: {
+      ...environment,
+      ...smokeEnvironment,
+      ...productionReleaseDeploymentEnvironment(deploymentTarget),
+    },
   });
   if (smoke?.status !== 0) {
     throw new Error("Remote production smoke failed.");

@@ -1,12 +1,34 @@
 import { expect, test, vi } from "vitest";
 
 import manifestFixture from "../config/remote-environments.json";
-import { verifyRemoteProduction } from "./verify-remote-production.mjs";
+import {
+  resolveProductionSourceCommit,
+  verifyRemoteProduction,
+} from "./verify-remote-production.mjs";
 
 const projectRef = "abcdefghijklmnopqrst";
 const commitSha = "a".repeat(40);
 const environmentFingerprint =
   "d53319153bfd2b1d5a4391e8f6a7fdd5c986c819a9d3bcce34a128a24ca0489a";
+
+test("passes an explicit environment to the read-only Git source resolver", () => {
+  const mainSha = "b".repeat(40);
+  const environment = { ...process.env, PATH: "git-path-sentinel" };
+  const commandRunner = vi.fn().mockReturnValue({
+    status: 0,
+    stderr: "",
+    stdout: `${mainSha}\n`,
+  });
+
+  expect(
+    resolveProductionSourceCommit("main", environment, commandRunner),
+  ).toBe(mainSha);
+  expect(commandRunner).toHaveBeenCalledWith(
+    "git",
+    ["rev-parse", "--verify", "refs/remotes/origin/main^{commit}"],
+    { environment },
+  );
+});
 
 test("verifies production database, deployment, variables and protection read-only", async () => {
   const { input, vercelClient } = fixture();

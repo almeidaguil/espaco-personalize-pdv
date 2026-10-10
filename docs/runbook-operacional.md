@@ -226,6 +226,11 @@ npm.cmd run ops:provision-production -- --inventory .provisioning/production-bac
 npm.cmd run ops:provision-vercel-production -- --phase audit
 ```
 
+O `audit` inicial da Vercel é estritamente somente leitura e pode ser executado
+antes de existir estado de cutover. Nessa fase ele exige que o projeto reservado
+esteja vazio; as fases `configure` e `deploy` continuam bloqueadas até o estado
+correspondente do corte.
+
 O inventário é somente leitura e precisa identificar a produção legada exata.
 Antes da pausa, confira origem, hash, integridade e idade máxima de uma hora da
 evidência. Ela registra schema, migrations, contagens, Auth e Storage sem dados
@@ -263,6 +268,13 @@ divergir, interrompa sem tentar corrigir pelo painel.
 ```powershell
 npm.cmd run ops:provision-production -- --inventory .provisioning/production-backup/production-backup.json --execute --confirm-target-ref <production-ref>
 ```
+
+Se a criação remota concluir, mas o polling ou a gravação local falhar, use esse
+mesmo comando com o ref exato observado. O provisionador reconcilia
+organização, nome, região, hostname e ref, registra `production-created` e não
+cria um segundo projeto. Depois de `legacy-paused`, a evidência pode ter mais de
+uma hora, mas deve ser exatamente o mesmo artefato registrado: origem,
+`capturedAt` e SHA-256 divergentes bloqueiam a retomada.
 
 Esse passo executa `supabase db push --linked --dry-run` antes do push real e
 configura o Auth. Signup público deve permanecer desabilitado, a senha mínima
@@ -355,7 +367,8 @@ deployment bloqueia o release; valores e chaves nunca são registrados.
 Pare imediatamente se ocorrer qualquer item:
 
 - organização, nome, ref, região, hostname, project ID ou commit divergente;
-- evidência ausente, adulterada, com origem incorreta ou mais de uma hora;
+- evidência ausente, adulterada ou com origem incorreta; antes da pausa, também
+  com mais de uma hora;
 - staging Roberto ou produção legada sem estado saudável antes da pausa;
 - produção legada sem chegar a `INACTIVE` ou cota gratuita sem vaga;
 - projeto desconhecido ativo ou mais de dois projetos Supabase ativos;

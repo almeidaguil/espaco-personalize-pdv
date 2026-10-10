@@ -13,25 +13,29 @@ export function createVercelManagementClient({
   }
 
   const request = createRequest({ authToken, baseUrl, fetch });
-  const createGitDeployment = ({
+  const createGitDeployment = async ({
     environment,
     metadata,
     orgId,
     projectId,
-    projectName = null,
+    projectName,
     ref,
     repositoryId,
-  }) =>
-    request(`/v13/deployments?teamId=${encodeURIComponent(orgId)}`, {
+  }) => {
+    if (!projectName?.trim()) {
+      throw new Error("Vercel deployment project name is required.");
+    }
+    return request(`/v13/deployments?teamId=${encodeURIComponent(orgId)}`, {
       body: {
         gitSource: { ref, repoId: repositoryId, type: "github" },
         meta: metadata,
-        ...(projectName ? { name: projectName } : {}),
+        name: projectName,
         project: projectId,
         target: environment,
       },
       method: "POST",
     });
+  };
 
   return {
     createAutomationBypass: ({ orgId, projectId, secret }) =>

@@ -54,12 +54,18 @@ export async function runSupabaseProductionProvisioning({
 }) {
   const manifest = parseRemoteEnvironmentManifest(providedManifest);
   const currentTime = now();
+  const resumedAfterLegacyPause =
+    phaseIndex(state?.phase) >= phaseIndex("legacy-paused");
   const validatedEvidence = validateProductionBackupEvidence({
+    allowExpired: resumedAfterLegacyPause,
     evidence,
     manifest,
-    maximumAgeMs: evidenceMaximumAgeMs,
+    maximumAgeMs: resumedAfterLegacyPause ? undefined : evidenceMaximumAgeMs,
     now: currentTime,
   });
+  if (resumedAfterLegacyPause) {
+    assertRecordedBackupEvidence(state, validatedEvidence);
+  }
 
   if (!managementClient) {
     throw new Error("SUPABASE_ACCESS_TOKEN is required for production audit.");
@@ -189,6 +195,33 @@ export async function runSupabaseProductionProvisioning({
   }
 
   const productionRef = projectRef(topology.production);
+  if (currentState?.phase === "legacy-paused") {
+    authorizeRecoveredProduction(options.confirmTargetRef, topology.production);
+    let recoveredProduction = await pollProject({
+      acceptedState: "ACTIVE_HEALTHY",
+      managementClient,
+      projectRef: productionRef,
+      wait,
+    });
+    recoveredProduction = assertProductionIdentity(
+      recoveredProduction,
+      manifest,
+      productionRef,
+    );
+    await advance(
+      "production-created",
+      productionFacts(recoveredProduction, manifest),
+    );
+    const result = {
+      legacyProductionState: topology.legacyProduction.status,
+      mode: "executed",
+      nextAction: "persist-production-target",
+      targetRef: productionRef,
+      targetState: recoveredProduction.status,
+    };
+    log(result);
+    return result;
+  }
   assertProductionStateIdentity(currentState, topology.production, manifest);
 
   if (!target.projectRef || !target.hostname) {
@@ -312,16 +345,20 @@ export async function runProvisionSupabaseProductionCli(
   const manifest = await loadManifest(
     resolve("config/remote-environments.json"),
   );
+  const loadState = dependencies.loadState ?? loadProductionCutoverState;
+  const state = await loadState({ filePath: resolve(stateFilePath) });
   const readEvidence =
     dependencies.readEvidence ?? readAndValidateProductionBackupEvidence;
   const evidence = await readEvidence({
+    allowExpired: phaseIndex(state?.phase) >= phaseIndex("legacy-paused"),
     filePath: resolve(options.inventoryPath),
     manifest,
-    maximumAgeMs: evidenceMaximumAgeMs,
+    maximumAgeMs:
+      phaseIndex(state?.phase) >= phaseIndex("legacy-paused")
+        ? undefined
+        : evidenceMaximumAgeMs,
     now: now(),
   });
-  const loadState = dependencies.loadState ?? loadProductionCutoverState;
-  const state = await loadState({ filePath: resolve(stateFilePath) });
   const managementClient =
     dependencies.managementClient ??
     (environment.SUPABASE_ACCESS_TOKEN
@@ -539,6 +576,29 @@ function assertResumeTopology(state, topology) {
   ) {
     throw new Error(
       "Recorded production creation diverges from provider topology.",
+    );
+  }
+}
+
+function assertRecordedBackupEvidence(state, evidence) {
+  const recorded = state?.history?.find(
+    (entry) => entry.phase === "backup-recorded",
+  )?.facts;
+  if (
+    !recorded ||
+    recorded.capturedAt !== evidence.capturedAt ||
+    recorded.evidenceSha256 !== evidence.sha256 ||
+    recorded.sourceProjectRef !== evidence.source.projectRef
+  ) {
+    throw new Error("Backup evidence diverges from cutover state.");
+  }
+}
+
+function authorizeRecoveredProduction(confirmation, project) {
+  const recoveredRef = projectRef(project);
+  if (!recoveredRef || confirmation !== recoveredRef) {
+    throw new Error(
+      "Recovered production requires literal confirmation of its project ref.",
     );
   }
 }

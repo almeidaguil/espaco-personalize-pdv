@@ -143,9 +143,10 @@ export async function writeProductionBackupEvidence({ evidence, outputPath }) {
 }
 
 export async function readAndValidateProductionBackupEvidence({
+  allowExpired = false,
   filePath,
   manifest,
-  maximumAgeMs,
+  maximumAgeMs = /** @type {number | undefined} */ (undefined),
   now,
 }) {
   const absolutePath = assertAuthorizedPath(filePath);
@@ -158,6 +159,7 @@ export async function readAndValidateProductionBackupEvidence({
   }
 
   return validateProductionBackupEvidence({
+    allowExpired,
     evidence,
     manifest,
     maximumAgeMs,
@@ -166,9 +168,10 @@ export async function readAndValidateProductionBackupEvidence({
 }
 
 export function validateProductionBackupEvidence({
+  allowExpired = false,
   evidence,
   manifest,
-  maximumAgeMs,
+  maximumAgeMs = /** @type {number | undefined} */ (undefined),
   now,
 }) {
   const validatedEvidence = validateEvidenceShape(evidence);
@@ -176,14 +179,16 @@ export function validateProductionBackupEvidence({
   const capturedAt = new Date(validatedEvidence.capturedAt).getTime();
   const currentTime =
     now instanceof Date ? now.getTime() : new Date(now).getTime();
-  if (!Number.isFinite(maximumAgeMs) || maximumAgeMs <= 0) {
-    throw new Error("Invalid production backup evidence maximum age.");
-  }
   if (capturedAt > currentTime) {
     throw new Error("Production backup evidence is from the future.");
   }
-  if (currentTime - capturedAt > maximumAgeMs) {
-    throw new Error("Production backup evidence is older than allowed.");
+  if (!allowExpired) {
+    if (!Number.isFinite(maximumAgeMs) || maximumAgeMs <= 0) {
+      throw new Error("Invalid production backup evidence maximum age.");
+    }
+    if (currentTime - capturedAt > maximumAgeMs) {
+      throw new Error("Production backup evidence is older than allowed.");
+    }
   }
 
   const expected = manifest.supabase.legacy.production;

@@ -341,7 +341,8 @@ export async function runVerifyRemoteProductionCli(
       NEXT_PUBLIC_SUPABASE_URL: buildSupabaseUrl(projectRef),
       SUPABASE_SECRET_KEY: keys.secretKey,
     },
-    resolveSourceCommit,
+    resolveSourceCommit: (sourceRef) =>
+      resolveProductionSourceCommit(sourceRef, environment),
     vercelClient: createVercelManagementClient({
       authToken: environment.VERCEL_TOKEN,
     }),
@@ -395,12 +396,18 @@ function readOption(argv, name, required = false) {
   return argv[indexes[0] + 1];
 }
 
-function resolveSourceCommit(sourceRef) {
+export function resolveProductionSourceCommit(
+  sourceRef,
+  environment = process.env,
+  commandRunner = runCliCommand,
+) {
   const gitRef =
     sourceRef === "main"
       ? "refs/remotes/origin/main^{commit}"
       : `refs/heads/${sourceRef}^{commit}`;
-  const result = runCliCommand("git", ["rev-parse", "--verify", gitRef]);
+  const result = commandRunner("git", ["rev-parse", "--verify", gitRef], {
+    environment,
+  });
   const commitSha = result.stdout?.trim();
   if (result.status !== 0 || !/^[a-f0-9]{40}$/.test(commitSha ?? "")) {
     throw new Error("Unable to resolve the production release source ref.");

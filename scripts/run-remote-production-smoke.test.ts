@@ -1,6 +1,7 @@
 import { expect, test, vi } from "vitest";
 
 import manifestFixture from "../config/remote-environments.json";
+import { resolveRemoteProductionPlaywrightEnvironment } from "./remote-production-smoke-environment.mjs";
 import {
   runManagedRemoteProductionSmoke,
   runRemoteProductionSmokeCli,
@@ -229,9 +230,21 @@ test("smokes the explicit verified main deployment without rewriting cutover sta
     expect.objectContaining({
       environment: expect.objectContaining({
         baseUrl: deploymentTarget.deploymentUrl,
+        PRODUCTION_RELEASE_COMMIT_SHA: deploymentTarget.commitSha,
+        PRODUCTION_RELEASE_DEPLOYMENT_ID: deploymentTarget.deploymentId,
+        PRODUCTION_RELEASE_DEPLOYMENT_URL: deploymentTarget.deploymentUrl,
+        PRODUCTION_RELEASE_SOURCE_REF: deploymentTarget.sourceRef,
       }),
     }),
   );
+  const playwrightEnvironment =
+    runPlaywright.mock.calls.at(-1)?.[0].environment;
+  expect(
+    resolveRemoteProductionPlaywrightEnvironment(
+      playwrightEnvironment,
+      input.manifest,
+    ),
+  ).toMatchObject({ baseUrl: deploymentTarget.deploymentUrl });
 });
 
 test("rejects an explicit main deployment unless provisional verification is complete", async () => {

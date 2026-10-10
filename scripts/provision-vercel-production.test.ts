@@ -21,7 +21,11 @@ describe("runVercelProductionProvisioning", () => {
   test("audits the exact empty reserved project without any mutation", async () => {
     const client = createClient();
 
-    const result = await run({ client, options: { phase: "audit" } });
+    const result = await run({
+      client,
+      options: { phase: "audit" },
+      state: null,
+    });
 
     expect(result).toMatchObject({
       mode: "audited",
@@ -31,6 +35,24 @@ describe("runVercelProductionProvisioning", () => {
       siteUrl,
     });
     expect(client.mutations).toHaveLength(0);
+  });
+
+  test("keeps configure and deploy gated by cutover state", async () => {
+    const configureClient = createClient();
+    await expect(run({ client: configureClient, state: null })).rejects.toThrow(
+      /requires admin-ready or vercel-configured state/i,
+    );
+    expect(configureClient.mutations).toHaveLength(0);
+
+    const deployClient = createClient({ variables: expectedVariables() });
+    await expect(
+      run({
+        client: deployClient,
+        options: deployOptions(),
+        state: null,
+      }),
+    ).rejects.toThrow(/requires vercel-configured or verified state/i);
+    expect(deployClient.createGitDeployment).not.toHaveBeenCalled();
   });
 
   test.each([
@@ -206,6 +228,7 @@ describe("runVercelProductionProvisioning", () => {
       },
       orgId,
       projectId,
+      projectName,
       ref: commitSha,
       repositoryId: 1264018806,
     });
@@ -445,6 +468,21 @@ describe("runVercelProductionProvisioning", () => {
 });
 
 describe("runProvisionVercelProductionCli", () => {
+  test("runs the documented initial read-only audit without cutover state", async () => {
+    const client = createClient();
+
+    await expect(
+      runProvisionVercelProductionCli(["--phase", "audit"], {
+        client,
+        environment: {},
+        loadManifest: vi.fn(async () => persistedManifest()),
+        loadState: vi.fn(async () => null),
+        logger: vi.fn(),
+      }),
+    ).resolves.toMatchObject({ mode: "audited", phase: "audit" });
+    expect(client.mutations).toHaveLength(0);
+  });
+
   test("prints help without loading state, secrets or providers", async () => {
     const loadManifest = vi.fn();
     const loadState = vi.fn();
@@ -484,7 +522,7 @@ function run({
   options?: Record<string, unknown>;
   recordPhase?: ReturnType<typeof vi.fn>;
   resolveSourceCommit?: ReturnType<typeof vi.fn>;
-  state?: CutoverState;
+  state?: CutoverState | null;
 } = {}) {
   return runVercelProductionProvisioning({
     client,

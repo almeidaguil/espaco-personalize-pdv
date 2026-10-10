@@ -135,6 +135,25 @@ describe("readAndValidateProductionBackupEvidence", () => {
     ).toEqual(evidence);
   });
 
+  test("requires an explicit opt-in before accepting expired evidence", () => {
+    const evidence = createProductionBackupEvidence(validInput());
+    const input = {
+      evidence,
+      manifest,
+      now: new Date("2026-10-08T14:00:00.000Z"),
+    };
+
+    expect(() =>
+      productionBackupEvidence.validateProductionBackupEvidence(input),
+    ).toThrow(/maximum age/i);
+    expect(
+      productionBackupEvidence.validateProductionBackupEvidence({
+        ...input,
+        allowExpired: true,
+      }),
+    ).toEqual(evidence);
+  });
+
   test("rejects tampering, stale and future evidence", async () => {
     await mkdir(authorizedDirectory, { recursive: true });
     const outputPath = join(authorizedDirectory, "production-backup.json");

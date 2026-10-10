@@ -1,7 +1,10 @@
 import { expect, test } from "vitest";
 
 import manifestFixture from "../config/remote-environments.json";
-import { resolveRemoteProductionSmokeEnvironment } from "./remote-production-smoke-environment.mjs";
+import {
+  resolveRemoteProductionPlaywrightEnvironment,
+  resolveRemoteProductionSmokeEnvironment,
+} from "./remote-production-smoke-environment.mjs";
 
 const projectRef = "abcdefghijklmnopqrst";
 
@@ -115,4 +118,30 @@ test("uses an explicit immutable main deployment without changing the manifest",
       releaseDeployment,
     ),
   ).toMatchObject({ baseUrl: releaseDeployment.deploymentUrl });
+});
+
+test("reconstructs the complete explicit release at the Playwright boundary", () => {
+  const releaseDeployment = {
+    commitSha: "b".repeat(40),
+    deploymentId: "dpl_MainProduction456",
+    deploymentUrl: "https://roberto-main-build.vercel.app",
+    sourceRef: "main",
+  };
+  const environment: Record<string, string> = {
+    ...validEnvironment(),
+    PRODUCTION_BASE_URL: releaseDeployment.deploymentUrl,
+    PRODUCTION_RELEASE_COMMIT_SHA: releaseDeployment.commitSha,
+    PRODUCTION_RELEASE_DEPLOYMENT_ID: releaseDeployment.deploymentId,
+    PRODUCTION_RELEASE_DEPLOYMENT_URL: releaseDeployment.deploymentUrl,
+    PRODUCTION_RELEASE_SOURCE_REF: releaseDeployment.sourceRef,
+  };
+
+  expect(
+    resolveRemoteProductionPlaywrightEnvironment(environment, manifest()),
+  ).toMatchObject({ baseUrl: releaseDeployment.deploymentUrl });
+
+  delete environment.PRODUCTION_RELEASE_COMMIT_SHA;
+  expect(() =>
+    resolveRemoteProductionPlaywrightEnvironment(environment, manifest()),
+  ).toThrow(/all release deployment fields/i);
 });

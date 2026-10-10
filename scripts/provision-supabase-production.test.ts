@@ -114,6 +114,80 @@ describe("runSupabaseProductionProvisioning", () => {
     expect(managementClient.createProject).not.toHaveBeenCalled();
   });
 
+  test("reconciles an interrupted creation by exact ref without creating a duplicate", async () => {
+    const managementClient = createManagementClient({
+      createdProjectStalls: true,
+    });
+    const recorder = createStateRecorder();
+
+    await expect(
+      runProvisioning({
+        managementClient,
+        options: firstExecutionOptions(),
+        recordPhase: recorder.recordPhase,
+      }),
+    ).rejects.toThrow(/did not reach ACTIVE_HEALTHY/i);
+    expect(recorder.currentState()?.phase).toBe("legacy-paused");
+    expect(managementClient.createProject).toHaveBeenCalledTimes(1);
+
+    managementClient.activateProduction();
+    await expect(
+      runProvisioning({
+        managementClient,
+        options: { confirmTargetRef: newProductionRef, execute: true },
+        recordPhase: recorder.recordPhase,
+        state: recorder.currentState(),
+      }),
+    ).resolves.toMatchObject({
+      nextAction: "persist-production-target",
+      targetRef: newProductionRef,
+    });
+    expect(managementClient.createProject).toHaveBeenCalledTimes(1);
+    expect(recorder.phases()).toEqual([
+      "preflight",
+      "backup-recorded",
+      "legacy-paused",
+      "production-created",
+    ]);
+  });
+
+  test("accepts stale but hash-matching backup evidence after the legacy pause", async () => {
+    const staleEvidence = evidenceAt("2026-10-09T10:00:00.000Z");
+    const managementClient = createManagementClient({ targetExists: true });
+
+    await expect(
+      runProvisioning({
+        commandRunner: vi.fn().mockReturnValue({
+          status: 0,
+          stderr: "",
+          stdout: "ok",
+        }),
+        evidence: staleEvidence,
+        managementClient,
+        manifest: persistedManifest(),
+        options: { confirmTargetRef: newProductionRef, execute: true },
+        state: productionCreatedState(staleEvidence),
+      }),
+    ).resolves.toMatchObject({ phase: "database-ready" });
+  });
+
+  test("rejects resumed backup evidence that differs from the recorded hash", async () => {
+    const recordedEvidence = evidenceAt("2026-10-09T10:00:00.000Z");
+    const differentEvidence = evidenceAt("2026-10-09T10:00:01.000Z");
+    const managementClient = createManagementClient({ targetExists: true });
+
+    await expect(
+      runProvisioning({
+        evidence: differentEvidence,
+        managementClient,
+        manifest: persistedManifest(),
+        options: { confirmTargetRef: newProductionRef, execute: true },
+        state: productionCreatedState(recordedEvidence),
+      }),
+    ).rejects.toThrow(/backup evidence.*state|state.*backup evidence/i);
+    expect(managementClient.updateAuthConfig).not.toHaveBeenCalled();
+  });
+
   test("requires exact first-cut and resume confirmations", async () => {
     const managementClient = createManagementClient();
     await expect(
@@ -274,6 +348,26 @@ describe("runProvisionSupabaseProductionCli", () => {
       expect(loadManifest).not.toHaveBeenCalled();
     },
   );
+
+  test("loads resumed state before allowing old but recorded evidence", async () => {
+    const staleEvidence = evidenceAt("2026-10-09T10:00:00.000Z");
+    const readEvidence = vi.fn(async (input) => {
+      expect(input.allowExpired).toBe(true);
+      expect(input.maximumAgeMs).toBeUndefined();
+      throw new Error("evidence-policy-observed");
+    });
+
+    await expect(
+      runProvisionSupabaseProductionCli(["--inventory", "backup.json"], {
+        loadManifest: vi.fn(async () => persistedManifest()),
+        loadState: vi.fn(async () => productionCreatedState(staleEvidence)),
+        log: vi.fn(),
+        now: () => now,
+        readEvidence,
+      }),
+    ).rejects.toThrow("evidence-policy-observed");
+    expect(readEvidence).toHaveBeenCalledOnce();
+  });
 });
 
 function runProvisioning({
@@ -291,10 +385,7 @@ function runProvisioning({
   manifest?: typeof manifestFixture | ReturnType<typeof persistedManifest>;
   options?: Record<string, boolean | string>;
   recordPhase?: ReturnType<typeof vi.fn>;
-  state?:
-    | ReturnType<typeof legacyPausedState>
-    | ReturnType<typeof productionCreatedState>
-    | null;
+  state?: unknown;
 }) {
   return runSupabaseProductionProvisioning({
     commandRunner,
@@ -378,9 +469,12 @@ function persistedManifest() {
   };
 }
 
-function productionCreatedState() {
+function productionCreatedState(
+  evidence = evidenceAt("2026-10-09T12:00:00.000Z"),
+) {
   return {
     history: [
+      ...legacyPausedState(evidence).history,
       {
         completedAt: "2026-10-09T12:10:00.000Z",
         facts: {
@@ -397,9 +491,27 @@ function productionCreatedState() {
   } as const;
 }
 
-function legacyPausedState() {
+function legacyPausedState(evidence = evidenceAt("2026-10-09T12:00:00.000Z")) {
   return {
     history: [
+      {
+        completedAt: "2026-10-09T12:00:00.000Z",
+        facts: {
+          commitSha: gitIdentity.commitSha,
+          manifestVersion: 2,
+          sourceRef: gitIdentity.sourceRef,
+        },
+        phase: "preflight",
+      },
+      {
+        completedAt: "2026-10-09T12:01:00.000Z",
+        facts: {
+          capturedAt: evidence.capturedAt,
+          evidenceSha256: evidence.sha256,
+          sourceProjectRef: evidence.source.projectRef,
+        },
+        phase: "backup-recorded",
+      },
       {
         completedAt: "2026-10-09T12:05:00.000Z",
         facts: {
@@ -429,22 +541,29 @@ function createStateRecorder(initialState: unknown = null) {
       return currentState;
     },
   );
-  return { phases: () => recorded, recordPhase };
+  return {
+    currentState: () => currentState,
+    phases: () => recorded,
+    recordPhase,
+  };
 }
 
 function createManagementClient({
   events = [],
+  createdProjectStalls = false,
   pauseDoesNotComplete = false,
   stagingStatus = "ACTIVE_HEALTHY",
   targetExists = false,
   unknownActive = false,
 }: {
   events?: string[];
+  createdProjectStalls?: boolean;
   pauseDoesNotComplete?: boolean;
   stagingStatus?: string;
   targetExists?: boolean;
   unknownActive?: boolean;
 } = {}) {
+  let productionIsStalled = createdProjectStalls;
   const projects = [
     project({
       id: "gpywbeoqcovjrfnmbdqx",
@@ -513,6 +632,9 @@ function createManagementClient({
       if (value?.id === "ciixpfquwmlsvzleattv" && pauseDoesNotComplete) {
         return { ...value, status: "ACTIVE_HEALTHY" };
       }
+      if (value?.id === newProductionRef && productionIsStalled) {
+        return { ...value, status: "COMING_UP" };
+      }
       return value;
     }),
     listAvailableRegions: vi.fn().mockResolvedValue([{ code: "sa-east-1" }]),
@@ -524,6 +646,9 @@ function createManagementClient({
       return { status: "pausing" };
     }),
     updateAuthConfig: vi.fn().mockResolvedValue(authConfiguration),
+    activateProduction: () => {
+      productionIsStalled = false;
+    },
   };
 }
 

@@ -2,9 +2,9 @@ import { defineConfig, devices } from "@playwright/test";
 
 import manifestFixture from "./config/remote-environments.json";
 import { parseRemoteEnvironmentManifest } from "./scripts/remote-environment-policy.mjs";
-import { resolveRemoteProductionSmokeEnvironment } from "./scripts/remote-production-smoke-environment.mjs";
+import { resolveRemoteProductionPlaywrightEnvironment } from "./scripts/remote-production-smoke-environment.mjs";
 
-const smokeEnvironment = resolveRemoteProductionSmokeEnvironment(
+const smokeEnvironment = resolveRemoteProductionPlaywrightEnvironment(
   process.env,
   parseRemoteEnvironmentManifest(manifestFixture),
 );

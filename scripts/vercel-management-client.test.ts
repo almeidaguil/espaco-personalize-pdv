@@ -24,6 +24,7 @@ describe("createVercelManagementClient", () => {
       },
       orgId,
       projectId,
+      projectName: "roberto-multimarcas-pdv",
       ref: "feature/production-cutover",
       repositoryId: 1264018806,
     });
@@ -41,9 +42,33 @@ describe("createVercelManagementClient", () => {
         roberto_environment: "production",
         roberto_source_ref: "feature/production-cutover",
       },
+      name: "roberto-multimarcas-pdv",
       project: projectId,
       target: "production",
     });
+  });
+
+  test("rejects a Git deployment without the required project name", async () => {
+    const fetch = vi
+      .fn()
+      .mockResolvedValue(jsonResponse({ id: "dpl_production123" }));
+    const client = createVercelManagementClient({
+      authToken: "vercel-token-sentinel",
+      fetch,
+    });
+
+    await expect(
+      // @ts-expect-error Runtime validation protects non-TypeScript callers.
+      client.createGitDeployment({
+        environment: "production",
+        metadata: {},
+        orgId,
+        projectId,
+        ref: "feature/production-cutover",
+        repositoryId: 1264018806,
+      }),
+    ).rejects.toThrow(/project name/i);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   test("scopes project reads to the approved organization", async () => {

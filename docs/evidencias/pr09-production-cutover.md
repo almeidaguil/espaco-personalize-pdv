@@ -43,15 +43,15 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 
 | Comando                                                | Resultado                    | Data/hora (`America/Sao_Paulo`) |
 | ------------------------------------------------------ | ---------------------------- | ------------------------------- |
-| `npm.cmd run format:check`                             | `APROVADO`                   | `2026-10-09 20:56:48 -03:00`    |
-| `npm.cmd run lint`                                     | `APROVADO`                   | `2026-10-09 20:56:48 -03:00`    |
-| `npm.cmd run type-check`                               | `APROVADO`                   | `2026-10-09 20:56:48 -03:00`    |
-| `npm.cmd test`                                         | `APROVADO` (123/123; 658)    | `2026-10-09 20:56:48 -03:00`    |
-| `npm.cmd run test:no-event-legacy`                     | `APROVADO`                   | `2026-10-09 20:56:48 -03:00`    |
-| `npm.cmd run test:db`                                  | `APROVADO` (upgrade PR05)    | `2026-10-09 20:56:48 -03:00`    |
-| `npm.cmd run build`                                    | `APROVADO`                   | `2026-10-09 20:56:48 -03:00`    |
-| `npm.cmd run test:e2e:local-reset`                     | `APROVADO` (48/48)           | `2026-10-09 20:56:48 -03:00`    |
-| Scan de segredos/e-mail pessoal em arquivos rastreados | `APROVADO` (diff PR09 limpo) | `2026-10-09 20:56:48 -03:00`    |
+| `npm.cmd run format:check`                             | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd run lint`                                     | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd run type-check`                               | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd test`                                         | `APROVADO` (123/123; 668)    | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd run test:no-event-legacy`                     | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd run test:db`                                  | `APROVADO` (upgrade PR05)    | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd run build`                                    | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd run test:e2e:local-reset`                     | `APROVADO` (48/48)           | `2026-10-10 03:33:11 -03:00`    |
+| Scan de segredos/e-mail pessoal em arquivos rastreados | `APROVADO` (diff PR09 limpo) | `2026-10-10 03:33:11 -03:00`    |
 
 O scan global encontrou duas referências históricas ao e-mail do autor em
 documentos de configuração Git anteriores ao PR09. O diff completo do PR09 e
@@ -67,6 +67,9 @@ npm.cmd run ops:inventory-production -- --output .provisioning/production-backup
 npm.cmd run ops:provision-production -- --inventory .provisioning/production-backup/production-backup.json
 npm.cmd run ops:provision-vercel-production -- --phase audit
 ```
+
+O audit Vercel deste preflight não depende de estado de cutover e deve apenas
+confirmar, sem mutações, que o projeto reservado continua vazio.
 
 | Evidência remota                                | Resultado  |
 | ----------------------------------------------- | ---------- |
@@ -112,6 +115,12 @@ manifesto. O comando de retomada previsto é:
 npm.cmd run ops:provision-production -- --inventory .provisioning/production-backup/production-backup.json --execute --confirm-target-ref <production-ref>
 npm.cmd run ops:bootstrap-production-admin -- --execute --confirm-ref <production-ref>
 ```
+
+Em retomada após criação parcial, o primeiro comando exige o ref literal
+observado, reconcilia a identidade completa e não cria outro projeto. A janela
+de uma hora vale imediatamente antes da pausa; depois de `legacy-paused`, o
+artefato precisa corresponder exatamente ao hash, origem e timestamp gravados
+no estado retomável.
 
 | Evidência remota                                  | Resultado  |
 | ------------------------------------------------- | ---------- |

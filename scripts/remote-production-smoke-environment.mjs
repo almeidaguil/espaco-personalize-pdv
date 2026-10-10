@@ -1,6 +1,54 @@
 import { resolveRemoteTarget } from "./remote-environment-policy.mjs";
 import { buildSupabaseUrl } from "./supabase-management-client.mjs";
 
+const releaseEnvironmentFields = Object.freeze({
+  commitSha: "PRODUCTION_RELEASE_COMMIT_SHA",
+  deploymentId: "PRODUCTION_RELEASE_DEPLOYMENT_ID",
+  deploymentUrl: "PRODUCTION_RELEASE_DEPLOYMENT_URL",
+  sourceRef: "PRODUCTION_RELEASE_SOURCE_REF",
+});
+
+export function resolveRemoteProductionPlaywrightEnvironment(
+  environment,
+  manifest,
+) {
+  return resolveRemoteProductionSmokeEnvironment(
+    environment,
+    manifest,
+    readProductionReleaseDeploymentTarget(environment),
+  );
+}
+
+export function productionReleaseDeploymentEnvironment(deploymentTarget) {
+  if (!deploymentTarget) return {};
+  return Object.fromEntries(
+    Object.entries(releaseEnvironmentFields).map(([key, name]) => [
+      name,
+      deploymentTarget[key],
+    ]),
+  );
+}
+
+function readProductionReleaseDeploymentTarget(environment) {
+  const entries = Object.entries(releaseEnvironmentFields).map(
+    ([key, name]) => [key, environment[name]?.trim()],
+  );
+  const present = entries.filter(([, value]) => Boolean(value));
+  if (present.length === 0) return null;
+  if (present.length !== entries.length) {
+    throw new Error("Playwright requires all release deployment fields.");
+  }
+  const target = Object.fromEntries(entries);
+  if (
+    !/^dpl_[A-Za-z0-9]+$/.test(target.deploymentId) ||
+    !/^[a-f0-9]{40}$/.test(target.commitSha) ||
+    target.sourceRef !== "main"
+  ) {
+    throw new Error("Playwright release deployment fields are invalid.");
+  }
+  return target;
+}
+
 export function resolveRemoteProductionSmokeEnvironment(
   environment,
   manifest,
