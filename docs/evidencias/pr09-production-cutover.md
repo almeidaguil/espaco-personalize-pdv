@@ -46,7 +46,7 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 | `npm.cmd run format:check`                             | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
 | `npm.cmd run lint`                                     | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
 | `npm.cmd run type-check`                               | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
-| `npm.cmd test`                                         | `APROVADO` (123/123; 668)    | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd test`                                         | `APROVADO` (124/124; 669)    | `2026-10-10 03:49:51 -03:00`    |
 | `npm.cmd run test:no-event-legacy`                     | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
 | `npm.cmd run test:db`                                  | `APROVADO` (upgrade PR05)    | `2026-10-10 03:33:11 -03:00`    |
 | `npm.cmd run build`                                    | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
@@ -56,6 +56,12 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 O scan global encontrou duas referências históricas ao e-mail do autor em
 documentos de configuração Git anteriores ao PR09. O diff completo do PR09 e
 os arquivos desta tarefa não adicionam segredo nem e-mail pessoal.
+
+Na primeira execução do PR09-A, o banco e o E2E iniciaram stacks Supabase
+locais simultâneas e disputaram a porta `54322`. Os workflows agora compartilham
+um grupo de concorrência por PR/ref, com cancelamento desativado, para serializar
+somente os gates que usam essas portas. O contrato dessa configuração possui
+teste automatizado.
 
 ## Fase 1 - Preflight E Backup
 
