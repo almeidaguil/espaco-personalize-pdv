@@ -65,8 +65,8 @@
         "environment": "production",
         "dedicatedStaging": false,
         "deploymentProtection": "application-auth",
-        "deploymentId": null,
-        "deploymentUrl": null,
+        "deploymentId": "dpl_TPMhRTBXKrsfz4GBraLXV7fg2PuC",
+        "deploymentUrl": "https://roberto-multimarcas-gvgkm8qvh-guilherme-a-s-projects.vercel.app",
         "siteUrl": "https://roberto-multimarcas-pdv.vercel.app"
       }
     }

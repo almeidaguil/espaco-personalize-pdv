@@ -207,17 +207,24 @@ npm.cmd run ops:provision-vercel-production -- --phase deploy --source-ref featu
 npm.cmd run ops:provision-vercel-production -- --phase verify --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
 ```
 
-| Evidência remota                        | Resultado  |
-| --------------------------------------- | ---------- |
-| Exatamente três variáveis `Production`  | `PENDENTE` |
-| `SUPABASE_SECRET_KEY` marcada sensível  | `PENDENTE` |
-| Preset Next.js / Node.js 22.x           | `PENDENTE` |
-| Deployment ID                           | `PENDENTE` |
-| Deployment URL imutável                 | `PENDENTE` |
-| Deployment `READY`                      | `PENDENTE` |
-| Alias estável exato                     | `PENDENTE` |
-| Commit implantado                       | `PENDENTE` |
-| Vercel Authentication/bypasses ausentes | `PENDENTE` |
+| Evidência remota                        | Resultado                                                                 |
+| --------------------------------------- | ------------------------------------------------------------------------- |
+| Exatamente três variáveis `Production`  | `CONFIRMADO`                                                              |
+| `SUPABASE_SECRET_KEY` marcada sensível  | `CONFIRMADO`                                                              |
+| Preset Next.js / Node.js 22.x           | `CONFIRMADO`                                                              |
+| Deployment ID                           | `dpl_TPMhRTBXKrsfz4GBraLXV7fg2PuC`                                        |
+| Deployment URL imutável                 | `https://roberto-multimarcas-gvgkm8qvh-guilherme-a-s-projects.vercel.app` |
+| Deployment `READY`                      | `CONFIRMADO`                                                              |
+| Alias estável exato                     | `https://roberto-multimarcas-pdv.vercel.app`                              |
+| Commit implantado                       | `4076d945192132f753965924680916efdd466dcf`                                |
+| Vercel Authentication/bypasses ausentes | `CONFIRMADO`                                                              |
+
+O projeto foi auditado imediatamente antes da configuração. As três variáveis
+foram reconciliadas exclusivamente no target `Production`; seus valores foram
+mantidos em memória e não aparecem nesta evidência. O deployment imutável da
+branch `feature/production-cutover` ficou `READY`, recebeu o alias estável e
+passou a releitura de identidade, fingerprint e proteção. O manifesto registra
+somente ID e URL não sensíveis do deployment.
 
 ## Fase 5 - Verificação, Smoke E Monitoramento
 
