@@ -374,7 +374,7 @@ function runProvisioning({
   commandRunner = vi.fn(),
   evidence = evidenceAt("2026-10-09T12:00:00.000Z"),
   managementClient = createManagementClient(),
-  manifest = manifestFixture,
+  manifest = unpersistedManifest(),
   options = { execute: false },
   recordPhase = createStateRecorder().recordPhase,
   state = null,
@@ -382,7 +382,9 @@ function runProvisioning({
   commandRunner?: ReturnType<typeof vi.fn>;
   evidence?: ReturnType<typeof createProductionBackupEvidence>;
   managementClient?: ReturnType<typeof createManagementClient>;
-  manifest?: typeof manifestFixture | ReturnType<typeof persistedManifest>;
+  manifest?:
+    | ReturnType<typeof unpersistedManifest>
+    | ReturnType<typeof persistedManifest>;
   options?: Record<string, boolean | string>;
   recordPhase?: ReturnType<typeof vi.fn>;
   state?: unknown;
@@ -405,6 +407,23 @@ function runProvisioning({
     state,
     wait: vi.fn(),
   });
+}
+
+function unpersistedManifest() {
+  return {
+    ...structuredClone(manifestFixture),
+    supabase: {
+      ...structuredClone(manifestFixture.supabase),
+      targets: {
+        ...structuredClone(manifestFixture.supabase.targets),
+        production: {
+          ...structuredClone(manifestFixture.supabase.targets.production),
+          hostname: null,
+          projectRef: null,
+        },
+      },
+    },
+  };
 }
 
 function firstExecutionOptions() {

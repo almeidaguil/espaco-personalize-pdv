@@ -8,7 +8,7 @@ import {
   recordProductionCutoverPhase,
 } from "./production-cutover-state.mjs";
 
-const statePath = resolve(".provisioning/production-cutover-state.json");
+const statePath = resolve(".provisioning/production-cutover-state.test.json");
 
 afterEach(async () => {
   await rm(statePath, { force: true });

@@ -28,9 +28,9 @@
       },
       "production": {
         "name": "roberto-multimarcas-pdv",
-        "projectRef": null,
+        "projectRef": "wjuzwjbvctbyfvgmprmd",
         "region": "sa-east-1",
-        "hostname": null
+        "hostname": "wjuzwjbvctbyfvgmprmd.supabase.co"
       }
     }
   },

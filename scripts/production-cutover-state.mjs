@@ -7,6 +7,9 @@ import { z } from "zod";
 const authorizedStatePath = resolve(
   ".provisioning/production-cutover-state.json",
 );
+const authorizedTestStatePath = resolve(
+  ".provisioning/production-cutover-state.test.json",
+);
 const projectRefSchema = z.string().regex(/^[a-z]{20}$/);
 const projectIdSchema = z.string().regex(/^prj_[A-Za-z0-9]+$/);
 const deploymentIdSchema = z.string().regex(/^dpl_[A-Za-z0-9]+$/);
@@ -285,7 +288,9 @@ async function writeStateAtomically(filePath, state) {
 
 function assertAuthorizedStatePath(filePath) {
   const absolutePath = resolve(filePath);
-  if (absolutePath !== authorizedStatePath) {
+  const isAuthorizedTestPath =
+    process.env.VITEST && absolutePath === authorizedTestStatePath;
+  if (absolutePath !== authorizedStatePath && !isAuthorizedTestPath) {
     throw new Error("State must use the authorized cutover state path.");
   }
   return absolutePath;
