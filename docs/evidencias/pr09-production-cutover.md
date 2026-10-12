@@ -83,12 +83,12 @@ confirmar, sem mutações, que o projeto reservado continua vazio.
 | Staging Roberto `ACTIVE_HEALTHY`                | `CONFIRMADO`                                                       |
 | Produção legada `ACTIVE_HEALTHY`                | `CONFIRMADO`                                                       |
 | Produção Roberto ausente                        | `CONFIRMADO`                                                       |
-| Vercel reservado com zero variáveis/deployments | `CONFIRMADO`; proteção incompatível bloqueia o audit               |
+| Vercel reservado com zero variáveis/deployments | `CONFIRMADO`; Authentication desabilitada e audit aprovado         |
 | Projetos Supabase ativos antes da pausa         | `2`                                                                |
 | Inventário: caminho local autorizado            | `.provisioning/production-backup/production-backup.json`           |
 | Inventário: origem exata                        | `ciixpfquwmlsvzleattv` / `espaco-personalize-pdv`                  |
-| Inventário: timestamp/idade                     | `2026-10-10T07:06:51.217Z`; válido no preflight                    |
-| Inventário: SHA-256                             | `134ebfb8061b1cbd615e230c95f74a22f186561bea57f3c4a1f96b29efd13bde` |
+| Inventário: timestamp/idade                     | `2026-10-12T16:24:49.019Z`; válido no preflight                    |
+| Inventário: SHA-256                             | `1e21343c2e7e604a8e7c7eaf2bd897feab69024ea4cc217a7c35ff4960132d18` |
 | Inventário: validação de integridade            | `APROVADO` pelo dry-run Supabase                                   |
 
 O preflight de 2026-10-10 não realizou mutações. O projeto Vercel reservado
@@ -98,6 +98,24 @@ com o login próprio da aplicação e interrompe o corte. A mesma API representa
 a ausência de bypass com o sentinela vazio `{"": null}`; o auditor ganhou uma
 regressão para aceitar somente esse sentinela e continuar rejeitando qualquer
 identificador real de bypass.
+
+Em `2026-10-12 13:24:14 -03:00`, após autorização explícita para o projeto
+`prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` da organização
+`team_jstETBWBHJi0hsir3a3bAkbK`, a Vercel Authentication foi alterada de
+`all_except_custom_domains` para `none`. Os guardrails confirmaram o nome
+`roberto-multimarcas-pdv`, preset Next.js, Node.js 22.x, domínio padrão exato,
+zero variáveis, zero deployments, ausência de bypass e projeto ainda não
+vinculado ao Git. A releitura posterior e
+`npm.cmd run ops:provision-vercel-production -- --phase audit` foram aprovadas.
+
+A primeira renovação do inventário Supabase em `2026-10-12` foi interrompida
+antes da escrita do artefato porque o endpoint oficial de chaves retornou HTTP
+500 em duas requisições independentes. Uma nova tentativa pelo mesmo caminho
+oficial foi concluída às `2026-10-12T16:24:49.019Z`; a evidência íntegra recebeu
+o SHA-256 registrado acima e o dry-run do provisionador foi aprovado. A
+listagem oficial confirmou o legado e o staging Roberto como `ACTIVE_HEALTHY`,
+o staging legado como `INACTIVE`, a produção Roberto ausente e exatamente dois
+projetos ativos. Nenhuma mutação Supabase foi realizada.
 
 ## Fase 2 - Confirmação E Pausa
 
