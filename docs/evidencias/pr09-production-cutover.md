@@ -235,16 +235,31 @@ npm.cmd run ops:verify-production -- --confirm-ref <production-ref>
 npm.cmd run test:e2e:production-smoke
 ```
 
-| Evidência remota                          | Resultado  |
-| ----------------------------------------- | ---------- |
-| Verificação do contrato Supabase          | `PENDENTE` |
-| Verificação do contrato Vercel            | `PENDENTE` |
-| Smoke autenticado somente leitura         | `PENDENTE` |
-| Ausência de request mutável no smoke      | `PENDENTE` |
-| Início da janela de monitoramento         | `PENDENTE` |
-| Verificações a cada cinco minutos         | `PENDENTE` |
-| Fim da janela após 30 minutos sem lacunas | `PENDENTE` |
-| Logs/availability sem erro crítico        | `PENDENTE` |
+| Evidência remota                          | Resultado                          |
+| ----------------------------------------- | ---------------------------------- |
+| Verificação do contrato Supabase          | `APROVADO`                         |
+| Verificação do contrato Vercel            | `APROVADO`                         |
+| Smoke autenticado somente leitura         | `APROVADO`                         |
+| Ausência de request mutável no smoke      | `CONFIRMADO`                       |
+| Início da janela de monitoramento         | `2026-10-12 18:57:50 -03:00`       |
+| Verificações a cada cinco minutos         | `APROVADO`; sem lacunas            |
+| Fim da janela após 30 minutos sem lacunas | `2026-10-12 19:27:59 -03:00`       |
+| Logs/availability sem erro crítico        | `APROVADO`; URLs `200`, zero erros |
+
+O verificador remoto aprovou projeto vinculado, 24 migrations, lint do banco,
+schema, extensões, Auth com a exceção Free registrada, RLS/policies, único
+administrador, inventário de usuários, banco operacional vazio, grants
+financeiros, variáveis Vercel, deployment, alias e ausência de proteção. O
+smoke navegou autenticado por todos os módulos previstos sem emitir request
+mutável e registrou a fase terminal `verified`.
+
+A janela explícita começou no primeiro checkpoint completo, às `18:57:50`, e
+terminou às `19:27:59`. Foram realizadas releituras de disponibilidade,
+identidade e logs a cada cinco minutos. Em todos os checkpoints, as URLs estável
+e imutável responderam `200`, o deployment permaneceu `READY` no mesmo SHA e os
+contadores sanitizados de erro/fatal, status 5xx, eventos
+`sale.create.failed`/`sale.cancel.failed`/`cash.close.failed` e falhas de
+autenticação permaneceram em zero. Conteúdo bruto de logs não foi persistido.
 
 ## Fase 6 - PR09-B E Deployment Final
 
