@@ -281,6 +281,14 @@ configura o Auth. Signup público deve permanecer desabilitado, a senha mínima
 deve ter 14 caracteres, proteção contra senhas vazadas deve estar ativa e a URL
 de site deve ser exatamente `https://roberto-multimarcas-pdv.vercel.app`.
 
+No Supabase Free, se e somente se a tentativa de ativar HaveIBeenPwned retornar
+HTTP 402 indicando indisponibilidade no plano, obtenha autorização explícita e
+retome com `--confirm-auth-exception SUPABASE_FREE_WITHOUT_HIBP`. O fallback
+mantém signup e acesso anônimo desabilitados, e-mail/senha habilitado, senha
+mínima 14 e URLs exatas; registra `unavailable-free-plan` no estado retomável.
+Qualquer outro erro continua bloqueando a execução. Nunca omita a confirmação
+nem trate a exceção como sucesso silencioso.
+
 Nunca execute `supabase db reset`, SQL manual, restore ou delete em projeto
 remoto. Em falha de migration, preserve o projeto parcial e o estado retomável.
 

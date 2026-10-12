@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
 import { createProductionEnvironmentFingerprint } from "./production-environment-fingerprint.mjs";
+import { loadProductionCutoverState } from "./production-cutover-state.mjs";
 import {
   loadRemoteEnvironmentManifest,
   resolveRemoteTarget,
@@ -27,6 +28,7 @@ const expectedVariables = new Map([
 
 export async function verifyRemoteProduction({
   anonymousClient,
+  authPolicy = /** @type {any} */ (undefined),
   authenticatedClient,
   commandRunner,
   deploymentTarget = /** @type {any} */ (null),
@@ -40,6 +42,7 @@ export async function verifyRemoteProduction({
   vercelClient,
 }) {
   const databaseReport = await verifyRemoteEnvironment({
+    authPolicy,
     environment: "production",
     manifest,
     runCommand: commandRunner,
@@ -301,6 +304,12 @@ export async function runVerifyRemoteProductionCli(
       auth: { autoRefreshToken: false, persistSession: false },
     },
   );
+  const cutoverState = await loadProductionCutoverState({
+    filePath: resolve(".provisioning/production-cutover-state.json"),
+  });
+  const databaseReady = cutoverState?.history?.find(
+    (entry) => entry.phase === "database-ready",
+  );
   const result = await verifyRemoteProduction({
     anonymousClient: {
       async authenticate() {
@@ -330,6 +339,12 @@ export async function runVerifyRemoteProductionCli(
         return data;
       },
     },
+    authPolicy: databaseReady
+      ? {
+          leakedPasswordProtection:
+            databaseReady.facts.leakedPasswordProtection,
+        }
+      : undefined,
     commandRunner: (command, args, options = {}) =>
       runCliCommand(command, args, { environment, ...options }),
     linkedProjectRef: await readLocalLinkedProjectRef(),

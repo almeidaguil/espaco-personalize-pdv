@@ -182,6 +182,7 @@
 - [ ] Implement the pause/poll/create/identity flow, recording each completed phase only after provider revalidation.
 - [ ] Run `supabase link --project-ref <ref>` and `supabase db push --linked --dry-run` through injectable process execution; pass passwords only via environment. Execute real `db push` only after successful dry-run.
 - [ ] Configure Auth and verify the configuration by reading it back. Treat unsupported paid leaked-password protection as a visible blocked state, not silent success.
+- Ruling operacional de 2026-10-12: após o bloqueio visível HTTP 402 e autorização literal do proprietário para manter custo zero, permitir somente o fallback confirmado por `SUPABASE_FREE_WITHOUT_HIBP`; registrar `unavailable-free-plan` no estado e continuar exigindo todos os demais controles. Custo se incorreto: senhas vazadas não serão bloqueadas pelo provedor enquanto o projeto permanecer no Free.
 - [ ] Add `ops:provision-production` and document its dry-run help text inside the CLI.
 - [ ] Run the directed tests and confirm GREEN.
 - [ ] Commit signed: `feat(ops): provision production Supabase safely`

@@ -25,6 +25,7 @@ const requiredRpcs = [
 ];
 
 export async function verifyRemoteEnvironment({
+  authPolicy = /** @type {any} */ (undefined),
   environment,
   logger = () => {},
   manifest,
@@ -181,13 +182,19 @@ export async function verifyRemoteEnvironment({
   if (
     environment === "production" &&
     (authConfig.external_email_enabled !== true ||
-      authConfig.password_hibp_enabled !== true ||
+      !matchesLeakedPasswordProtection(authConfig, authPolicy) ||
       authConfig.password_min_length !== 14)
   ) {
     throw new Error("Production Auth password policy is divergent.");
   }
 
   const checks = ["linked-project", "migrations", "database-lint", "schema"];
+  if (
+    environment === "production" &&
+    authPolicy?.leakedPasswordProtection === "unavailable-free-plan"
+  ) {
+    checks.push("auth-hibp-unavailable-free-plan");
+  }
   if (environment === "production") {
     const extensions = firstQueryRow(
       await supabase.managementClient.runReadOnlyQuery(target.projectRef, {
@@ -322,6 +329,12 @@ export async function verifyRemoteEnvironment({
   };
   logger(report);
   return report;
+}
+
+function matchesLeakedPasswordProtection(authConfig, authPolicy) {
+  const expected = authPolicy?.leakedPasswordProtection ?? "enabled";
+  if (!["enabled", "unavailable-free-plan"].includes(expected)) return false;
+  return authConfig.password_hibp_enabled === (expected === "enabled");
 }
 
 function firstQueryRow(response) {

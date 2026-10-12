@@ -204,6 +204,10 @@ O provisionador de produção deverá:
 - nunca executar `db reset` remotamente;
 - configurar Auth com signup público bloqueado, senha mínima de 14 caracteres,
   proteção contra senhas vazadas e URL de produção exata;
+- quando o plano Free responder HTTP 402 exclusivamente para HaveIBeenPwned,
+  aceitar a ausência dessa proteção somente após confirmação literal, mantendo
+  os demais controles e registrando `unavailable-free-plan` no estado e nas
+  evidências;
 - preservar o projeto parcial em caso de falha;
 - nunca excluir ou restaurar projetos automaticamente.
 

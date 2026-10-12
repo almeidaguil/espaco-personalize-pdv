@@ -246,6 +246,7 @@ function legalTransitions() {
     {
       facts: {
         authVerified: true,
+        leakedPasswordProtection: "unavailable-free-plan",
         migrationHead: "20261008000000",
         projectRef: "abcdefghijklmnopqrst",
       },

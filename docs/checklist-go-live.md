@@ -111,7 +111,9 @@ No corte técnico, conferir:
 - exatamente um admin oficial e nenhum outro usuário;
 - banco operacional vazio, sem produtos, estoque, caixas ou vendas;
 - signup público desabilitado conforme a política do projeto;
-- `leaked password protection` habilitada no Supabase Auth;
+- `leaked password protection` habilitada no Supabase Auth ou, no plano Free,
+  exceção explícita registrada como `unavailable-free-plan`, sem reduzir os
+  demais controles;
 - senha administrativa operacional conhecida somente pelos autorizadores;
 - usuários temporários desativados quando não fizerem parte da operação;
 - segredos e senhas expostos durante homologação rotacionados;

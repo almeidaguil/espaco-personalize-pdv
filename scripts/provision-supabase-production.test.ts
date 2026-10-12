@@ -285,6 +285,89 @@ describe("runSupabaseProductionProvisioning", () => {
     expect(managementClient.createProject).not.toHaveBeenCalled();
   });
 
+  test("uses the authorized Free-plan Auth exception only for the HIBP 402", async () => {
+    const managementClient = createManagementClient({ targetExists: true });
+    const freePlanAuthConfiguration = {
+      disable_signup: true,
+      external_anonymous_users_enabled: false,
+      external_email_enabled: true,
+      password_hibp_enabled: false,
+      password_min_length: 14,
+      site_url: "https://roberto-multimarcas-pdv.vercel.app",
+      uri_allow_list: "https://roberto-multimarcas-pdv.vercel.app/**",
+    };
+    managementClient.updateAuthConfig
+      .mockRejectedValueOnce(
+        new Error(
+          "Supabase API returned 402: HaveIBeenPwned.org is available on Pro Plans and up.",
+        ),
+      )
+      .mockResolvedValueOnce(freePlanAuthConfiguration);
+    managementClient.getAuthConfig.mockResolvedValue(freePlanAuthConfiguration);
+    const recorder = createStateRecorder(productionCreatedState());
+
+    const result = await runProvisioning({
+      commandRunner: vi.fn().mockReturnValue({
+        status: 0,
+        stderr: "",
+        stdout: "ok",
+      }),
+      managementClient,
+      manifest: persistedManifest(),
+      options: {
+        confirmAuthException: "SUPABASE_FREE_WITHOUT_HIBP",
+        confirmTargetRef: newProductionRef,
+        execute: true,
+      },
+      recordPhase: recorder.recordPhase,
+      state: productionCreatedState(),
+    });
+
+    expect(managementClient.updateAuthConfig).toHaveBeenCalledTimes(2);
+    expect(managementClient.updateAuthConfig.mock.calls[1][1]).toEqual(
+      freePlanAuthConfiguration,
+    );
+    expect(recorder.recordPhase).toHaveBeenCalledWith(
+      expect.objectContaining({
+        facts: {
+          authVerified: true,
+          leakedPasswordProtection: "unavailable-free-plan",
+          migrationHead: "20261008000000",
+          projectRef: newProductionRef,
+        },
+        phase: "database-ready",
+      }),
+    );
+    expect(result).toMatchObject({
+      leakedPasswordProtection: "unavailable-free-plan",
+      phase: "database-ready",
+    });
+  });
+
+  test("keeps the HIBP 402 blocked without the literal Auth exception", async () => {
+    const managementClient = createManagementClient({ targetExists: true });
+    managementClient.updateAuthConfig.mockRejectedValueOnce(
+      new Error(
+        "Supabase API returned 402: HaveIBeenPwned.org is available on Pro Plans and up.",
+      ),
+    );
+
+    await expect(
+      runProvisioning({
+        commandRunner: vi.fn().mockReturnValue({
+          status: 0,
+          stderr: "",
+          stdout: "ok",
+        }),
+        managementClient,
+        manifest: persistedManifest(),
+        options: { confirmTargetRef: newProductionRef, execute: true },
+        state: productionCreatedState(),
+      }),
+    ).rejects.toThrow(/402|HaveIBeenPwned/i);
+    expect(managementClient.updateAuthConfig).toHaveBeenCalledTimes(1);
+  });
+
   test("stops after migration dry-run failure without push, Auth or destructive operations", async () => {
     const managementClient = createManagementClient({ targetExists: true });
     const commandRunner = vi

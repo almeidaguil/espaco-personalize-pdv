@@ -53,6 +53,29 @@ test("verifies production database, deployment, variables and protection read-on
   expect(vercelClient.createAutomationBypass).not.toHaveBeenCalled();
 });
 
+test("accepts disabled HIBP only with the recorded Free-plan exception", async () => {
+  const { input } = fixture({
+    authConfig: { password_hibp_enabled: false },
+  });
+
+  await expect(
+    verifyRemoteProduction({
+      ...input,
+      authPolicy: { leakedPasswordProtection: "unavailable-free-plan" },
+    }),
+  ).resolves.toMatchObject({ status: "passed" });
+});
+
+test("rejects disabled HIBP without the recorded Free-plan exception", async () => {
+  const { input } = fixture({
+    authConfig: { password_hibp_enabled: false },
+  });
+
+  await expect(verifyRemoteProduction(input)).rejects.toThrow(
+    /password policy/i,
+  );
+});
+
 test("accepts Vercel's explicit none deployment protection", async () => {
   const { input } = fixture({
     project: { ssoProtection: { deploymentType: "none" } },
@@ -266,6 +289,7 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
       password_min_length: 14,
       site_url: manifest.vercel.targets.production.siteUrl,
       uri_allow_list: `${manifest.vercel.targets.production.siteUrl}/**`,
+      ...(vercelOverride.authConfig as Record<string, unknown>),
     }),
     getDatabaseOpenApi: vi.fn().mockResolvedValue({
       paths: Object.fromEntries([

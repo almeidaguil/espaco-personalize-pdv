@@ -54,6 +54,7 @@ const phaseSchemas = {
   "database-ready": z
     .object({
       authVerified: z.literal(true),
+      leakedPasswordProtection: z.enum(["enabled", "unavailable-free-plan"]),
       migrationHead: z.string().regex(/^\d{14}$/),
       projectRef: projectRefSchema,
     })

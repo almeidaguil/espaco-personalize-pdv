@@ -24,6 +24,7 @@ const evidenceMaximumAgeMs = 60 * 60 * 1_000;
 const pollingAttempts = 20;
 const pollingIntervalMs = 15_000;
 const stateFilePath = ".provisioning/production-cutover-state.json";
+const freePlanAuthException = "SUPABASE_FREE_WITHOUT_HIBP";
 
 const phaseOrder = [
   "preflight",
@@ -241,6 +242,12 @@ export async function runSupabaseProductionProvisioning({
     options.confirmTargetRef,
     topology.production,
   );
+  if (
+    options.confirmAuthException !== undefined &&
+    options.confirmAuthException !== freePlanAuthException
+  ) {
+    throw new Error("The production Auth exception confirmation is divergent.");
+  }
   if (topology.legacyProduction.status !== "INACTIVE") {
     throw new Error("Legacy production must remain INACTIVE during resume.");
   }
@@ -292,7 +299,7 @@ export async function runSupabaseProductionProvisioning({
     throw new Error("Production Vercel site URL is missing.");
   }
   const siteUrl = vercelTarget.siteUrl.replace(/\/$/, "");
-  const authConfiguration = {
+  const requestedAuthConfiguration = {
     disable_signup: true,
     external_anonymous_users_enabled: false,
     external_email_enabled: true,
@@ -301,13 +308,39 @@ export async function runSupabaseProductionProvisioning({
     site_url: siteUrl,
     uri_allow_list: `${siteUrl}/**`,
   };
-  await managementClient.updateAuthConfig(productionRef, authConfiguration);
+  let effectiveAuthConfiguration = requestedAuthConfiguration;
+  try {
+    await managementClient.updateAuthConfig(
+      productionRef,
+      requestedAuthConfiguration,
+    );
+  } catch (error) {
+    if (
+      options.confirmAuthException !== freePlanAuthException ||
+      !isUnsupportedLeakedPasswordProtection(error)
+    ) {
+      throw error;
+    }
+    effectiveAuthConfiguration = {
+      ...requestedAuthConfiguration,
+      password_hibp_enabled: false,
+    };
+    await managementClient.updateAuthConfig(
+      productionRef,
+      effectiveAuthConfiguration,
+    );
+  }
   const persistedAuth = await managementClient.getAuthConfig(productionRef);
-  assertExactAuthConfiguration(persistedAuth, authConfiguration);
+  assertExactAuthConfiguration(persistedAuth, effectiveAuthConfiguration);
+  const leakedPasswordProtection =
+    effectiveAuthConfiguration.password_hibp_enabled
+      ? "enabled"
+      : "unavailable-free-plan";
 
   assertMigrationHead(migrationHead);
   await advance("database-ready", {
     authVerified: true,
+    leakedPasswordProtection,
     migrationHead,
     projectRef: productionRef,
   });
@@ -315,6 +348,7 @@ export async function runSupabaseProductionProvisioning({
     mode: "executed",
     nextAction: "bootstrap-production-admin",
     phase: "database-ready",
+    leakedPasswordProtection,
     targetRef: productionRef,
   };
   log(result);
@@ -329,7 +363,7 @@ export async function runProvisionSupabaseProductionCli(
   const log = dependencies.log ?? console.log;
   if (options.help) {
     log(
-      "Uso: npm run ops:provision-production -- --inventory <evidencia-json> [--execute --confirm-legacy-ref <ref> --confirm-target-name <nome> | --execute --confirm-target-ref <ref>]\nO comando executa dry-run por padrao; mutacoes exigem --execute e confirmacao literal.",
+      "Uso: npm run ops:provision-production -- --inventory <evidencia-json> [--execute --confirm-legacy-ref <ref> --confirm-target-name <nome> | --execute --confirm-target-ref <ref> [--confirm-auth-exception SUPABASE_FREE_WITHOUT_HIBP]]\nO comando executa dry-run por padrao; mutacoes exigem --execute e confirmacao literal.",
     );
     return;
   }
@@ -412,6 +446,7 @@ function parseArguments(argv) {
     ["--confirm-legacy-ref", "confirmLegacyRef"],
     ["--confirm-target-name", "confirmTargetName"],
     ["--confirm-target-ref", "confirmTargetRef"],
+    ["--confirm-auth-exception", "confirmAuthException"],
   ]);
   for (let index = 0; index < argv.length; index += 1) {
     const argument = argv[index];
@@ -724,6 +759,14 @@ function assertExactAuthConfiguration(actual, expected) {
       `Production Auth configuration is divergent at ${divergent[0]}.`,
     );
   }
+}
+
+function isUnsupportedLeakedPasswordProtection(error) {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    /\b402\b/.test(message) &&
+    /HaveIBeenPwned|leaked password protection/i.test(message)
+  );
 }
 
 function assertGitIdentity(identity) {

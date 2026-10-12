@@ -17,27 +17,27 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 | Staging legado             | `espaco-personalize-pdv-staging` / `gpywbeoqcovjrfnmbdqx` / `us-west-2`  | `CONFIRMADO`        |
 | Staging Roberto            | `roberto-multimarcas-pdv-staging` / `otsxpchqtfypxgzjzrxs` / `sa-east-1` | `CONFIRMADO`        |
 | Produção legada            | `espaco-personalize-pdv` / `ciixpfquwmlsvzleattv` / `us-west-2`          | `CONFIRMADO`        |
-| Produção Roberto           | `roberto-multimarcas-pdv` / ref `PENDENTE` / `sa-east-1`                 | `PENDENTE`          |
+| Produção Roberto           | `roberto-multimarcas-pdv` / `wjuzwjbvctbyfvgmprmd` / `sa-east-1`         | `CONFIRMADO`        |
 | Organização Vercel         | `team_jstETBWBHJi0hsir3a3bAkbK`                                          | `CONFIRMADO`        |
 | Projeto Vercel de produção | `roberto-multimarcas-pdv` / `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`           | `CONFIRMADO`        |
 | URL estável                | `https://roberto-multimarcas-pdv.vercel.app`                             | `CONFIRMADO`        |
 
 ## Git E Pull Requests
 
-| Evidência                                             | Valor      |
-| ----------------------------------------------------- | ---------- |
-| PR09-A URL (`feature/production-cutover` → `develop`) | `PENDENTE` |
-| PR09-A commit SHA assinado                            | `PENDENTE` |
-| PR09-A Quality URL/resultado                          | `PENDENTE` |
-| PR09-A Database contract URL/resultado                | `PENDENTE` |
-| PR09-A E2E Release Gate URL/resultado                 | `PENDENTE` |
-| PR09-A revisão independente                           | `PENDENTE` |
-| PR09-A merge SHA assinado em `develop`                | `PENDENTE` |
-| PR09-B URL (`develop` → `main`)                       | `PENDENTE` |
-| PR09-B Quality URL/resultado                          | `PENDENTE` |
-| PR09-B Database contract URL/resultado                | `PENDENTE` |
-| PR09-B E2E Release Gate URL/resultado                 | `PENDENTE` |
-| PR09-B merge SHA assinado em `main`                   | `PENDENTE` |
+| Evidência                                             | Valor                                                            |
+| ----------------------------------------------------- | ---------------------------------------------------------------- |
+| PR09-A URL (`feature/production-cutover` → `develop`) | `https://github.com/almeidaguil/espaco-personalize-pdv/pull/169` |
+| PR09-A commit SHA assinado                            | `dfa911c602f6abb3c1067d5fc27d1db837ebe8cd`                       |
+| PR09-A Quality URL/resultado                          | `APROVADO` (2m24s)                                               |
+| PR09-A Database contract URL/resultado                | `APROVADO` (3m47s)                                               |
+| PR09-A E2E Release Gate URL/resultado                 | `APROVADO` (48/48; 5m26s)                                        |
+| PR09-A revisão independente                           | `PENDENTE`                                                       |
+| PR09-A merge SHA assinado em `develop`                | `PENDENTE`                                                       |
+| PR09-B URL (`develop` → `main`)                       | `PENDENTE`                                                       |
+| PR09-B Quality URL/resultado                          | `PENDENTE`                                                       |
+| PR09-B Database contract URL/resultado                | `PENDENTE`                                                       |
+| PR09-B E2E Release Gate URL/resultado                 | `PENDENTE`                                                       |
+| PR09-B merge SHA assinado em `main`                   | `PENDENTE`                                                       |
 
 ## Gates Locais Do PR09-A
 
@@ -168,6 +168,14 @@ no estado retomável.
 | Exatamente um admin                               | `PENDENTE` |
 | Zero operadores/outros usuários                   | `PENDENTE` |
 | Zero dados operacionais                           | `PENDENTE` |
+
+O push remoto alinhou as 24 migrations locais e remotas. A primeira tentativa
+de Auth parou visivelmente em HTTP 402 porque HaveIBeenPwned exige Supabase Pro;
+o PATCH foi atômico e os defaults permaneceram inalterados. Em seguida, o
+proprietário autorizou literalmente a continuidade sem custo. A retomada exige
+`--confirm-auth-exception SUPABASE_FREE_WITHOUT_HIBP`, mantém signup e acesso
+anônimo desabilitados, senha mínima 14 e URLs exatas, e registra a exceção
+`unavailable-free-plan`. Nenhum outro erro de Auth pode usar esse fallback.
 
 ## Fase 4 - Vercel E Deployment Provisório
 
