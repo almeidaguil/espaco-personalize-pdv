@@ -27,10 +27,10 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 | Evidência                                             | Valor                                                            |
 | ----------------------------------------------------- | ---------------------------------------------------------------- |
 | PR09-A URL (`feature/production-cutover` → `develop`) | `https://github.com/almeidaguil/espaco-personalize-pdv/pull/169` |
-| PR09-A commit SHA assinado                            | `dfa911c602f6abb3c1067d5fc27d1db837ebe8cd`                       |
-| PR09-A Quality URL/resultado                          | `APROVADO` (2m24s)                                               |
-| PR09-A Database contract URL/resultado                | `APROVADO` (3m47s)                                               |
-| PR09-A E2E Release Gate URL/resultado                 | `APROVADO` (48/48; 5m26s)                                        |
+| PR09-A commit SHA assinado                            | `e2473eb05cb659b5a55d1e8da9084ff6aace3a14`                       |
+| PR09-A Quality URL/resultado                          | `APROVADO` (2m27s)                                               |
+| PR09-A Database contract URL/resultado                | `APROVADO` (3m49s)                                               |
+| PR09-A E2E Release Gate URL/resultado                 | `APROVADO` (5m41s)                                               |
 | PR09-A revisão independente                           | `PENDENTE`                                                       |
 | PR09-A merge SHA assinado em `develop`                | `PENDENTE`                                                       |
 | PR09-B URL (`develop` → `main`)                       | `PENDENTE`                                                       |
@@ -131,12 +131,12 @@ Comando previsto após a confirmação nova:
 npm.cmd run ops:provision-production -- --inventory .provisioning/production-backup/production-backup.json --execute --confirm-legacy-ref ciixpfquwmlsvzleattv --confirm-target-name roberto-multimarcas-pdv
 ```
 
-| Evidência remota                           | Resultado  |
-| ------------------------------------------ | ---------- |
-| Confirmação literal recebida no checkpoint | `PENDENTE` |
-| Produção legada pausada e `INACTIVE`       | `PENDENTE` |
-| Staging Roberto permaneceu saudável        | `PENDENTE` |
-| Vaga na cota Free confirmada após a pausa  | `PENDENTE` |
+| Evidência remota                           | Resultado    |
+| ------------------------------------------ | ------------ |
+| Confirmação literal recebida no checkpoint | `CONFIRMADO` |
+| Produção legada pausada e `INACTIVE`       | `CONFIRMADO` |
+| Staging Roberto permaneceu saudável        | `CONFIRMADO` |
+| Vaga na cota Free confirmada após a pausa  | `CONFIRMADO` |
 
 ## Fase 3 - Produção Supabase
 
@@ -154,20 +154,21 @@ de uma hora vale imediatamente antes da pausa; depois de `legacy-paused`, o
 artefato precisa corresponder exatamente ao hash, origem e timestamp gravados
 no estado retomável.
 
-| Evidência remota                                  | Resultado  |
-| ------------------------------------------------- | ---------- |
-| Novo project ref                                  | `PENDENTE` |
-| Novo hostname                                     | `PENDENTE` |
-| Nome/organização/região exatos                    | `PENDENTE` |
-| Commit assinado que persiste ref/hostname         | `PENDENTE` |
-| Migration dry-run                                 | `PENDENTE` |
-| Migration push real                               | `PENDENTE` |
-| Auth: signup público desabilitado                 | `PENDENTE` |
-| Auth: senha mínima 14 e proteção contra vazamento | `PENDENTE` |
-| Auth: site URL e allowlist exatas                 | `PENDENTE` |
-| Exatamente um admin                               | `PENDENTE` |
-| Zero operadores/outros usuários                   | `PENDENTE` |
-| Zero dados operacionais                           | `PENDENTE` |
+| Evidência remota                                    | Resultado                                     |
+| --------------------------------------------------- | --------------------------------------------- |
+| Novo project ref                                    | `wjuzwjbvctbyfvgmprmd`                        |
+| Novo hostname                                       | `wjuzwjbvctbyfvgmprmd.supabase.co`            |
+| Nome/organização/região exatos                      | `CONFIRMADO`                                  |
+| Commit assinado que persiste ref/hostname           | `dfa911c602f6abb3c1067d5fc27d1db837ebe8cd`    |
+| Migration dry-run                                   | `APROVADO`                                    |
+| Migration push real                                 | `APROVADO` (24 migrations em paridade)        |
+| Auth: signup público e acesso anônimo desabilitados | `CONFIRMADO`                                  |
+| Auth: senha mínima 14                               | `CONFIRMADO`                                  |
+| Auth: HIBP indisponível no Free                     | `EXCEÇÃO AUTORIZADA`; `unavailable-free-plan` |
+| Auth: site URL e allowlist exatas                   | `CONFIRMADO`                                  |
+| Exatamente um admin                                 | `CONFIRMADO`                                  |
+| Zero operadores/outros usuários                     | `CONFIRMADO`                                  |
+| Zero dados operacionais                             | `CONFIRMADO`                                  |
 
 O push remoto alinhou as 24 migrations locais e remotas. A primeira tentativa
 de Auth parou visivelmente em HTTP 402 porque HaveIBeenPwned exige Supabase Pro;
@@ -176,6 +177,24 @@ proprietário autorizou literalmente a continuidade sem custo. A retomada exige
 `--confirm-auth-exception SUPABASE_FREE_WITHOUT_HIBP`, mantém signup e acesso
 anônimo desabilitados, senha mínima 14 e URLs exatas, e registra a exceção
 `unavailable-free-plan`. Nenhum outro erro de Auth pode usar esse fallback.
+
+Em `2026-10-12 18:32:58 -03:00`, após o commit assinado
+`e2473eb05cb659b5a55d1e8da9084ff6aace3a14` passar Quality, contrato do banco,
+E2E e Vercel, a retomada idempotente concluiu `database-ready`. A releitura da
+Management API confirmou signup desabilitado, acesso anônimo desabilitado,
+login por e-mail habilitado, senha mínima de 14 caracteres, HIBP desabilitado e
+URL/allowlist restritas a `https://roberto-multimarcas-pdv.vercel.app`. O estado
+operacional registra explicitamente `unavailable-free-plan`; nenhum segredo ou
+identificador do administrador foi gravado nesta evidência.
+
+O primeiro gerador local de senha encontrou uma API criptográfica incompatível
+com a versão do PowerShell. O aviso foi detectado antes de qualquer criação
+remota; o dry-run confirmou zero usuários e a credencial local provisória foi
+substituída imediatamente. A credencial definitiva usa 32 bytes de entropia do
+gerador criptográfico do sistema, produz senha de 47 caracteres e fica somente
+no Windows Credential Manager. O bootstrap posterior criou exatamente um
+perfil `admin`, confirmou zero operadores e zero linhas nas tabelas
+operacionais, e registrou a fase `admin-ready`.
 
 ## Fase 4 - Vercel E Deployment Provisório
 
