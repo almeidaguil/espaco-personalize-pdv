@@ -4,90 +4,65 @@ import {
   SupabaseCurrentUserProfileRepository,
   type SupabaseCurrentUserProfileClient,
 } from "@/modules/auth/infra/supabase-current-user-profile-repository";
-import { listOpenCashSessionsUseCase } from "@/modules/cash/application/list-open-cash-sessions-use-case";
-import type { CashSession } from "@/modules/cash/domain/cash-session";
+import { listOpenCashSessionOverviewsUseCase } from "@/modules/cash/application/list-open-cash-session-overviews-use-case";
 import {
-  SupabaseCashSessionRepository,
-  type SupabaseCashSessionClient,
-} from "@/modules/cash/infra/supabase-cash-session-repository";
-import { listActiveEventsUseCase } from "@/modules/events/application/list-active-events-use-case";
-import type { Event } from "@/modules/events/domain/event";
-import {
-  SupabaseEventRepository,
-  type SupabaseEventClient,
-} from "@/modules/events/infra/supabase-event-repository";
-import { listSalesUseCase } from "@/modules/sales/application/list-sales-use-case";
-import {
-  SupabaseSaleSummaryRepository,
-  type SupabaseSaleSummaryClient,
-} from "@/modules/sales/infra/supabase-sale-summary-repository";
+  SupabaseOpenCashSessionOverviewRepository,
+  type SupabaseOpenCashSessionOverviewClient,
+} from "@/modules/cash/infra/supabase-open-cash-session-overview-repository";
+import { OpenCashSessionsPanel } from "@/modules/cash/presentation/open-cash-sessions-panel";
 import { AppHeader } from "@/shared/components/app-header";
+import { PageShell } from "@/shared/components/page-shell";
 import { Panel } from "@/shared/components/panel";
+import { StatusBadge } from "@/shared/components/status-badge";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const dynamic = "force-dynamic";
 
-const moneyFormatter = new Intl.NumberFormat("pt-BR", {
-  currency: "BRL",
-  style: "currency",
-});
-
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
-
 const modules = [
   {
-    description: "Cadastro, consulta e preparacao para venda.",
+    description: "Cadastro, consulta e preparação para venda.",
     href: "/products",
-    status: "Disponivel",
+    status: "Disponível",
     title: "Produtos",
   },
   {
-    description: "Ajustes iniciais e manuais por movimentacao.",
+    description: "Ajustes iniciais e manuais por movimentação.",
     href: "/stock",
-    status: "Disponivel",
+    status: "Disponível",
     title: "Estoque",
-  },
-  {
-    description: "Preparacao das vendas presenciais.",
-    href: "/events",
-    status: "Disponivel",
-    title: "Eventos",
   },
   {
     description: "Venda com carrinho, pagamento em dinheiro e troco.",
     href: "/pdv",
-    status: "Disponivel",
+    status: "Disponível",
     title: "PDV",
   },
   {
-    description: "Abertura, fechamento e turnos de evento.",
+    description: "Abertura, fechamento e turnos de operação.",
     href: "/cash/open",
-    status: "Disponivel",
+    status: "Disponível",
     title: "Caixa",
   },
   {
     description: "Vendas registradas, detalhes e cancelamentos.",
     href: "/sales",
-    status: "Disponivel",
+    status: "Disponível",
     title: "Vendas",
   },
   {
-    description: "Vendas por evento, rankings e exportacao CSV.",
+    description: "Vendas por período, operador e caixa.",
     href: "/reports",
-    status: "Disponivel",
-    title: "Relatorios",
+    status: "Disponível",
+    title: "Relatórios",
   },
 ] as const;
 
 const adminModules = [
   {
-    description: "Usuarios, perfis de acesso e senhas temporarias.",
+    description: "Usuários, perfis de acesso e senhas temporárias.",
     href: "/settings",
     status: "Admin",
-    title: "Configuracoes",
+    title: "Configurações",
   },
 ] as const;
 
@@ -96,270 +71,127 @@ export default async function Home() {
   const currentUserProfileRepository = new SupabaseCurrentUserProfileRepository(
     supabaseClient as unknown as SupabaseCurrentUserProfileClient,
   );
-  const [currentUserResult, eventsResult, cashSessionsResult, salesResult] =
-    await Promise.all([
-      currentUserProfileRepository.getCurrent(),
-      listActiveEventsUseCase({
-        eventRepository: new SupabaseEventRepository(
-          supabaseClient as unknown as SupabaseEventClient,
+
+  const [currentUserResult, openCashSessionsResult] = await Promise.all([
+    currentUserProfileRepository.getCurrent(),
+    listOpenCashSessionOverviewsUseCase({
+      currentUserProfileRepository,
+      openCashSessionOverviewRepository:
+        new SupabaseOpenCashSessionOverviewRepository(
+          supabaseClient as unknown as SupabaseOpenCashSessionOverviewClient,
         ),
-      }),
-      listOpenCashSessionsUseCase({
-        cashSessionRepository: new SupabaseCashSessionRepository(
-          supabaseClient as unknown as SupabaseCashSessionClient,
-        ),
-        currentUserProfileRepository,
-      }),
-      listSalesUseCase({
-        saleSummaryRepository: new SupabaseSaleSummaryRepository(
-          supabaseClient as unknown as SupabaseSaleSummaryClient,
-        ),
-      }),
-    ]);
+    }),
+  ]);
+
   const isAdmin =
     currentUserResult.success && currentUserResult.profile.role === "admin";
-  const activeEvents = eventsResult.success ? eventsResult.events : [];
-  const openCashSessions = cashSessionsResult.success
-    ? cashSessionsResult.sessions
+  const openCashSessions = openCashSessionsResult.success
+    ? openCashSessionsResult.overviews
     : [];
-  const sales = salesResult.success ? salesResult.sales : [];
-  const eventNamesById = new Map(
-    activeEvents.map((event) => [event.id, event.name]),
-  );
-  const currentCashSession = openCashSessions[0];
-  const currentEvent =
-    (currentCashSession
-      ? activeEvents.find((event) => event.id === currentCashSession.eventId)
-      : activeEvents[0]) ?? null;
-  const currentCashSales = currentCashSession
-    ? sales.filter((sale) => sale.cashSessionId === currentCashSession.id)
-    : [];
-  const completedCashSales = currentCashSales.filter(
-    (sale) => sale.status === "completed",
-  );
-  const canceledCashSales = currentCashSales.filter(
-    (sale) => sale.status === "canceled",
-  );
-  const cashTotalInReais = completedCashSales.reduce(
-    (total, sale) => total + sale.totalInReais,
-    0,
-  );
+  const currentCashSession = currentUserResult.success
+    ? openCashSessions.find(
+        (session) => session.operatorId === currentUserResult.profile.id,
+      )
+    : undefined;
 
   return (
-    <main className="min-h-screen bg-[#f6f7fb] text-slate-950">
-      <section className="mx-auto flex min-h-screen w-full max-w-5xl flex-col gap-6 px-5 py-6 sm:px-8 lg:px-10">
-        <AppHeader showAdminNavigation={isAdmin} title="PDV" />
+    <PageShell maxWidth="xl">
+      <AppHeader showAdminNavigation={isAdmin} title="Painel" />
 
-        <Panel className="grid gap-4">
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-[#1e3275]">
-                Operacao do dia
-              </p>
-              <h2 className="mt-1 text-xl font-semibold text-slate-950">
-                {getOperationalTitle({
-                  currentCashSession,
-                  currentEvent,
-                  hasActiveEvents: activeEvents.length > 0,
-                })}
-              </h2>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {getOperationalDescription({
-                  currentCashSession,
-                  currentEvent,
-                  hasActiveEvents: activeEvents.length > 0,
-                })}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {getOperationalActions({
-                currentCashSession,
-                currentEvent,
-                hasActiveEvents: activeEvents.length > 0,
-              }).map((action) => (
-                <Link
-                  className={
-                    action.variant === "primary"
-                      ? "rounded-md bg-[#1e3275] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#17275c]"
-                      : "rounded-md border border-slate-200 px-3 py-2 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275]"
-                  }
-                  href={action.href}
-                  key={action.href}
-                >
-                  {action.label}
-                </Link>
-              ))}
-            </div>
+      <Panel className="grid gap-5">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
+              Meu caixa
+            </p>
+            <h1 className="mt-1.5 text-2xl font-bold tracking-tight text-[var(--brand-foreground)]">
+              {currentCashSession ? "Caixa aberto" : "Caixa fechado"}
+            </h1>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--brand-muted)]">
+              {currentCashSession
+                ? "Use o PDV para vender ou feche o caixa ao encerrar o turno."
+                : "Abra o caixa antes de registrar vendas."}
+            </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-4">
-            <SummaryCard
-              label="Evento ativo"
-              value={currentEvent?.name ?? "Nao definido"}
-            />
-            <SummaryCard
-              label="Caixa"
-              value={
-                currentCashSession
-                  ? `Aberto desde ${dateFormatter.format(currentCashSession.openedAt)}`
-                  : "Fechado"
-              }
-            />
-            <SummaryCard
-              label="Vendas do caixa"
-              value={moneyFormatter.format(cashTotalInReais)}
-            />
-            <SummaryCard
-              label="Movimentos"
-              value={`${completedCashSales.length} concluidas / ${canceledCashSales.length} canceladas`}
-            />
+          <div className="flex shrink-0 flex-wrap gap-2">
+            {currentCashSession ? (
+              <>
+                <OperationalLink href="/pdv" label="Ir ao PDV" primary />
+                <OperationalLink href="/cash/close" label="Fechar caixa" />
+              </>
+            ) : (
+              <OperationalLink href="/cash/open" label="Abrir caixa" primary />
+            )}
           </div>
+        </div>
 
-          {!eventsResult.success ||
-          !cashSessionsResult.success ||
-          !salesResult.success ? (
-            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
-              Alguns dados operacionais nao puderam ser carregados agora.
-            </p>
-          ) : null}
+        {!openCashSessionsResult.success ? (
+          <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+            Alguns dados operacionais não puderam ser carregados agora.
+          </p>
+        ) : null}
+      </Panel>
 
-          {currentCashSession ? (
-            <p className="text-sm text-slate-600">
-              Caixa vinculado a{" "}
-              <strong className="text-slate-950">
-                {eventNamesById.get(currentCashSession.eventId) ??
-                  currentEvent?.name ??
-                  "evento sem nome"}
-              </strong>
-              .
-            </p>
-          ) : null}
-        </Panel>
+      {isAdmin ? <OpenCashSessionsPanel sessions={openCashSessions} /> : null}
 
-        <section className="grid flex-1 gap-3 sm:grid-cols-2">
-          {[...modules, ...(isAdmin ? adminModules : [])].map((module) => (
-            <Link
-              className="rounded-md border border-slate-200 bg-white p-5 shadow-sm transition hover:border-[#1e3275] hover:shadow-md"
-              href={module.href}
-              key={module.title}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <h2 className="text-lg font-semibold text-[#1e3275]">
+      <section className="grid gap-3 sm:grid-cols-2">
+        {[...modules, ...(isAdmin ? adminModules : [])].map((module) => (
+          <Link
+            className="group rounded-2xl border border-[var(--border)] bg-[var(--brand-surface)] p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-[var(--brand-accent)]/70 hover:shadow-[0_14px_35px_rgba(0,0,0,0.07)]"
+            href={module.href}
+            key={module.title}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold text-[var(--brand-foreground)] transition group-hover:text-[var(--brand-accent-foreground)]">
                   {module.title}
                 </h2>
-                <span className="rounded-md bg-slate-100 px-2 py-1 text-xs font-semibold text-slate-600">
-                  {module.status}
-                </span>
+                <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
+                  {module.description}
+                </p>
               </div>
-              <p className="mt-2 text-sm leading-6 text-slate-600">
-                {module.description}
-              </p>
-            </Link>
-          ))}
-        </section>
+              <StatusBadge
+                tone={module.status === "Admin" ? "warning" : "neutral"}
+              >
+                {module.status}
+              </StatusBadge>
+            </div>
+            <div className="mt-5 flex items-center gap-2 text-sm font-semibold text-[var(--brand-accent-foreground)] opacity-0 transition duration-200 group-hover:opacity-100">
+              Acessar
+              <span
+                aria-hidden="true"
+                className="transition-transform duration-200 group-hover:translate-x-1"
+              >
+                →
+              </span>
+            </div>
+          </Link>
+        ))}
       </section>
-    </main>
+    </PageShell>
   );
 }
 
-type SummaryCardProps = {
-  label: string;
-  value: string;
-};
-
-function SummaryCard({ label, value }: SummaryCardProps) {
-  return (
-    <article className="rounded-md border border-slate-200 bg-slate-50 p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <strong className="mt-2 block text-base text-slate-950">{value}</strong>
-    </article>
-  );
-}
-
-type OperationalState = {
-  currentCashSession?: CashSession;
-  currentEvent: Event | null;
-  hasActiveEvents: boolean;
-};
-
-function getOperationalTitle({
-  currentCashSession,
-  currentEvent,
-  hasActiveEvents,
-}: OperationalState): string {
-  if (!hasActiveEvents) {
-    return "Crie um evento para comecar";
-  }
-
-  if (!currentCashSession) {
-    return "Abra o caixa antes de vender";
-  }
-
-  return `Pronto para vender${currentEvent ? ` em ${currentEvent.name}` : ""}`;
-}
-
-function getOperationalDescription({
-  currentCashSession,
-  currentEvent,
-  hasActiveEvents,
-}: OperationalState): string {
-  if (!hasActiveEvents) {
-    return "Nenhum evento ativo foi encontrado. Cadastre ou ative um evento para iniciar a operacao.";
-  }
-
-  if (!currentCashSession) {
-    return currentEvent
-      ? `Evento ${currentEvent.name} disponivel, mas ainda sem caixa aberto.`
-      : "Ha evento ativo, mas nenhum caixa aberto para o operador atual.";
-  }
-
-  return "Use o PDV para vender ou feche o caixa ao encerrar o turno.";
-}
-
-function getOperationalActions({
-  currentCashSession,
-  currentEvent,
-  hasActiveEvents,
-}: OperationalState): Array<{
+function OperationalLink({
+  href,
+  label,
+  primary = false,
+}: {
   href: string;
   label: string;
-  variant: "primary" | "secondary";
-}> {
-  if (!hasActiveEvents) {
-    return [
-      {
-        href: "/events/new",
-        label: "Criar evento",
-        variant: "primary",
-      },
-    ];
-  }
-
-  if (!currentCashSession) {
-    return [
-      {
-        href: "/cash/open",
-        label: "Abrir caixa",
-        variant: "primary",
-      },
-      {
-        href: "/events",
-        label: currentEvent ? "Ver eventos" : "Escolher evento",
-        variant: "secondary",
-      },
-    ];
-  }
-
-  return [
-    {
-      href: "/pdv",
-      label: "Ir ao PDV",
-      variant: "primary",
-    },
-    {
-      href: "/cash/close",
-      label: "Fechar caixa",
-      variant: "secondary",
-    },
-  ];
+  primary?: boolean;
+}) {
+  return (
+    <Link
+      className={
+        primary
+          ? "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105"
+          : "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
+      }
+      href={href}
+    >
+      {label}
+    </Link>
+  );
 }

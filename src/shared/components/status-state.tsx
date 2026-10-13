@@ -18,24 +18,27 @@ type StatusStateProps = {
 
 const toneClasses = {
   empty: {
-    border: "border-slate-200",
-    eyebrow: "text-[#1e3275]",
-    panel: "bg-white",
-    title: "text-slate-950",
+    border: "border-[var(--border)]",
+    eyebrow: "text-[var(--brand-accent-foreground)]",
+    panel: "bg-[var(--brand-surface)]",
+    title: "text-[var(--brand-foreground)]",
+    message: "text-[var(--brand-muted)]",
   },
   error: {
     border: "border-red-200",
     eyebrow: "text-red-700",
     panel: "bg-red-50",
     title: "text-red-950",
+    message: "text-red-800",
   },
   warning: {
     border: "border-amber-200",
-    eyebrow: "text-[#1e3275]",
+    eyebrow: "text-amber-700",
     panel: "bg-amber-50",
-    title: "text-slate-950",
+    title: "text-amber-950",
+    message: "text-amber-900",
   },
-};
+} as const;
 
 export function StatusState({
   actions = [],
@@ -50,27 +53,31 @@ export function StatusState({
   return (
     <section
       aria-live={tone === "error" ? "polite" : undefined}
-      className={`rounded-md border ${classes.border} ${classes.panel} p-5 shadow-sm`}
+      className={`rounded-2xl border ${classes.border} ${classes.panel} p-5 shadow-[0_8px_30px_rgba(0,0,0,0.04)]`}
       role={tone === "error" ? "alert" : undefined}
     >
       {eyebrow ? (
         <p
-          className={`text-xs font-semibold uppercase tracking-wide ${classes.eyebrow}`}
+          className={`text-xs font-bold uppercase tracking-[0.16em] ${classes.eyebrow}`}
         >
           {eyebrow}
         </p>
       ) : null}
-      <h2 className={`mt-1 text-lg font-semibold ${classes.title}`}>{title}</h2>
-      <p className="mt-2 text-sm leading-6 text-slate-700">{message}</p>
+
+      <h2 className={`mt-1.5 text-lg font-bold ${classes.title}`}>{title}</h2>
+
+      <p className={`mt-2 text-sm leading-6 ${classes.message}`}>{message}</p>
+
       {children ? <div className="mt-3">{children}</div> : null}
+
       {actions.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
+        <div className="mt-5 flex flex-wrap gap-2">
           {actions.map((action) => (
             <Link
               className={
                 action.variant === "secondary"
-                  ? "inline-flex min-h-10 items-center justify-center rounded-md border border-slate-200 bg-white px-4 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275]"
-                  : "inline-flex min-h-10 items-center justify-center rounded-md bg-[#1e3275] px-4 text-sm font-semibold text-white transition hover:bg-[#17275c]"
+                  ? "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
+                  : "inline-flex min-h-10 items-center justify-center rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-4 py-2 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105"
               }
               href={action.href}
               key={`${action.href}-${action.label}`}

@@ -24,9 +24,9 @@ describe("PdvCashStatus", () => {
       <PdvCashStatus
         sessions={[
           {
-            eventName: "Evento Julho",
             id: "cash-session-1",
             openedAtLabel: "10/07/2026, 09:00",
+            openingAmountLabel: "R$ 150,50",
           },
         ]}
       />,
@@ -38,7 +38,10 @@ describe("PdvCashStatus", () => {
         name: "Caixa aberto para venda",
       }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Evento Julho")).toBeInTheDocument();
-    expect(screen.getByText("Aberto em 10/07/2026, 09:00")).toBeInTheDocument();
+    expect(
+      screen.getByText("Caixa aberto em 10/07/2026, 09:00"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Troco inicial: R$ 150,50")).toBeInTheDocument();
+    expect(screen.getByText("Sessao #cash-ses")).toBeInTheDocument();
   });
 });

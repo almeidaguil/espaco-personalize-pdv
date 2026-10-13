@@ -5,7 +5,10 @@ import { defineConfig, devices } from "@playwright/test";
 loadEnvFile(".env.local");
 loadEnvFile(".env.e2e.local");
 
-const configuredE2EBaseUrl = process.env.E2E_BASE_URL?.trim();
+const localReset = process.env.E2E_LOCAL_RESET === "1";
+const configuredE2EBaseUrl = localReset
+  ? undefined
+  : process.env.E2E_BASE_URL?.trim();
 const e2eBaseUrl = configuredE2EBaseUrl || "http://localhost:3000";
 
 export default defineConfig({
@@ -13,9 +16,14 @@ export default defineConfig({
     timeout: 10_000,
   },
   fullyParallel: false,
-  globalSetup: "./tests/e2e/global-setup.ts",
-  reporter: process.env.CI ? [["github"], ["list"]] : "list",
+  reporter: process.env.CI
+    ? [["github"], ["list"], ["html", { open: "never" }]]
+    : "list",
   testDir: "./tests/e2e",
+  testIgnore: [
+    "remote-staging-smoke.spec.ts",
+    "remote-production-smoke.spec.ts",
+  ],
   timeout: 60_000,
   workers: 1,
   use: {
@@ -26,7 +34,7 @@ export default defineConfig({
     ? undefined
     : {
         command: "npm run dev -- --hostname localhost --port 3000",
-        reuseExistingServer: !process.env.CI,
+        reuseExistingServer: !process.env.CI && !localReset,
         timeout: 120_000,
         url: "http://localhost:3000",
       },

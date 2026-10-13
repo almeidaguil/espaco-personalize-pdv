@@ -16,11 +16,17 @@ describe("LoginPage", () => {
     render(<LoginPage />);
 
     expect(
-      screen.getByRole("heading", { name: "Acessar PDV" }),
+      screen.getByRole("heading", {
+        name: "Acessar Sistema",
+      }),
     ).toBeInTheDocument();
+
     expect(
-      screen.getByRole("img", { name: "Espaco Personalize" }),
+      screen.getByRole("img", {
+        name: "Roberto Multimarcas",
+      }),
     ).toBeInTheDocument();
+
     expect(screen.getByLabelText("Formulario de login")).toBeInTheDocument();
   });
 });

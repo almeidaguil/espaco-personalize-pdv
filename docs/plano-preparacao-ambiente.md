@@ -174,7 +174,12 @@ necessarias para a etapa atual.
 - Servidor de producao local iniciado em `http://127.0.0.1:3000` e `/login`
   confirmado com HTTP `200`.
 
-### Ambientes E Fluxo Git
+### Ambientes E Fluxo Git Na Preparacao Inicial
+
+Os itens abaixo registram o ambiente legado validado na preparacao inicial e
+foram substituidos operacionalmente pelo PR08. O staging
+`gpywbeoqcovjrfnmbdqx` esta pausado; consulte [Ambientes](ambientes.md) para o
+estado vigente.
 
 - Desenvolvimento local isolado com Supabase CLI e arquivos `.env.*.local`
   ignorados pelo Git.

@@ -23,10 +23,15 @@ describe("CreateUserForm", () => {
     render(<CreateUserForm action={vi.fn()} />);
 
     expect(screen.getByLabelText("Nome completo")).toBeInTheDocument();
+
     expect(screen.getByLabelText("E-mail")).toBeInTheDocument();
-    expect(screen.getByLabelText("Senha temporaria")).toBeInTheDocument();
+
+    expect(screen.getByLabelText("Senha temporária")).toBeInTheDocument();
+
     expect(
-      screen.getByRole("button", { name: "Criar operador" }),
+      screen.getByRole("button", {
+        name: "Criar operador",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -44,10 +49,12 @@ describe("CreateUserForm", () => {
     for (const [label, errorId] of [
       ["Nome completo", "fullName-error"],
       ["E-mail", "email-error"],
-      ["Senha temporaria", "temporaryPassword-error"],
+      ["Senha temporária", "temporaryPassword-error"],
     ]) {
       const field = screen.getByLabelText(label);
+
       expect(field).toHaveAttribute("aria-describedby", errorId);
+
       expect(field).toHaveAttribute("aria-invalid", "true");
     }
   });

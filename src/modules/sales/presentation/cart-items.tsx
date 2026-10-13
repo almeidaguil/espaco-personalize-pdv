@@ -21,45 +21,55 @@ export function CartItems({
   totalInReais,
 }: CartItemsProps) {
   return (
-    <div className="rounded-md border border-slate-200">
-      <div className="border-b border-slate-200 px-3 py-2">
-        <h3 className="text-sm font-semibold text-slate-950">Itens da venda</h3>
+    <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white">
+      <div className="flex items-center justify-between border-b border-[var(--border)] px-4 py-3">
+        <h3 className="text-sm font-bold text-[var(--brand-foreground)]">
+          Itens da venda
+        </h3>
+
+        <span className="rounded-lg bg-[var(--surface-muted)] px-2.5 py-1 text-xs font-semibold text-[var(--brand-muted)]">
+          {items.length}
+        </span>
       </div>
 
       {items.length === 0 ? (
-        <p className="px-3 py-4 text-sm text-slate-600">
+        <p className="px-4 py-5 text-sm text-[var(--brand-muted)]">
           Nenhum item adicionado.
         </p>
       ) : (
-        <ul className="divide-y divide-slate-200">
+        <ul className="divide-y divide-[var(--border)]">
           {items.map((item) => (
             <li
-              className="grid gap-3 px-3 py-3 sm:grid-cols-[1fr_auto]"
+              className="grid gap-3 px-4 py-4 sm:grid-cols-[1fr_auto] sm:items-center"
               key={item.id}
             >
-              <div>
-                <p className="text-sm font-semibold text-slate-950">
+              <div className="min-w-0">
+                <p className="break-words text-sm font-bold text-[var(--brand-foreground)]">
                   {item.name}
                 </p>
-                <p className="mt-1 text-sm text-slate-600">
-                  {item.quantity} x {moneyFormatter.format(item.priceInReais)}
+
+                <p className="mt-1 text-sm text-[var(--brand-muted)]">
+                  {item.quantity} × {moneyFormatter.format(item.priceInReais)}
                 </p>
               </div>
+
               <div className="flex items-center gap-2">
                 <button
                   aria-label={`Remover uma unidade de ${item.name}`}
-                  className="h-11 w-11 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-lg font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                   onClick={() => onDecrementProduct(item.id)}
                   type="button"
                 >
-                  -
+                  −
                 </button>
-                <span className="min-w-8 text-center text-sm font-semibold">
+
+                <span className="min-w-8 text-center text-sm font-bold text-[var(--brand-foreground)]">
                   {item.quantity}
                 </span>
+
                 <button
                   aria-label={`Adicionar uma unidade de ${item.name}`}
-                  className="h-11 w-11 rounded-md border border-slate-300 text-sm font-semibold text-slate-700 transition hover:border-[#1e3275] hover:text-[#1e3275]"
+                  className="flex h-11 w-11 items-center justify-center rounded-xl border border-[var(--border)] bg-white text-lg font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                   onClick={() => onAddProduct(item)}
                   type="button"
                 >
@@ -71,9 +81,12 @@ export function CartItems({
         </ul>
       )}
 
-      <div className="flex items-center justify-between border-t border-slate-200 px-3 py-3">
-        <span className="text-sm font-semibold text-slate-700">Total</span>
-        <strong className="text-lg text-slate-950">
+      <div className="flex items-center justify-between border-t border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
+        <span className="text-sm font-semibold text-[var(--brand-muted)]">
+          Total
+        </span>
+
+        <strong className="text-xl font-bold text-[var(--brand-foreground)]">
           {moneyFormatter.format(totalInReais)}
         </strong>
       </div>

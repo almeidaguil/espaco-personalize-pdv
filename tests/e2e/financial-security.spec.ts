@@ -27,7 +27,6 @@ test("authenticated users cannot write financial records directly", async () => 
       result: await supabase.from("sales").insert({
         cash_session_id: crypto.randomUUID(),
         completed_at: now,
-        event_id: crypto.randomUUID(),
         id: saleId,
         operator_id: user?.id ?? crypto.randomUUID(),
         status: "completed",
@@ -67,9 +66,10 @@ test("authenticated users cannot write financial records directly", async () => 
 
   for (const attempt of attempts) {
     expect(attempt.result.error, attempt.name).not.toBeNull();
+    expect(attempt.result.error?.code, attempt.name).toBe("42501");
     expect(
       `${attempt.result.error?.code ?? ""} ${attempt.result.error?.message ?? ""}`,
       attempt.name,
-    ).toMatch(/permission denied|42501|row-level security|violates/i);
+    ).toMatch(/permission denied|row-level security/i);
   }
 });

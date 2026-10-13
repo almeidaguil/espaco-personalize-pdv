@@ -28,6 +28,8 @@ import type { SaleRepository, SaveSaleResult } from "./sale-repository";
 import type { Sale } from "../domain/sale";
 
 class FakeCashSessionRepository implements CashSessionRepository {
+  public findOperatorId?: string;
+
   constructor(
     private readonly findResult: FindOpenCashSessionResult = {
       session: createCashSession(),
@@ -35,27 +37,41 @@ class FakeCashSessionRepository implements CashSessionRepository {
     },
   ) {}
 
-  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
-    return this.findResult;
-  }
+  async findOpenById(
+    _cashSessionId: string,
+  ): Promise<FindOpenCashSessionResult> {
+    void _cashSessionId;
 
-  async findOpenByEventAndOperator(): Promise<FindOpenCashSessionResult> {
     return {
       session: null,
       success: true,
     };
   }
 
-  async listOpenByOperator(): Promise<ListOpenCashSessionsResult> {
+  async findOpenByOperator(
+    operatorId: string,
+  ): Promise<FindOpenCashSessionResult> {
+    this.findOperatorId = operatorId;
+
+    return this.findResult;
+  }
+
+  async listOpenByOperator(
+    _operatorId: string,
+  ): Promise<ListOpenCashSessionsResult> {
+    void _operatorId;
     return {
       sessions: [],
       success: true,
     };
   }
 
-  async save(session: CashSession): Promise<SaveCashSessionResult> {
+  async open(_input: {
+    openingAmountInReais: number;
+  }): Promise<SaveCashSessionResult> {
+    void _input;
     return {
-      session,
+      session: createCashSession(),
       success: true,
     };
   }
@@ -69,6 +85,7 @@ class FakeCashSessionRepository implements CashSessionRepository {
 }
 
 class FakeProductRepository implements ProductRepository {
+  public listCalls = 0;
   constructor(
     private readonly result: ListProductsResult = {
       products: [createProduct()],
@@ -84,6 +101,7 @@ class FakeProductRepository implements ProductRepository {
   }
 
   async list(): Promise<ListProductsResult> {
+    this.listCalls += 1;
     return this.result;
   }
 
@@ -141,14 +159,15 @@ class FakeSaleRepository implements SaleRepository {
 }
 
 describe("createSaleUseCase", () => {
-  it("creates a sale using trusted product data and available stock", async () => {
+  it("finds the current operator cash session and uses it for the sale", async () => {
     const saleRepository = new FakeSaleRepository();
+    const cashSessionRepository = new FakeCashSessionRepository();
     const stockMovementRepository = new FakeStockMovementRepository([
       createStockMovement(3),
     ]);
 
     const result = await createSaleUseCase(createInput(), {
-      cashSessionRepository: new FakeCashSessionRepository(),
+      cashSessionRepository,
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
@@ -158,9 +177,9 @@ describe("createSaleUseCase", () => {
     });
 
     expect(result.success).toBe(true);
+    expect(cashSessionRepository.findOperatorId).toBe("operator-1");
     expect(saleRepository.savedSale).toMatchObject({
-      cashSessionId: "cash-session-1",
-      eventId: "event-1",
+      cashSessionId: "cash-session-current",
       id: "sale-1",
       items: [
         {
@@ -184,6 +203,7 @@ describe("createSaleUseCase", () => {
   });
 
   it("rejects sales when there is no open cash session", async () => {
+    const productRepository = new FakeProductRepository();
     const result = await createSaleUseCase(createInput(), {
       cashSessionRepository: new FakeCashSessionRepository({
         session: null,
@@ -192,7 +212,7 @@ describe("createSaleUseCase", () => {
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
-      productRepository: new FakeProductRepository(),
+      productRepository,
       saleRepository: new FakeSaleRepository(),
       stockMovementRepository: new FakeStockMovementRepository([
         createStockMovement(3),
@@ -203,31 +223,34 @@ describe("createSaleUseCase", () => {
       formError: "Nao ha caixa aberto para esta venda.",
       success: false,
     });
+    expect(productRepository.listCalls).toBe(0);
   });
 
-  it("rejects sales when the cash session belongs to another event", async () => {
+  it("asks the operator to reopen the cash when the trusted session closes before persistence", async () => {
+    const saleRepository = new FakeSaleRepository({
+      error: "cash_session_closed",
+      success: false,
+    });
     const result = await createSaleUseCase(createInput(), {
-      cashSessionRepository: new FakeCashSessionRepository({
-        session: {
-          ...createCashSession(),
-          eventId: "event-2",
-        },
-        success: true,
-      }),
+      cashSessionRepository: new FakeCashSessionRepository(),
       currentUserProfileRepository: createCurrentUserProfileRepository(),
       generateSaleId: () => "sale-1",
       getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       productRepository: new FakeProductRepository(),
-      saleRepository: new FakeSaleRepository(),
+      saleRepository,
       stockMovementRepository: new FakeStockMovementRepository([
         createStockMovement(3),
       ]),
     });
 
     expect(result).toEqual({
-      formError: "O caixa aberto nao pertence ao evento informado.",
+      formError:
+        "O caixa foi fechado durante a venda. Abra um novo caixa e tente novamente.",
       success: false,
     });
+    expect(saleRepository.savedSale?.cashSessionId).toBe(
+      "cash-session-current",
+    );
   });
 
   it("rejects inactive products", async () => {
@@ -334,8 +357,7 @@ describe("createSaleUseCase", () => {
 
 function createInput() {
   return {
-    cashSessionId: "cash-session-1",
-    eventId: "event-1",
+    cashSessionId: "forged-cash-session",
     items: [
       {
         productId: "product-1",
@@ -363,8 +385,7 @@ function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
 
 function createCashSession(): CashSession {
   return {
-    eventId: "event-1",
-    id: "cash-session-1",
+    id: "cash-session-current",
     openedAt: new Date("2026-07-10T09:00:00.000Z"),
     openingAmountInReais: 150.5,
     operatorId: "operator-1",

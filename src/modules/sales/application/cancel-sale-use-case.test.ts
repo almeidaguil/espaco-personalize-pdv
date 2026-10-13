@@ -218,10 +218,10 @@ function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
 
 function createSaleDetail(): SaleDetail {
   return {
+    businessDate: "2026-07-10",
     cashSessionId: "cash-session-1",
+    cashSessionOpenedAt: new Date("2026-07-10T09:00:00.000Z"),
     completedAt: new Date("2026-07-10T12:00:00.000Z"),
-    eventId: "event-1",
-    eventName: "Evento Julho",
     id: "sale-1",
     items: [
       {
@@ -244,6 +244,8 @@ function createSaleDetail(): SaleDetail {
       changeInReais: 5,
       method: "cash",
     },
+    operatorId: "operator-1",
+    operatorName: "Operador 1",
     status: "completed",
     totalInReais: 55,
   };

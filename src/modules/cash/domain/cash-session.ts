@@ -5,7 +5,6 @@ export type CashSession = {
   closedBy?: string;
   countedAmountInReais?: number;
   differenceAmountInReais?: number;
-  eventId: string;
   expectedAmountInReais?: number;
   id: string;
   openedAt: Date;
@@ -15,7 +14,6 @@ export type CashSession = {
 };
 
 export type OpenCashSessionInput = {
-  eventId: string;
   id: string;
   openedAt: Date;
   openingAmountInReais: number;
@@ -32,7 +30,6 @@ export type CashSessionValidationError = {
   field:
     | "closedAt"
     | "countedAmountInReais"
-    | "eventId"
     | "id"
     | "openedAt"
     | "openingAmountInReais"
@@ -66,20 +63,12 @@ export function openCashSession(
 ): OpenCashSessionResult {
   const errors: CashSessionValidationError[] = [];
   const id = input.id.trim();
-  const eventId = input.eventId.trim();
   const operatorId = input.operatorId.trim();
 
   if (!id) {
     errors.push({
       field: "id",
       message: "Cash session id is required.",
-    });
-  }
-
-  if (!eventId) {
-    errors.push({
-      field: "eventId",
-      message: "Cash session event id is required.",
     });
   }
 
@@ -130,7 +119,6 @@ export function openCashSession(
 
   return {
     session: {
-      eventId,
       id,
       openedAt: input.openedAt,
       openingAmountInReais: input.openingAmountInReais,

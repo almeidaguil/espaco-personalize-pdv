@@ -45,18 +45,31 @@ describe("StockMovementsOverview", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "Estoque atual" }),
+      screen.getByRole("heading", {
+        level: 2,
+        name: "Estoque atual",
+      }),
     ).toBeInTheDocument();
+
     expect(
-      screen.getByRole("heading", { level: 2, name: "Movimentacoes" }),
+      screen.getByRole("heading", {
+        level: 2,
+        name: "Movimentações",
+      }),
     ).toBeInTheDocument();
+
     expect(screen.getAllByText("Caneca personalizada")).toHaveLength(4);
+
     expect(screen.getByText("7")).toBeInTheDocument();
+
     expect(screen.getByText("-3")).toBeInTheDocument();
+
     expect(screen.getAllByText("Ajuste manual").length).toBeGreaterThanOrEqual(
       1,
     );
+
     expect(screen.getAllByText("Venda").length).toBeGreaterThanOrEqual(1);
+
     expect(
       screen.getAllByText("Cancelamento de venda").length,
     ).toBeGreaterThanOrEqual(1);
@@ -68,18 +81,21 @@ describe("StockMovementsOverview", () => {
     expect(
       screen.getByText("Nenhum produto com saldo registrado ainda."),
     ).toBeInTheDocument();
+
     expect(
-      screen.getByText("Nenhuma movimentacao registrada ainda."),
+      screen.getByText("Nenhuma movimentação registrada ainda."),
     ).toBeInTheDocument();
   });
 
   it("paginates balances and movement history independently", async () => {
     const user = userEvent.setup();
+
     const balances = Array.from({ length: 9 }, (_, index) => ({
       productId: `product-${index + 1}`,
       productLabel: `Produto ${index + 1}`,
       quantityOnHand: index + 1,
     }));
+
     const movements = Array.from({ length: 9 }, (_, index) => ({
       createdAt: new Date("2026-06-10T12:00:00.000Z"),
       id: `movement-${index + 1}`,
@@ -94,21 +110,29 @@ describe("StockMovementsOverview", () => {
     );
 
     expect(screen.getByText("Produto 8")).toBeInTheDocument();
+
     expect(screen.queryByText("Produto 9")).not.toBeInTheDocument();
+
     expect(screen.getByText("Movimento Produto 8")).toBeInTheDocument();
+
     expect(screen.queryByText("Movimento Produto 9")).not.toBeInTheDocument();
 
-    const nextButtons = screen.getAllByRole("button", { name: "Proxima" });
+    const nextButtons = screen.getAllByRole("button", {
+      name: "Proxima",
+    });
+
     await user.click(nextButtons[0]!);
 
     expect(screen.getByText("Produto 9")).toBeInTheDocument();
+
     expect(screen.queryByText("Movimento Produto 9")).not.toBeInTheDocument();
 
     await user.click(nextButtons[1]!);
 
     expect(screen.getByText("Movimento Produto 9")).toBeInTheDocument();
+
     expect(
-      screen.getByText("Mostrando 9-9 de 9 movimentacoes"),
+      screen.getByText("Mostrando 9-9 de 9 movimentações"),
     ).toBeInTheDocument();
   });
 
@@ -138,6 +162,7 @@ describe("StockMovementsOverview", () => {
     expect(
       screen.getByText("Caneca personalizada (CANECA-001)"),
     ).toBeInTheDocument();
+
     expect(
       screen.queryByText("Chaveiro polvo (CHAVEIRO-001)"),
     ).not.toBeInTheDocument();
@@ -171,12 +196,14 @@ describe("StockMovementsOverview", () => {
     );
 
     await user.selectOptions(
-      screen.getByLabelText("Tipo de movimentacao"),
+      screen.getByLabelText("Tipo de movimentação"),
       "sale",
     );
 
     expect(screen.getByText("Caneca personalizada")).toBeInTheDocument();
+
     expect(screen.queryByText("Chaveiro polvo")).not.toBeInTheDocument();
+
     expect(screen.getByText("1")).toBeInTheDocument();
   });
 });

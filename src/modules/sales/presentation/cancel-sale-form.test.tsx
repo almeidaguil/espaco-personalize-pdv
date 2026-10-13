@@ -20,6 +20,7 @@ const useActionStateMock = vi.mocked(useActionState);
 describe("CancelSaleForm", () => {
   it("requires confirmation before enabling the cancel sale action", async () => {
     const user = userEvent.setup();
+
     mockActionState({});
 
     render(
@@ -27,10 +28,18 @@ describe("CancelSaleForm", () => {
     );
 
     expect(
-      screen.getByRole("heading", { level: 2, name: "Cancelamento" }),
+      screen.getByRole("heading", {
+        level: 2,
+        name: "Cancelamento da venda",
+      }),
     ).toBeInTheDocument();
+
     expect(screen.getByLabelText("Senha administrativa")).toBeInTheDocument();
-    const button = screen.getByRole("button", { name: "Cancelar venda" });
+
+    const button = screen.getByRole("button", {
+      name: "Cancelar venda",
+    });
+
     const checkbox = screen.getByRole("checkbox", {
       name: /Confirmo que esta venda deve ser cancelada/,
     });
@@ -50,7 +59,9 @@ describe("CancelSaleForm", () => {
     );
 
     expect(
-      screen.getByRole("button", { name: "Venda cancelada" }),
+      screen.getByRole("button", {
+        name: "Venda cancelada",
+      }),
     ).toBeDisabled();
   });
 
@@ -67,6 +78,7 @@ describe("CancelSaleForm", () => {
     expect(
       screen.getByText("Nao foi possivel cancelar a venda."),
     ).toBeInTheDocument();
+
     expect(
       screen.getByText("Venda cancelada com sucesso."),
     ).toBeInTheDocument();

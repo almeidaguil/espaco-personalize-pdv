@@ -12,18 +12,7 @@ type SupabaseCashSessionRow = {
   closed_by?: string | null;
   counted_amount_in_cents?: number | null;
   difference_amount_in_cents?: number | null;
-  event_id: string;
   expected_amount_in_cents?: number | null;
-  id: string;
-  opened_at: string;
-  opening_amount_in_cents: number;
-  operator_id: string;
-  status: CashSessionStatus;
-};
-
-type SupabaseCashSessionInsert = {
-  closed_at: string | null;
-  event_id: string;
   id: string;
   opened_at: string;
   opening_amount_in_cents: number;
@@ -36,6 +25,10 @@ type SupabaseCashSessionUpdate = {
   p_cash_session_id: string;
   p_closed_at: string;
   p_counted_amount_in_cents: number;
+};
+
+type OpenCashSessionV3Args = {
+  p_opening_amount_in_cents: number;
 };
 
 type SupabaseError = {
@@ -61,7 +54,7 @@ type SupabaseCashSessionListResult = PromiseLike<{
 
 type SupabaseCashSessionFilterBuilder = {
   eq(
-    column: "event_id" | "id" | "operator_id" | "status",
+    column: "id" | "operator_id" | "status",
     value: string,
   ): SupabaseCashSessionFilterBuilder;
   maybeSingle(): SupabaseMaybeSingleCashSessionResult;
@@ -73,11 +66,6 @@ type SupabaseCashSessionFilterBuilder = {
 
 export type SupabaseCashSessionClient = {
   from(table: "cash_sessions"): {
-    insert(payload: SupabaseCashSessionInsert): {
-      select(columns: string): {
-        single(): SupabaseSingleCashSessionResult;
-      };
-    };
     select(columns: string): SupabaseCashSessionFilterBuilder;
     update(payload: SupabaseCashSessionUpdate): {
       eq(
@@ -97,23 +85,28 @@ export type SupabaseCashSessionClient = {
     data: string | null;
     error: SupabaseError | null;
   }>;
+  rpc(
+    functionName: "open_cash_session_v3",
+    args: OpenCashSessionV3Args,
+  ): PromiseLike<{
+    data: SupabaseCashSessionRow | null;
+    error: SupabaseError | null;
+  }>;
 };
 
 const cashSessionColumns =
-  "id,event_id,operator_id,opening_amount_in_cents,status,opened_at,closed_at,counted_amount_in_cents,expected_amount_in_cents,difference_amount_in_cents,closed_by" as const;
+  "id,operator_id,opening_amount_in_cents,status,opened_at,closed_at,counted_amount_in_cents,expected_amount_in_cents,difference_amount_in_cents,closed_by" as const;
 
 export class SupabaseCashSessionRepository implements CashSessionRepository {
   constructor(private readonly supabaseClient: SupabaseCashSessionClient) {}
 
-  async findOpenByIdAndOperator(input: {
-    cashSessionId: string;
-    operatorId: string;
-  }): Promise<FindOpenCashSessionResult> {
+  async findOpenById(
+    cashSessionId: string,
+  ): Promise<FindOpenCashSessionResult> {
     const { data, error } = await this.supabaseClient
       .from("cash_sessions")
       .select(cashSessionColumns)
-      .eq("id", input.cashSessionId)
-      .eq("operator_id", input.operatorId)
+      .eq("id", cashSessionId)
       .eq("status", "open")
       .maybeSingle();
 
@@ -130,15 +123,13 @@ export class SupabaseCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async findOpenByEventAndOperator(input: {
-    eventId: string;
-    operatorId: string;
-  }): Promise<FindOpenCashSessionResult> {
+  async findOpenByOperator(
+    operatorId: string,
+  ): Promise<FindOpenCashSessionResult> {
     const { data, error } = await this.supabaseClient
       .from("cash_sessions")
       .select(cashSessionColumns)
-      .eq("event_id", input.eventId)
-      .eq("operator_id", input.operatorId)
+      .eq("operator_id", operatorId)
       .eq("status", "open")
       .maybeSingle();
 
@@ -178,12 +169,15 @@ export class SupabaseCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async save(session: CashSession): Promise<SaveCashSessionResult> {
-    const { data, error } = await this.supabaseClient
-      .from("cash_sessions")
-      .insert(toCashSessionInsert(session))
-      .select(cashSessionColumns)
-      .single();
+  async open(input: {
+    openingAmountInReais: number;
+  }): Promise<SaveCashSessionResult> {
+    const { data, error } = await this.supabaseClient.rpc(
+      "open_cash_session_v3",
+      {
+        p_opening_amount_in_cents: Math.round(input.openingAmountInReais * 100),
+      },
+    );
 
     if (error || !data) {
       return {
@@ -246,18 +240,6 @@ export class SupabaseCashSessionRepository implements CashSessionRepository {
   }
 }
 
-function toCashSessionInsert(session: CashSession): SupabaseCashSessionInsert {
-  return {
-    closed_at: session.closedAt?.toISOString() ?? null,
-    event_id: session.eventId,
-    id: session.id,
-    opened_at: session.openedAt.toISOString(),
-    opening_amount_in_cents: Math.round(session.openingAmountInReais * 100),
-    operator_id: session.operatorId,
-    status: session.status,
-  };
-}
-
 function toCashSessionUpdate(
   session: CashSession,
   options?: CloseCashSessionPersistenceOptions,
@@ -290,7 +272,6 @@ function toCashSession(row: SupabaseCashSessionRow): CashSession {
     ...(row.difference_amount_in_cents != null
       ? { differenceAmountInReais: row.difference_amount_in_cents / 100 }
       : {}),
-    eventId: row.event_id,
     ...(row.expected_amount_in_cents != null
       ? { expectedAmountInReais: row.expected_amount_in_cents / 100 }
       : {}),
@@ -303,9 +284,5 @@ function toCashSession(row: SupabaseCashSessionRow): CashSession {
 }
 
 function isOpenSessionUniqueViolation(error: SupabaseError | null): boolean {
-  const errorText = `${error?.code ?? ""} ${error?.details ?? ""} ${
-    error?.message ?? ""
-  }`.toLowerCase();
-
-  return errorText.includes("23505") && errorText.includes("open");
+  return error?.code === "23505";
 }
