@@ -3,70 +3,39 @@ import { describe, expect, it, vi } from "vitest";
 
 import OpenCashPage from "./page";
 
-vi.mock("@/shared/lib/supabase/server-client", () => ({
-  createSupabaseServerClient: vi.fn(async () => ({})),
-}));
-
-vi.mock("@/modules/events/infra/supabase-event-repository", () => ({
-  SupabaseEventRepository: vi.fn(),
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
 }));
 
 vi.mock("@/modules/cash/presentation/open-cash-session-action", () => ({
   openCashSessionAction: vi.fn(),
 }));
 
-vi.mock("@/modules/cash/presentation/open-cash-session-form", () => ({
-  OpenCashSessionForm: () => <form aria-label="Formulario de abertura" />,
-}));
-
-const listActiveEventsUseCaseMock = vi.hoisted(() => vi.fn());
-
-vi.mock("@/modules/events/application/list-active-events-use-case", () => ({
-  listActiveEventsUseCase: listActiveEventsUseCaseMock,
-}));
-
 describe("OpenCashPage", () => {
-  it("renders the cash opening page when active events exist", async () => {
-    listActiveEventsUseCaseMock.mockResolvedValueOnce({
-      events: [
-        {
-          id: "event-1",
-          isActive: true,
-          name: "Evento Julho",
-          startsAt: new Date("2026-07-10T12:00:00.000Z"),
-        },
-      ],
-      success: true,
-    });
-
+  it("offers the opening amount form for the authenticated operator cash", async () => {
     render(await OpenCashPage());
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Abrir caixa" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Abrir caixa",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Painel" })).toHaveAttribute(
-      "href",
-      "/",
-    );
-    expect(screen.getByRole("link", { name: "PDV" })).toHaveAttribute(
-      "href",
-      "/pdv",
-    );
-    expect(screen.getByLabelText("Formulario de abertura")).toBeInTheDocument();
-  });
-
-  it("renders the empty state when no active events exist", async () => {
-    listActiveEventsUseCaseMock.mockResolvedValueOnce({
-      events: [],
-      success: true,
-    });
-
-    render(await OpenCashPage());
-
     expect(
-      screen.getByText(
-        "Nenhum evento ativo disponivel para abertura de caixa.",
-      ),
+      screen.getByRole("link", {
+        name: "Voltar para o PDV",
+      }),
+    ).toHaveAttribute("href", "/pdv");
+    expect(
+      screen.getByRole("link", {
+        name: "Fechar caixa",
+      }),
+    ).toHaveAttribute("href", "/cash/close");
+    expect(
+      screen.getByRole("textbox", { name: "Valor inicial" }),
+    ).toHaveAttribute("name", "openingAmountInReais");
+    expect(
+      screen.getByRole("button", { name: "Abrir caixa" }),
     ).toBeInTheDocument();
   });
 });

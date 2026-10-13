@@ -23,9 +23,10 @@ describe("ManagedUsersList", () => {
     const accessAction = vi.fn();
     const passwordAction = vi.fn();
     const roleAction = vi.fn();
+
     actionStates.set(passwordAction, {
       fieldErrors: {
-        temporaryPassword: "Informe uma senha temporaria valida.",
+        temporaryPassword: "Informe uma senha temporária válida.",
       },
     });
 
@@ -49,14 +50,17 @@ describe("ManagedUsersList", () => {
       />,
     );
 
-    const password = screen.getByLabelText("Senha temporaria");
+    const password = screen.getByLabelText(/senha temporária/i);
+
     expect(password).toHaveAttribute(
       "aria-describedby",
       "temporary-password-error-user-1",
     );
+
     expect(password).toHaveAttribute("aria-invalid", "true");
+
     expect(
-      screen.getByText("Informe uma senha temporaria valida."),
+      screen.getByText("Informe uma senha temporária válida."),
     ).toHaveAttribute("id", "temporary-password-error-user-1");
   });
 });

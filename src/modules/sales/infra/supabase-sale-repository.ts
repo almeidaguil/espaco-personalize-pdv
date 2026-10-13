@@ -15,14 +15,11 @@ type FinalizeSalePaymentPayload = {
   method: Sale["payment"]["method"];
 };
 
-type FinalizeSaleArgs = {
+type FinalizeSaleV3Args = {
   p_cash_session_id: string;
-  p_completed_at: string;
-  p_event_id: string;
   p_items: FinalizeSaleItemPayload[];
   p_payment: FinalizeSalePaymentPayload;
   p_sale_id: string;
-  p_total_in_cents: number;
 };
 
 type SupabaseError = {
@@ -36,7 +33,10 @@ type SupabaseRpcResult = PromiseLike<{
 }>;
 
 export type SupabaseSaleClient = {
-  rpc(functionName: "finalize_sale", args: FinalizeSaleArgs): SupabaseRpcResult;
+  rpc(
+    functionName: "finalize_sale_v3",
+    args: FinalizeSaleV3Args,
+  ): SupabaseRpcResult;
 };
 
 export class SupabaseSaleRepository implements SaleRepository {
@@ -44,13 +44,15 @@ export class SupabaseSaleRepository implements SaleRepository {
 
   async save(sale: Sale): Promise<SaveSaleResult> {
     const result = await this.supabaseClient.rpc(
-      "finalize_sale",
-      toFinalizeSaleArgs(sale),
+      "finalize_sale_v3",
+      toFinalizeSaleV3Args(sale),
     );
 
     if (result.error || result.data !== sale.id) {
       return {
-        error: "unknown",
+        error: isCashSessionClosedError(result.error)
+          ? "cash_session_closed"
+          : "unknown",
         success: false,
       };
     }
@@ -62,11 +64,9 @@ export class SupabaseSaleRepository implements SaleRepository {
   }
 }
 
-function toFinalizeSaleArgs(sale: Sale): FinalizeSaleArgs {
+function toFinalizeSaleV3Args(sale: Sale): FinalizeSaleV3Args {
   return {
     p_cash_session_id: sale.cashSessionId,
-    p_completed_at: sale.completedAt.toISOString(),
-    p_event_id: sale.eventId,
     p_items: sale.items.map((item) => ({
       product_id: item.productId,
       quantity: item.quantity,
@@ -77,8 +77,14 @@ function toFinalizeSaleArgs(sale: Sale): FinalizeSaleArgs {
       method: sale.payment.method,
     },
     p_sale_id: sale.id,
-    p_total_in_cents: reaisToCents(sale.totalInReais),
   };
+}
+
+function isCashSessionClosedError(error: SupabaseError | null): boolean {
+  const errorText =
+    `${error?.code ?? ""} ${error?.message ?? ""}`.toLowerCase();
+
+  return errorText.includes("there is no open cash session for this sale");
 }
 
 function reaisToCents(amountInReais: number): number {

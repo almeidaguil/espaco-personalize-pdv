@@ -11,7 +11,6 @@ describe("openCashSession", () => {
     const openedAt = new Date("2026-07-10T12:00:00.000Z");
 
     const result = openCashSession({
-      eventId: " event-1 ",
       id: " cash-session-1 ",
       openedAt,
       openingAmountInReais: 150.5,
@@ -20,7 +19,6 @@ describe("openCashSession", () => {
 
     expect(result).toEqual({
       session: {
-        eventId: "event-1",
         id: "cash-session-1",
         openedAt,
         openingAmountInReais: 150.5,
@@ -33,7 +31,6 @@ describe("openCashSession", () => {
 
   it("rejects required ids and invalid open dates", () => {
     const result = openCashSession({
-      eventId: " ",
       id: " ",
       openedAt: new Date("invalid"),
       openingAmountInReais: 0,
@@ -45,10 +42,6 @@ describe("openCashSession", () => {
         {
           field: "id",
           message: "Cash session id is required.",
-        },
-        {
-          field: "eventId",
-          message: "Cash session event id is required.",
         },
         {
           field: "operatorId",
@@ -65,7 +58,6 @@ describe("openCashSession", () => {
 
   it("rejects negative opening amounts", () => {
     const result = openCashSession({
-      eventId: "event-1",
       id: "cash-session-1",
       openedAt: new Date("2026-07-10T12:00:00.000Z"),
       openingAmountInReais: -1,
@@ -85,7 +77,6 @@ describe("openCashSession", () => {
 
   it("rejects opening amounts with more than 2 decimal places", () => {
     const result = openCashSession({
-      eventId: "event-1",
       id: "cash-session-1",
       openedAt: new Date("2026-07-10T12:00:00.000Z"),
       openingAmountInReais: 10.999,
@@ -189,7 +180,6 @@ describe("closeCashSession", () => {
 
 function createOpenSession(): CashSession {
   return {
-    eventId: "event-1",
     id: "cash-session-1",
     openedAt: new Date("2026-07-10T12:00:00.000Z"),
     openingAmountInReais: 150.5,

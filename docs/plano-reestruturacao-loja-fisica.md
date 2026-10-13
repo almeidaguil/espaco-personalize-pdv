@@ -1,0 +1,614 @@
+# Plano De Reestruturacao Para Loja Fisica
+
+Estado atual: PR01 a PR07 concluidos e integrados.
+O runtime opera sem eventos, com caixas proprios e relatorios por vendedor/sessao.
+O PR08 implementa e executa o staging novo sem alterar a producao legada. O
+corte de producao permanece exclusivo do PR09.
+
+## 1. Objetivo
+
+Adaptar o Espaco Personalize PDV para a operacao permanente da Roberto
+Multimarcas, removendo o conceito de eventos e adotando caixas independentes
+por vendedor.
+
+O resultado esperado e um PDV de loja fisica em que cada vendedor abre o
+proprio caixa, realiza somente vendas vinculadas a esse caixa e o fecha com
+reconciliacao financeira. Varios vendedores podem operar simultaneamente.
+
+## 2. Decisoes Confirmadas
+
+- O modulo de eventos sera removido integralmente da aplicacao.
+- Os dados atuais podem ser descartados porque pertencem a outra operacao.
+- A Roberto Multimarcas usara Vercel Hobby, conforme declaracao do proprietario
+  de uso pessoal e nao comercial, e projetos novos e isolados no Supabase,
+  sujeitos a validacao de quota e custo antes da criacao.
+- Os projetos da Espaco Personalize permanecerao intactos ate o corte ser
+  validado e o periodo de rollback terminar.
+- Cada vendedor pode ter no maximo um caixa aberto por vez.
+- Vendedores diferentes podem manter caixas abertos simultaneamente.
+- Um vendedor pode abrir e fechar varias sessoes no mesmo dia.
+- Cada venda pertence obrigatoriamente a uma sessao de caixa e ao operador
+  autenticado.
+- O PDV usa automaticamente o caixa aberto do usuario atual; nao existe selecao
+  manual de evento ou de caixa de outro vendedor.
+- Administradores podem consultar todos os caixas e executar fechamento
+  administrativo, sempre com auditoria.
+- Valores monetarios permanecem armazenados em centavos.
+- A data operacional usa o fuso `America/Sao_Paulo`.
+
+## 3. Glossario E Fluxo Alvo
+
+- **Vendedor ou operador:** usuario autenticado responsavel por suas vendas e
+  sessoes de caixa.
+- **Sessao de caixa:** ciclo auditavel entre abertura e fechamento.
+- **Caixa aberto:** unica sessao com status `open` para determinado operador.
+- **Data operacional:** data da abertura calculada no servidor em
+  `America/Sao_Paulo`.
+- **Fechamento administrativo:** encerramento excepcional de caixa alheio por
+  um administrador, com autoria registrada.
+- **Ambiente legado:** projeto ainda associado a Espaco Personalize.
+- **Ambiente Roberto:** projeto novo, vazio e exclusivo da Roberto Multimarcas.
+
+```txt
+Login do vendedor
+->
+Localizar o proprio caixa aberto
+->
+Abrir caixa, se necessario
+->
+Registrar vendas no proprio caixa
+->
+Fechar e reconciliar a sessao
+->
+Opcionalmente abrir outra sessao no mesmo dia
+```
+
+## 4. Regras De Negocio Alvo
+
+### 4.1 Abertura De Caixa
+
+- A abertura exige usuario autenticado e ativo.
+- O operador informa somente o valor inicial.
+- `operator_id`, `opened_at` e `business_date` sao definidos no servidor.
+- Uma restricao unica parcial impede duas sessoes abertas para o mesmo
+  operador.
+- A restricao nao impede novas sessoes depois que a anterior for fechada,
+  inclusive no mesmo dia.
+- A operacao deve ser atomica para impedir duas aberturas concorrentes pelo
+  mesmo operador.
+
+### 4.2 Operacao Simultanea
+
+- Cada operador enxerga e utiliza o proprio caixa aberto.
+- Um operador nao pode registrar venda, alterar ou fechar o caixa de outro.
+- Administradores enxergam todos os caixas abertos e seus responsaveis.
+- Estoque continua compartilhado por toda a loja.
+- Vendas concorrentes devem manter a protecao contra estoque negativo.
+
+### 4.3 Venda
+
+- Nao existe `event_id` na intencao de venda.
+- A venda exige um caixa aberto pertencente ao usuario autenticado.
+- O servidor deriva `operator_id` a partir de `auth.uid()`.
+- O servidor valida caixa aberto, produtos, estoque, precos, total, pagamento e
+  troco dentro da mesma transacao.
+- Venda concluida gera pagamento e movimentacoes de estoque.
+- Caixa fechado rejeita novas vendas.
+- Cancelamento preserva o historico e devolve o estoque.
+
+### 4.4 Fechamento De Caixa
+
+- O operador pode fechar o proprio caixa.
+- O administrador pode fechar o caixa de outro operador em contingencia.
+- O fechamento registra responsavel, data, valor esperado, valor contado e
+  diferenca.
+- O valor esperado em dinheiro considera saldo inicial, pagamentos em dinheiro
+  liquidos de troco e cancelamentos.
+- Pix, credito e debito aparecem na conciliacao, mas nao compoem o dinheiro
+  fisico esperado.
+- Falta de caixa mantem a validacao administrativa ja adotada pelo sistema.
+- O fechamento e idempotente: uma sessao fechada nao pode ser fechada outra vez.
+
+### 4.5 Relatorios
+
+- Os filtros principais passam a ser periodo, data operacional, operador,
+  sessao de caixa, status e forma de pagamento.
+- O relatorio diario consolida todos os caixas e tambem permite detalhamento
+  individual.
+- A exportacao CSV usa os mesmos filtros e totais exibidos na tela.
+- Relatorios administrativos incluem vendas concluidas, canceladas, produtos,
+  pagamentos e divergencias de caixa.
+
+## 5. Modelo De Dados Alvo
+
+### `cash_sessions`
+
+- `id uuid primary key`
+- `operator_id uuid not null`
+- `business_date date not null`
+- `opening_amount_in_cents integer not null`
+- `status cash_session_status not null`
+- `opened_at timestamptz not null`
+- `closed_at timestamptz null`
+- `counted_amount_in_cents integer null`
+- `expected_amount_in_cents integer null`
+- `difference_amount_in_cents integer null`
+- `closed_by uuid null`
+- `created_at timestamptz not null`
+- `updated_at timestamptz not null`
+
+Restricao principal:
+
+```sql
+create unique index cash_sessions_one_open_per_operator_idx
+  on public.cash_sessions(operator_id)
+  where status = 'open';
+```
+
+Indices adicionais:
+
+- `(business_date, opened_at desc)`
+- `(operator_id, business_date, opened_at desc)`
+- `(status, opened_at desc)`
+
+### `sales`
+
+- Remover `event_id`.
+- Manter `cash_session_id` e `operator_id` obrigatorios.
+- Garantir na RPC que venda, sessao e usuario autenticado representam o mesmo
+  operador.
+- Indexar `(completed_at desc)`, `(operator_id, completed_at desc)` e
+  `(cash_session_id, completed_at desc)`.
+
+### `events`
+
+- Remover FKs e indices dependentes.
+- Remover funcoes e policies exclusivas de eventos.
+- Remover a tabela somente depois que a aplicacao nao possuir mais nenhuma
+  dependencia de runtime.
+- Manter migrations historicas imutaveis; a remocao ocorre em uma nova
+  migration.
+
+### RPCs Financeiras
+
+As operacoes criticas devem ocorrer no banco, com validacao de autenticacao e
+transacao:
+
+- `open_cash_session`
+- `close_cash_session`
+- `finalize_sale`
+- `cancel_sale`
+
+As RPCs nao devem confiar em `operator_id`, datas ou totais enviados pelo
+frontend quando esses valores puderem ser derivados no servidor.
+
+## 6. Infraestrutura Alvo
+
+Projetos propostos:
+
+- Vercel staging: `roberto-multimarcas-pdv-staging`; o ambiente Production
+  desse projeto dedicado representa somente staging no PR08.
+- Vercel producao: `roberto-multimarcas-pdv`, reservado para o corte controlado
+  do PR09 e independente do staging.
+- URL de staging: `https://roberto-multimarcas-pdv-staging.vercel.app`.
+- URL de producao: `https://roberto-multimarcas-pdv.vercel.app`.
+- Supabase staging: `roberto-multimarcas-pdv-staging`.
+- Supabase producao: `roberto-multimarcas-pdv`.
+
+O endpoint do Supabase usa um project ref aleatorio e nao oferece uma URL de API
+com o nome comercial. O link publico com a marca sera fornecido pela Vercel no
+corte de producao; um dominio personalizado podera ser configurado separadamente.
+
+Politica de provisionamento:
+
+- validar conta, organizacao, regiao, tamanho e eventual custo antes de criar;
+- usar `sa-east-1` como regiao preferencial para novos bancos, salvo restricao
+  tecnica ou comercial documentada;
+- gerar senhas novas e nunca reutilizar credenciais da operacao anterior;
+- manter staging e producao em projetos distintos;
+- aplicar migrations primeiro em staging;
+- conectar producao somente no PR09-A, depois da pausa autorizada do legado;
+- no PR08, permitir Production somente no projeto dedicado terminado em
+  `-staging`; manter o projeto reservado para producao vazio;
+- manter no maximo dois projetos Supabase Free ativos: staging e uma producao;
+- preservar a producao legada pausada por 30 dias como rollback;
+- nunca excluir, restaurar ou reinicializar projeto remoto automaticamente;
+- criar somente o administrador no bootstrap; vendedores, produtos e estoque
+  inicial serao cadastrados manualmente pelo sistema.
+
+## 7. Estrategia De Entrega
+
+A mudanca sera entregue de forma compativel e incremental. Primeiro entram as
+estruturas aditivas; depois as consultas independentes de evento; em seguida o
+fluxo operacional muda; por ultimo o legado e removido.
+
+Cada PR deve:
+
+- nascer de `develop` atualizado em uma branch `feature/*`;
+- possuir escopo unico e reversivel;
+- manter build e aplicacao funcionais;
+- incluir testes do comportamento alterado;
+- passar formatacao, lint, TypeScript, unitarios, build e E2E aplicavel;
+- usar commits assinados e Conventional Commits;
+- ser integrado em `develop` somente depois dos checks obrigatorios.
+
+Dependencias:
+
+```txt
+PR 01
+  -> PR 02
+       -> PR 03
+       -> PR 04
+            -> PR 05
+                 -> PR 06
+                      -> PR 07
+                           -> PR 08
+                                -> PR 09
+```
+
+## 8. Plano Por Pull Request
+
+### PR 01 - Contrato Da Reestruturacao
+
+Objetivo: registrar as decisoes antes de alterar runtime ou banco.
+
+Tarefas:
+
+- [x] Aprovar este plano e as regras de negocio.
+- [x] Criar ADR para a mudanca de eventos para sessoes por operador.
+- [x] Atualizar o plano de desenvolvimento e o plano incremental.
+- [x] Atualizar diagramas, rotas alvo e glossario.
+- [x] Registrar a estrategia de provisionamento e rollback dos ambientes.
+- [x] Atualizar README, instrucoes de agentes, ambientes e padroes tecnicos.
+
+Testes e aceite:
+
+- [x] Documentacao sem links quebrados.
+- [x] Nenhuma alteracao funcional.
+- [x] Dependencias e ordem dos proximos PRs explicitadas.
+
+### PR 02 - Banco Aditivo E Compativel
+
+Objetivo: preparar o banco para o novo modelo sem quebrar a versao atual.
+
+Tarefas:
+
+- [x] Adicionar `business_date` a `cash_sessions`, calculado no fuso da loja.
+- [x] Permitir `event_id` nulo temporariamente em `cash_sessions` e `sales`.
+- [x] Criar indices por data, operador e sessao.
+- [x] Criar as novas versoes transacionais das RPCs de abertura e venda.
+- [x] Fazer o servidor derivar usuario e timestamps.
+- [x] Preservar temporariamente as RPCs antigas para compatibilidade.
+- [x] Preparar a restricao de um caixa aberto por operador.
+- [x] Revisar grants, RLS e `search_path` de todas as funcoes financeiras.
+
+Testes e aceite:
+
+- [x] `supabase db reset` aplica todas as migrations do zero.
+- [x] A aplicacao atual continua operando durante a transicao.
+- [x] Duas aberturas concorrentes para o mesmo operador resultam em uma unica
+      sessao aberta.
+- [x] Dois operadores diferentes conseguem abrir caixas simultaneamente.
+- [x] Escritas financeiras diretas continuam bloqueadas.
+
+Rollback:
+
+- o rollback preferencial e logico: a aplicacao antiga continua usando as RPCs
+  e colunas legadas preservadas;
+- antes de remover as RPCs, triggers e indices novos, deve-se revogar sua
+  execucao e confirmar que nenhum fluxo ativo depende deles;
+- `event_id` so pode voltar a `not null` depois de associar ou remover
+  explicitamente todas as sessoes e vendas sem evento;
+- grants e policies anteriores so podem ser restaurados durante uma janela
+  controlada, pois reabrem escritas e leituras que este PR restringe.
+
+### PR 03 - Relatorios Por Periodo, Operador E Caixa
+
+Objetivo: remover a dependencia de eventos do modulo de relatorios antes do
+corte operacional.
+
+Tarefas:
+
+- [x] Criar repositorio e caso de uso de relatorio por periodo.
+- [x] Adicionar filtros por `business_date`, operador e sessao.
+- [x] Consolidar pagamentos, produtos, vendas e cancelamentos.
+- [x] Exibir divergencias por caixa.
+- [x] Substituir o CSV por exportacao baseada nos novos filtros.
+- [x] Manter consultas paginadas e indices compativeis.
+- [x] Remover nomes `SalesByEvent*` do codigo ativo.
+
+Testes e aceite:
+
+- [x] Totais da tela e CSV sao identicos.
+- [x] Relatorio diario soma corretamente varios caixas simultaneos.
+- [x] Relatorio individual nao mistura vendas entre operadores.
+- [x] Cancelamentos sao exibidos sem inflar receita liquida.
+
+### PR 04 - Vendas E Historico Sem Eventos
+
+Objetivo: desacoplar listagem, detalhe e cancelamento de vendas do modulo de
+eventos, ainda sem mudar a abertura de caixa no frontend.
+
+Tarefas:
+
+- [x] Remover `eventId` dos contratos de dominio e aplicacao de vendas.
+- [x] Alterar repositorios para consultar por data, operador e caixa.
+- [x] Atualizar lista e detalhe de vendas.
+- [x] Atualizar cancelamento e reposicao de estoque.
+- [x] Remover textos e filtros de evento dessas telas.
+- [x] Manter compatibilidade de leitura com registros criados pelo fluxo antigo.
+
+Testes e aceite:
+
+- [x] Lista e detalhe funcionam sem carregar `events`.
+- [x] Cancelamento continua exigindo autorizacao e devolvendo estoque.
+- [x] Venda permanece rastreavel ate operador e sessao de caixa.
+
+### PR 05 - Corte Operacional Do Caixa E PDV
+
+Status: concluido e integrado, com tarefas e criterios de aceite atendidos.
+
+Objetivo: ativar o fluxo definitivo da Roberto Multimarcas.
+
+Tarefas:
+
+- [x] Remover evento do dominio, validacao, formulario e repositorio de caixa.
+- [x] Abrir caixa apenas com valor inicial.
+- [x] Aplicar a restricao unica parcial por operador.
+- [x] Permitir nova abertura depois do fechamento, inclusive no mesmo dia.
+- [x] Fazer o PDV localizar automaticamente o caixa aberto do usuario.
+- [x] Bloquear o PDV quando o usuario nao possuir caixa aberto.
+- [x] Remover seletor de evento e seletor manual de caixa.
+- [x] Finalizar vendas pela nova RPC sem `event_id`.
+- [x] Atualizar dashboard com "Meu caixa" e, para admin, "Caixas abertos".
+- [x] Identificar cada caixa por vendedor, horario de abertura e sessao.
+- [x] Garantir que o operador nao use nem feche caixa alheio.
+- [x] Preservar fechamento administrativo auditado.
+
+Testes e aceite:
+
+- [x] Mesmo operador nao consegue abrir dois caixas simultaneos.
+- [x] Mesmo operador fecha e reabre caixa no mesmo dia.
+- [x] Dois operadores abrem caixas e vendem simultaneamente.
+- [x] Cada venda fica no caixa correto.
+- [x] Fechar um caixa nao interrompe o caixa de outro operador.
+- [x] Tentativas cruzadas retornam erro de autorizacao.
+- [x] Estoque nao fica negativo em vendas concorrentes.
+
+### PR 06 - Remocao Completa De Eventos
+
+Status: concluido e integrado em 2026-10-06, com tarefas e aceites atendidos.
+
+Objetivo: eliminar o legado depois que nenhum fluxo depender dele.
+
+Tarefas:
+
+- [x] Remover `/events` e `/events/new`.
+- [x] Remover o modulo `src/modules/events`.
+- [x] Remover eventos da navegacao, dashboard e mensagens.
+- [x] Remover testes e fixtures exclusivas de eventos.
+- [x] Remover `event_id` de `cash_sessions` e `sales`.
+- [x] Remover FKs, indices, policies, RPCs e tipos legados.
+- [x] Remover a tabela `events`.
+- [x] Atualizar documentacao, manual e runbook.
+
+Testes e aceite:
+
+- [x] Nenhuma dependencia de runtime referencia evento.
+- [x] URLs antigas retornam `404` controlado ou redirecionamento documentado.
+- [x] Banco novo e banco migrado chegam ao mesmo schema final.
+- [x] Build, testes unitarios e E2E passam sem fixtures de evento.
+
+Evidencia final: `npm.cmd run format:check`, `npm.cmd run lint`,
+`npm.cmd run type-check`, `npm.cmd test`, `npm.cmd run test:no-event-legacy`,
+`npm.cmd run test:db`, `npm.cmd run build` e `npm.cmd run test:e2e:required`,
+nessa ordem, todos com exit code `0`. Foram aprovados 369 testes unitarios,
+111 asserts pgTAP por caminho de upgrade/reset, integracoes financeiras
+e 42 testes E2E sem skips. Nenhum Supabase/Vercel remoto foi acessado ou alterado.
+
+### PR 07 - E2E Multioperador E Concorrencia
+
+Status: concluido e integrado; gates completos registrados na Task 5.
+
+Objetivo: provar os fluxos reais com usuarios independentes antes do reset
+remoto.
+
+Tarefas:
+
+- [x] Criar seed local idempotente com um admin e dois operadores.
+- [x] Usar contextos de navegador separados por usuario.
+- [x] Substituir a limpeza por update direto por preparacao via RPCs ou reset do
+      ambiente isolado.
+- [x] Fazer o setup falhar explicitamente quando nao conseguir preparar dados.
+- [x] Cobrir abertura simultanea de caixas.
+- [x] Cobrir bloqueio da segunda abertura para o mesmo usuario.
+- [x] Cobrir fechamento e reabertura no mesmo dia.
+- [x] Cobrir vendas simultaneas no estoque compartilhado.
+- [x] Cobrir isolamento de caixa e fechamento administrativo.
+- [x] Cobrir relatorio diario consolidado e por operador.
+- [x] Atualizar o gate E2E de release.
+- [x] Publicar traces e relatorios como artefatos quando houver falha.
+
+Testes e aceite:
+
+- [x] Suite completa passa localmente contra Supabase reinicializado.
+- [ ] Gate remoto passa em ambiente isolado.
+- [x] Testes nao dependem de ordem nem de dados preexistentes.
+- [x] Falhas preservam traces e relatorios restritos a dados e credenciais
+      efemeros locais, tratados como sensiveis; logs dos subprocessos sao redigidos.
+
+### PR 08 - Provisionamento E Bootstrap Roberto Multimarcas
+
+Objetivo: substituir somente o staging, preparar o projeto Vercel dedicado e
+concluir o bootstrap sem alterar a produção legada.
+
+Tarefas:
+
+- [x] Validar quota, regiao, tamanho e custo com o responsavel.
+- [x] Pausar o staging legado somente após confirmação literal e criar apenas o
+      novo projeto Supabase de staging; produção nova fica para o PR09.
+- [x] Reservar `roberto-multimarcas-pdv` sem variaveis ou deployments.
+- [x] Criar `roberto-multimarcas-pdv-staging` com preset Next.js e Node 22.x.
+- [x] Manter a integracao Git automatica desabilitada durante o PR08.
+- [x] Configurar variaveis somente no staging dedicado e validar a URL estavel.
+- [x] Criar runbook de provisionamento, validacao e rollback.
+- [x] Exigir identificacao explicita do projeto antes de qualquer operacao
+      remota.
+- [x] Implementar modo `dry-run` para as validacoes previas.
+- [x] Inventariar dados, usuarios e storage que permanecerao nos projetos
+      legados.
+- [x] Recriar somente o administrador inicial da Roberto Multimarcas.
+- [x] Definir o processo seguro para cadastrar vendedores sem seed remoto.
+- [x] Manter carga inicial de produtos e estoque fora do bootstrap.
+- [x] Validar RLS e RPCs depois do bootstrap.
+
+Testes e aceite:
+
+- [x] Banco local reproduz o ambiente novo do zero.
+- [x] Staging novo inicializado e aprovado por verificacao remota e smoke no
+      projeto Vercel dedicado antes de producao.
+- [x] O procedimento recusa project refs nao autorizados.
+- [x] Nenhuma credencial e gravada no repositorio ou em logs.
+
+Observacao: criação, alteração de plano, exclusão ou pausa/restauração de projeto
+é uma etapa operacional que exige confirmação explícita e verificação de custo.
+Nenhum projeto será excluído e nenhuma produção nova será criada neste PR.
+
+### PR 09 - Release E Corte De Producao
+
+Objetivo: preparar, cortar e publicar a primeira producao Roberto Multimarcas
+com verificacao ponta a ponta, banco operacional vazio e rollback preservado.
+
+O trabalho e separado em:
+
+- **PR09-A:** `feature/production-cutover` para `develop`; implementacao,
+  revisao, gates, confirmacao literal, provisionamento controlado, deploy
+  provisorio e verificacao remota;
+- **PR09-B:** `develop` para `main`; release do mesmo conteudo revisado, deploy
+  do commit assinado de `main`, nova verificacao e monitoramento.
+
+Tarefas:
+
+- [ ] Congelar alteracoes concorrentes durante a janela de corte.
+- [ ] Registrar inventario tecnico recente da producao legada, sem dados
+      pessoais ou segredos.
+- [ ] Revalidar staging, producao legada, cota gratuita e projeto Vercel vazio.
+- [ ] Solicitar imediatamente antes da pausa a confirmacao literal definida no
+      runbook; nenhuma aprovacao anterior substitui esse checkpoint.
+- [ ] Pausar somente a producao legada e confirmar `INACTIVE` antes de criar.
+- [ ] Criar a producao Roberto em `sa-east-1`, persistir ref/hostname validados
+      e aplicar migrations apenas depois do dry-run.
+- [ ] Configurar Auth e criar somente um administrador, mantendo zero
+      operadores e banco operacional vazio.
+- [ ] Configurar exatamente tres variaveis Vercel e publicar o commit assinado
+      autorizado, sem Vercel Authentication ou bypass em producao.
+- [ ] Executar verificacao remota, smoke somente leitura e monitoramento de 30
+      minutos no PR09-A.
+- [ ] Integrar o PR09-A em `develop` com Quality, Database contract e E2E
+      Release Gate verdes.
+- [ ] Abrir o PR09-B de `develop` para `main`, publicar o commit resultante e
+      repetir verificacao, smoke e monitoramento.
+- [ ] Manter a producao legada pausada por 30 dias, sem exclusao automatica.
+- [ ] Depois do corte tecnico, cadastrar vendedores, produtos e estoque inicial
+      manualmente pelo sistema.
+- [ ] Validar venda, cancelamento, fechamento e relatorio; depois validar dois
+      operadores reais em caixas simultaneos.
+
+Testes e aceite:
+
+- [ ] Producao possui exatamente um admin, nenhum outro usuario e nenhum dado
+      operacional antes da preparacao manual.
+- [ ] Staging e producao usam projetos Supabase e Vercel independentes.
+- [ ] Nenhum segredo, e-mail pessoal ou evidencia local foi versionado.
+- [ ] Um operador abre, vende, fecha e reabre no mesmo dia.
+- [ ] Dois vendedores operam caixas simultaneamente sem mistura financeira.
+- [ ] Relatorio consolidado confere com as sessoes individuais.
+- [ ] Estoque confere depois de venda e cancelamento.
+- [ ] Quality, Database contract e E2E permanecem verdes depois dos deploys.
+
+## 9. Matriz Minima De Testes
+
+| Area         | Cenario obrigatorio                           | Nivel                      |
+| ------------ | --------------------------------------------- | -------------------------- |
+| Caixa        | primeira abertura do operador                 | Unitario, integracao e E2E |
+| Caixa        | segunda abertura simultanea do mesmo operador | Banco e E2E                |
+| Caixa        | caixas simultaneos de operadores diferentes   | Banco e E2E                |
+| Caixa        | fechamento e reabertura no mesmo dia          | Unitario e E2E             |
+| Caixa        | fechamento duplicado                          | Banco e unitario           |
+| Seguranca    | operador acessa caixa alheio                  | RLS, RPC e E2E             |
+| Venda        | venda sem caixa aberto                        | Unitario e E2E             |
+| Venda        | venda vinculada ao caixa do usuario           | Banco e E2E                |
+| Venda        | caixa fecha durante tentativa de venda        | Concorrencia               |
+| Estoque      | dois vendedores disputam o ultimo item        | Concorrencia               |
+| Cancelamento | estoque e financeiro sao compensados          | Integracao e E2E           |
+| Relatorio    | consolidacao de varios caixas no dia          | Unitario e E2E             |
+| Relatorio    | filtro por vendedor e sessao                  | Unitario e E2E             |
+| CSV          | mesmos totais da interface                    | Integracao                 |
+| Reset        | ambiente vazio recebe schema e seed           | Integracao                 |
+
+## 10. Gates Obrigatorios Por PR
+
+```text
+npm run format:check
+npm run lint
+npm run type-check
+npm run test
+npm run test:no-event-legacy
+npm run test:db
+npm run build
+npm run test:e2e:local-reset
+```
+
+PRs com migration tambem exigem:
+
+- reset exclusivamente local pelo gate, em stack isolada de testes;
+- validacao de constraints, indices, grants e RLS;
+- smoke das RPCs com usuario admin e operador;
+- verificacao de que nenhuma chave real foi versionada.
+
+O workflow `Quality` inicia Supabase local efemero e executa `test:db` e
+`test:no-event-legacy` para PRs destinados a `develop` ou `main`.
+O `E2E Release Gate` tambem executa nos dois destinos com Supabase local efemero,
+sem secrets nem project ref remoto. Usa `test:e2e:local-reset`, seed idempotente
+de admin e dois operadores e suite obrigatoria, sem skips autenticados.
+Publica traces/relatorios somente em falha E2E, por tres dias, e para a stack
+com `if: always()`. O comando `test:e2e` isolado nao e gate, pois pode pular
+fluxos autenticados quando faltam credenciais. Provisionamento remoto continua
+exclusivo do PR08.
+
+## 11. Decisoes Aprovadas Para O PR 02
+
+As definicoes abaixo foram aprovadas em 2 de outubro de 2026 e passam a compor
+o contrato da reestruturacao:
+
+1. O administrador pode abrir o proprio caixa e vender, sujeito a mesma regra
+   de apenas um caixa aberto por usuario.
+2. Uma sessao pode atravessar a meia-noite e permanece vinculada a
+   `business_date` calculada no momento da abertura no fuso
+   `America/Sao_Paulo`.
+3. Cancelamento depois do fechamento gera um ajuste financeiro separado e nao
+   reescreve o resumo historico do fechamento.
+4. Operadores consultam apenas os proprios caixas e vendas; administradores
+   podem consultar todos.
+5. Dinheiro, Pix, credito e debito permanecem atribuidos individualmente a
+   venda, ao operador e ao caixa, mesmo quando a conta ou terminal fisico e
+   compartilhado pela loja.
+6. Os projetos Supabase alvo devem usar `sa-east-1` e o menor tamanho
+   disponivel. Nenhum recurso pago pode ser criado sem autorizacao especifica.
+7. A URL de staging sera a URL estavel do projeto Vercel dedicado. A URL de producao e um
+   eventual dominio personalizado pertencem ao PR09.
+
+## 12. Criterio De Conclusao Da Reestruturacao
+
+A missao somente estara concluida quando:
+
+- eventos nao existirem no runtime, navegacao ou schema final;
+- cada operador tiver no maximo um caixa aberto;
+- o mesmo operador puder ter varias sessoes fechadas no mesmo dia;
+- varios operadores venderem simultaneamente em caixas isolados;
+- estoque, pagamentos, cancelamentos e reconciliacao forem atomicos;
+- relatorios funcionarem por periodo, operador e sessao;
+- bancos estiverem reinicializados para a Roberto Multimarcas;
+- toda a matriz de testes estiver automatizada e verde;
+- a documentacao operacional refletir exclusivamente a loja fisica.
+- a aplicacao publica usar URL e projetos exclusivos da Roberto Multimarcas.

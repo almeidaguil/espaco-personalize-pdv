@@ -6,7 +6,6 @@ import { authenticatePage, hasAuthenticatedE2EConfig } from "./support/auth";
 const authenticatedRoutes = [
   "/",
   "/products",
-  "/events",
   "/pdv",
   "/cash/open",
   "/cash/close",
@@ -19,7 +18,7 @@ test("login page has no critical accessibility violations", async ({
 }) => {
   await page.goto("/login");
   await expect(
-    page.getByRole("heading", { name: "Acessar PDV" }),
+    page.getByRole("heading", { name: "Acessar Sistema" }),
   ).toBeVisible();
 
   await expectNoAccessibilityViolations(page);

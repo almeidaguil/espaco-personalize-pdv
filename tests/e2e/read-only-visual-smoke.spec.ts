@@ -3,18 +3,16 @@ import { expect, test, type Page, type TestInfo } from "@playwright/test";
 import { authenticatePage, hasAuthenticatedE2EConfig } from "./support/auth";
 
 const readOnlyRoutes = [
-  { heading: "PDV", path: "/" },
+  { heading: /Caixa aberto|Caixa fechado/, path: "/" },
   { heading: "Produtos", path: "/products" },
   { heading: "Novo produto", path: "/products/new" },
-  { heading: "Eventos", path: "/events" },
-  { heading: "Novo evento", path: "/events/new" },
   { heading: "Estoque", path: "/stock" },
   { heading: "PDV", path: "/pdv" },
   { heading: "Abrir caixa", path: "/cash/open" },
   { heading: "Fechar caixa", path: "/cash/close" },
   { heading: "Vendas", path: "/sales" },
-  { heading: "Relatorios", path: "/reports" },
-  { heading: "Configuracoes", path: "/settings" },
+  { heading: "Relatórios", path: "/reports" },
+  { heading: "Configurações", path: "/settings" },
 ];
 
 test.skip(

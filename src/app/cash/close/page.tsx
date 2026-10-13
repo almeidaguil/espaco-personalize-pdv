@@ -5,34 +5,29 @@ import {
   type SupabaseCurrentUserProfileClient,
 } from "@/modules/auth/infra/supabase-current-user-profile-repository";
 import { listCashSessionClosingSummariesUseCase } from "@/modules/cash/application/list-cash-session-closing-summaries-use-case";
-import { listOpenCashSessionsUseCase } from "@/modules/cash/application/list-open-cash-sessions-use-case";
-import type { CashSessionClosingSummary } from "@/modules/cash/application/cash-session-closing-summary-repository";
-import type { CashSession } from "@/modules/cash/domain/cash-session";
+import { listOpenCashSessionOverviewsUseCase } from "@/modules/cash/application/list-open-cash-session-overviews-use-case";
+import type { OpenCashSessionOverview } from "@/modules/cash/application/open-cash-session-overview-repository";
 import {
   SupabaseCashSessionClosingSummaryRepository,
   type SupabaseCashSessionClosingSummaryClient,
 } from "@/modules/cash/infra/supabase-cash-session-closing-summary-repository";
 import {
-  SupabaseCashSessionRepository,
-  type SupabaseCashSessionClient,
-} from "@/modules/cash/infra/supabase-cash-session-repository";
+  SupabaseOpenCashSessionOverviewRepository,
+  type SupabaseOpenCashSessionOverviewClient,
+} from "@/modules/cash/infra/supabase-open-cash-session-overview-repository";
 import { closeCashSessionAction } from "@/modules/cash/presentation/close-cash-session-action";
 import {
   CloseCashSessionForm,
   type CloseCashSessionOption,
 } from "@/modules/cash/presentation/close-cash-session-form";
-import { listEventsUseCase } from "@/modules/events/application/list-events-use-case";
-import {
-  SupabaseEventRepository,
-  type SupabaseEventClient,
-} from "@/modules/events/infra/supabase-event-repository";
+import { AppNavigation } from "@/shared/components/app-navigation";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
-import { Panel } from "@/shared/components/panel";
 import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
+import { brand } from "@/shared/config/brand";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
-  title: "Fechar caixa | Espaco Personalize PDV",
+  title: `Fechar caixa | ${brand.name}`,
 };
 
 export const dynamic = "force-dynamic";
@@ -40,51 +35,46 @@ export const dynamic = "force-dynamic";
 const dateTimeFormatter = new Intl.DateTimeFormat("pt-BR", {
   dateStyle: "short",
   timeStyle: "short",
+  timeZone: "America/Sao_Paulo",
 });
 
 export default async function CloseCashPage() {
   const supabaseClient = await createSupabaseServerClient();
-  const cashSessionClient =
-    supabaseClient as unknown as SupabaseCashSessionClient;
+
+  const openCashSessionOverviewClient =
+    supabaseClient as unknown as SupabaseOpenCashSessionOverviewClient;
+
   const currentUserProfileClient =
     supabaseClient as unknown as SupabaseCurrentUserProfileClient;
-  const eventClient = supabaseClient as unknown as SupabaseEventClient;
+
   const cashSessionClosingSummaryClient =
     supabaseClient as unknown as SupabaseCashSessionClosingSummaryClient;
 
-  const [cashSessionsResult, eventsResult] = await Promise.all([
-    listOpenCashSessionsUseCase({
-      cashSessionRepository: new SupabaseCashSessionRepository(
-        cashSessionClient,
+  const overviewsResult = await listOpenCashSessionOverviewsUseCase({
+    currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
+      currentUserProfileClient,
+    ),
+    openCashSessionOverviewRepository:
+      new SupabaseOpenCashSessionOverviewRepository(
+        openCashSessionOverviewClient,
       ),
-      currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
-        currentUserProfileClient,
-      ),
-    }),
-    listEventsUseCase({
-      eventRepository: new SupabaseEventRepository(eventClient),
-    }),
-  ]);
+  });
 
-  const eventNames = new Map(
-    eventsResult.success
-      ? eventsResult.events.map((event) => [event.id, event.name])
-      : [],
-  );
-  const closingSummariesResult = cashSessionsResult.success
+  const closingSummariesResult = overviewsResult.success
     ? await listCashSessionClosingSummariesUseCase({
         cashSessionClosingSummaryRepository:
           new SupabaseCashSessionClosingSummaryRepository(
             cashSessionClosingSummaryClient,
           ),
-        cashSessionIds: cashSessionsResult.sessions.map(
-          (session) => session.id,
+        cashSessionIds: overviewsResult.overviews.map(
+          (overview) => overview.id,
         ),
       })
     : ({
         summaries: [],
         success: true,
       } as const);
+
   const closingSummaries = new Map(
     closingSummariesResult.success
       ? closingSummariesResult.summaries.map((summary) => [
@@ -95,72 +85,100 @@ export default async function CloseCashPage() {
   );
 
   return (
-    <PageShell>
-      <PageHeader
-        backLinks={[
-          { href: "/", label: "Painel" },
-          { href: "/cash/open", label: "Abrir caixa" },
-        ]}
-        description="Encerre o caixa aberto ao final do turno para travar novas movimentacoes nesse caixa."
-        eyebrow="Caixa"
-        title="Fechar caixa"
-      />
+    <PageShell maxWidth="xl">
+      <AppNavigation title="Fechar caixa" />
 
-      {!cashSessionsResult.success ? (
-        <LoadErrorState
-          actions={[{ href: "/cash/close", label: "Tentar novamente" }]}
-          eyebrow="Erro"
-          message={
-            cashSessionsResult.formError ??
-            "Verifique sua conexao e tente carregar os caixas abertos novamente."
-          }
-          title="Nao foi possivel carregar os caixas abertos"
-        />
-      ) : !closingSummariesResult.success ? (
-        <LoadErrorState
-          actions={[{ href: "/cash/close", label: "Tentar novamente" }]}
-          eyebrow="Erro"
-          message="A lista de caixas carregou, mas a conferencia financeira nao pode ser calculada agora."
-          title="Nao foi possivel calcular a conferencia do caixa."
-        />
-      ) : cashSessionsResult.sessions.length === 0 ? (
-        <EmptyState
-          actions={[
-            { href: "/cash/open", label: "Abrir caixa" },
-            { href: "/pdv", label: "Ir ao PDV", variant: "secondary" },
+      <section className="mx-auto grid w-full max-w-4xl gap-5">
+        <PageHeader
+          backLinks={[
+            {
+              href: "/pdv",
+              label: "Voltar para o PDV",
+            },
           ]}
-          eyebrow="Sem caixa aberto"
-          message="Abra um caixa antes das vendas. Quando houver caixa aberto, ele aparecera aqui para conferencia e fechamento."
-          title="Nenhum caixa aberto disponivel para fechamento."
+          description="Confira os valores do turno antes de encerrar o caixa."
+          eyebrow="Caixa"
+          title="Fechar caixa"
         />
-      ) : (
-        <Panel>
+
+        {!overviewsResult.success ? (
+          <LoadErrorState
+            actions={[
+              {
+                href: "/cash/close",
+                label: "Tentar novamente",
+              },
+            ]}
+            eyebrow="Erro"
+            message={
+              overviewsResult.formError ??
+              "Verifique sua conexão e tente carregar os caixas abertos novamente."
+            }
+            title="Não foi possível carregar os caixas abertos"
+          />
+        ) : !closingSummariesResult.success ? (
+          <LoadErrorState
+            actions={[
+              {
+                href: "/cash/close",
+                label: "Tentar novamente",
+              },
+            ]}
+            eyebrow="Erro"
+            message="A lista de caixas foi carregada, mas a conferência financeira não pôde ser calculada agora."
+            title="Não foi possível calcular a conferência do caixa"
+          />
+        ) : overviewsResult.overviews.length === 0 ? (
+          <EmptyState
+            actions={[
+              {
+                href: "/cash/open",
+                label: "Abrir caixa",
+              },
+              {
+                href: "/pdv",
+                label: "Ir ao PDV",
+                variant: "secondary",
+              },
+            ]}
+            eyebrow="Sem caixa aberto"
+            message="Quando houver um caixa aberto, ele aparecerá aqui para conferência e fechamento."
+            title="Nenhum caixa aberto disponível para fechamento."
+          />
+        ) : (
           <CloseCashSessionForm
             action={closeCashSessionAction}
-            sessions={cashSessionsResult.sessions.map((session) =>
-              toCashSessionOption(session, eventNames, closingSummaries),
+            sessions={overviewsResult.overviews.map((overview) =>
+              toCashSessionOption(overview, closingSummaries),
             )}
           />
-        </Panel>
-      )}
+        )}
+      </section>
     </PageShell>
   );
 }
 
 function toCashSessionOption(
-  session: CashSession,
-  eventNames: Map<string, string>,
-  closingSummaries: Map<string, CashSessionClosingSummary>,
+  overview: OpenCashSessionOverview,
+  closingSummaries: Map<
+    string,
+    {
+      canceledSalesCount: number;
+      canceledSalesTotalInReais: number;
+      completedSalesCount: number;
+      completedSalesTotalInReais: number;
+      expectedAmountInReais: number;
+      openingAmountInReais: number;
+    }
+  >,
 ): CloseCashSessionOption {
-  const eventName = eventNames.get(session.eventId) ?? "Evento sem nome";
-  const summary = closingSummaries.get(session.id) ?? {
+  const summary = closingSummaries.get(overview.id) ?? {
     canceledSalesCount: 0,
     canceledSalesTotalInReais: 0,
-    cashSessionId: session.id,
     completedSalesCount: 0,
     completedSalesTotalInReais: 0,
-    expectedAmountInReais: session.openingAmountInReais,
-    openingAmountInReais: session.openingAmountInReais,
+    expectedAmountInReais: overview.openingAmountInReais,
+    openingAmountInReais: overview.openingAmountInReais,
   };
 
   return {
@@ -169,10 +187,10 @@ function toCashSessionOption(
     completedSalesCount: summary.completedSalesCount,
     completedSalesTotalInReais: summary.completedSalesTotalInReais,
     expectedAmountInReais: summary.expectedAmountInReais,
-    id: session.id,
-    label: `${eventName} - aberto em ${dateTimeFormatter.format(
-      session.openedAt,
-    )}`,
+    id: overview.id,
+    label: `${overview.operatorName} · aberto em ${dateTimeFormatter.format(
+      overview.openedAt,
+    )} · sessão ${overview.id}`,
     openingAmountInReais: summary.openingAmountInReais,
   };
 }

@@ -23,8 +23,9 @@ export function Panel<TElement extends PanelElement = "section">({
   ...props
 }: PanelProps<TElement>) {
   const Component = (as ?? "section") as ElementType;
+
   const classes = [
-    "rounded-md border border-slate-200 bg-white shadow-sm",
+    "rounded-2xl border border-[var(--border)] bg-[var(--brand-surface)] shadow-[0_8px_30px_rgba(0,0,0,0.04)]",
     paddingClasses[padding],
     className,
   ]

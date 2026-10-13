@@ -16,6 +16,7 @@ type FakeSupabaseResponse = {
 
 class FakeSupabaseSaleClient implements SupabaseSaleClient {
   public functionName?: string;
+  public rpcCalls = 0;
   public rpcArgs?: unknown;
 
   constructor(
@@ -25,7 +26,8 @@ class FakeSupabaseSaleClient implements SupabaseSaleClient {
     },
   ) {}
 
-  async rpc(functionName: "finalize_sale", args: unknown) {
+  async rpc(functionName: "finalize_sale_v3", args: unknown) {
+    this.rpcCalls += 1;
     this.functionName = functionName;
     this.rpcArgs = args;
 
@@ -34,7 +36,7 @@ class FakeSupabaseSaleClient implements SupabaseSaleClient {
 }
 
 describe("SupabaseSaleRepository", () => {
-  it("finalizes sales through the atomic RPC mapping BRL values to cents", async () => {
+  it("finalizes sales through V3 with the exact trusted cash session", async () => {
     const supabaseClient = new FakeSupabaseSaleClient();
     const repository = new SupabaseSaleRepository(supabaseClient);
     const sale = createSale();
@@ -44,11 +46,9 @@ describe("SupabaseSaleRepository", () => {
       success: true,
     });
 
-    expect(supabaseClient.functionName).toBe("finalize_sale");
+    expect(supabaseClient.functionName).toBe("finalize_sale_v3");
     expect(supabaseClient.rpcArgs).toEqual({
       p_cash_session_id: "cash-session-1",
-      p_completed_at: "2026-07-10T12:00:00.000Z",
-      p_event_id: "event-1",
       p_items: [
         {
           product_id: "product-1",
@@ -61,7 +61,6 @@ describe("SupabaseSaleRepository", () => {
         method: "cash",
       },
       p_sale_id: "sale-1",
-      p_total_in_cents: 3000,
     });
   });
 
@@ -118,8 +117,6 @@ describe("SupabaseSaleRepository", () => {
 
     expect(supabaseClient.rpcArgs).toEqual({
       p_cash_session_id: "cash-session-1",
-      p_completed_at: "2026-07-10T12:00:00.000Z",
-      p_event_id: "event-1",
       p_items: [
         {
           product_id: "product-1",
@@ -132,8 +129,24 @@ describe("SupabaseSaleRepository", () => {
         method: "pix",
       },
       p_sale_id: "sale-1",
-      p_total_in_cents: 3000,
     });
+  });
+
+  it("reports a closed trusted session without retrying against another session", async () => {
+    const supabaseClient = new FakeSupabaseSaleClient({
+      data: null,
+      error: {
+        message: "There is no open cash session for this sale.",
+      },
+    });
+    const repository = new SupabaseSaleRepository(supabaseClient);
+
+    await expect(repository.save(createSale())).resolves.toEqual({
+      error: "cash_session_closed",
+      success: false,
+    });
+    expect(supabaseClient.functionName).toBe("finalize_sale_v3");
+    expect(supabaseClient.rpcCalls).toBe(1);
   });
 });
 
@@ -141,7 +154,6 @@ function createSale(): Sale {
   return {
     cashSessionId: "cash-session-1",
     completedAt: new Date("2026-07-10T12:00:00.000Z"),
-    eventId: "event-1",
     id: "sale-1",
     items: [
       {

@@ -25,11 +25,21 @@ describe("ProductForm", () => {
     render(<ProductForm action={vi.fn()} />);
 
     expect(screen.getByLabelText("Nome do produto")).toBeInTheDocument();
+
     expect(screen.getByLabelText("Preço")).toBeInTheDocument();
+
     expect(screen.getByLabelText("SKU")).toBeInTheDocument();
-    expect(screen.getByLabelText("Produto ativo")).toBeChecked();
+
     expect(
-      screen.getByRole("button", { name: "Salvar produto" }),
+      screen.getByRole("checkbox", {
+        name: /Produto ativo/i,
+      }),
+    ).toBeChecked();
+
+    expect(
+      screen.getByRole("button", {
+        name: "Salvar produto",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -48,12 +58,22 @@ describe("ProductForm", () => {
     );
 
     expect(screen.getByDisplayValue("Caneca premium")).toBeInTheDocument();
+
     expect(screen.getByDisplayValue("42,50")).toBeInTheDocument();
+
     expect(screen.getByDisplayValue("CANECA-002")).toBeInTheDocument();
+
     expect(
-      screen.getByRole("button", { name: "Salvar alteracoes" }),
+      screen.getByRole("button", {
+        name: "Salvar alteracoes",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByLabelText("Produto ativo")).not.toBeChecked();
+
+    expect(
+      screen.getByRole("checkbox", {
+        name: /Produto ativo/i,
+      }),
+    ).not.toBeChecked();
   });
 
   it("associates validation errors with their fields", () => {
@@ -71,18 +91,23 @@ describe("ProductForm", () => {
       "aria-describedby",
       "name-error",
     );
+
     expect(screen.getByLabelText("Nome do produto")).toHaveAttribute(
       "aria-invalid",
       "true",
     );
+
     expect(screen.getByText("Informe o nome do produto.")).toHaveAttribute(
       "id",
       "name-error",
     );
-    expect(screen.getByRole("textbox", { name: /^Pre/ })).toHaveAttribute(
-      "aria-describedby",
-      "priceInReais-error",
-    );
+
+    expect(
+      screen.getByRole("textbox", {
+        name: /^Pre/,
+      }),
+    ).toHaveAttribute("aria-describedby", "priceInReais-error");
+
     expect(screen.getByLabelText("SKU")).toHaveAttribute(
       "aria-describedby",
       "sku-error",

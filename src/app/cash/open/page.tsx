@@ -1,85 +1,44 @@
 import type { Metadata } from "next";
 
-import { listActiveEventsUseCase } from "@/modules/events/application/list-active-events-use-case";
-import type { Event } from "@/modules/events/domain/event";
-import {
-  SupabaseEventRepository,
-  type SupabaseEventClient,
-} from "@/modules/events/infra/supabase-event-repository";
 import { openCashSessionAction } from "@/modules/cash/presentation/open-cash-session-action";
-import {
-  OpenCashSessionForm,
-  type OpenCashSessionEventOption,
-} from "@/modules/cash/presentation/open-cash-session-form";
+import { OpenCashSessionForm } from "@/modules/cash/presentation/open-cash-session-form";
+import { AppNavigation } from "@/shared/components/app-navigation";
 import { PageHeader, PageShell } from "@/shared/components/page-shell";
 import { Panel } from "@/shared/components/panel";
-import { EmptyState, LoadErrorState } from "@/shared/components/status-state";
-import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
+import { brand } from "@/shared/config/brand";
 
 export const metadata: Metadata = {
-  title: "Abrir caixa | Espaco Personalize PDV",
+  title: `Abrir caixa | ${brand.name}`,
 };
 
 export const dynamic = "force-dynamic";
 
-const dateFormatter = new Intl.DateTimeFormat("pt-BR", {
-  dateStyle: "short",
-  timeStyle: "short",
-});
-
 export default async function OpenCashPage() {
-  const supabaseClient = await createSupabaseServerClient();
-  const eventClient = supabaseClient as unknown as SupabaseEventClient;
-  const eventRepository = new SupabaseEventRepository(eventClient);
-  const result = await listActiveEventsUseCase({ eventRepository });
-
   return (
-    <PageShell maxWidth="sm">
-      <PageHeader
-        backLinks={[
-          { href: "/", label: "Painel" },
-          { href: "/pdv", label: "PDV" },
-        ]}
-        description="Abra um caixa por evento antes de iniciar as vendas presenciais."
-        eyebrow="Caixa"
-        title="Abrir caixa"
-      />
+    <PageShell maxWidth="xl">
+      <AppNavigation title="Abrir caixa" />
 
-      {!result.success ? (
-        <LoadErrorState
-          actions={[{ href: "/cash/open", label: "Tentar novamente" }]}
-          eyebrow="Erro"
-          message={
-            result.formError ??
-            "Verifique sua conexao e tente carregar os eventos ativos novamente."
-          }
-          title="Nao foi possivel carregar eventos ativos"
-        />
-      ) : result.events.length === 0 ? (
-        <EmptyState
-          actions={[
-            { href: "/events/new", label: "Criar evento" },
-            { href: "/events", label: "Ver eventos", variant: "secondary" },
+      <section className="mx-auto grid w-full max-w-3xl gap-5">
+        <PageHeader
+          backLinks={[
+            {
+              href: "/pdv",
+              label: "Voltar para o PDV",
+            },
+            {
+              href: "/cash/close",
+              label: "Fechar caixa",
+            },
           ]}
-          eyebrow="Sem evento ativo"
-          message="O caixa sempre precisa estar vinculado a um evento ativo."
-          title="Nenhum evento ativo disponivel para abertura de caixa."
+          description="Informe o valor inicial do caixa para começar as vendas."
+          eyebrow="Caixa"
+          title="Abrir caixa"
         />
-      ) : (
+
         <Panel>
-          <OpenCashSessionForm
-            action={openCashSessionAction}
-            events={result.events.map(toEventOption)}
-          />
+          <OpenCashSessionForm action={openCashSessionAction} />
         </Panel>
-      )}
+      </section>
     </PageShell>
   );
-}
-
-function toEventOption(event: Event): OpenCashSessionEventOption {
-  return {
-    id: event.id,
-    label: `${event.name} · ${dateFormatter.format(event.startsAt)}`,
-  };
 }

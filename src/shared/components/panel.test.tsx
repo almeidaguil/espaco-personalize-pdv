@@ -9,7 +9,14 @@ describe("Panel", () => {
 
     expect(
       screen.getByText("Conteudo do painel").closest("section"),
-    ).toHaveClass("rounded-md", "border", "bg-white", "p-5", "shadow-sm");
+    ).toHaveClass(
+      "rounded-2xl",
+      "border",
+      "border-[var(--border)]",
+      "bg-[var(--brand-surface)]",
+      "p-5",
+      "shadow-[0_8px_30px_rgba(0,0,0,0.04)]",
+    );
   });
 
   it("supports alternate elements and custom classes", () => {
@@ -51,8 +58,8 @@ describe("Panel", () => {
     render(<Panel as="header">Cabecalho</Panel>);
 
     expect(screen.getByText("Cabecalho").closest("header")).toHaveClass(
-      "rounded-md",
-      "bg-white",
+      "rounded-2xl",
+      "bg-[var(--brand-surface)]",
     );
   });
 });

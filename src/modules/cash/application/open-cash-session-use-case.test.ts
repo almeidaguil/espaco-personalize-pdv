@@ -2,36 +2,38 @@ import { describe, expect, it } from "vitest";
 
 import type { CurrentUserProfileRepository } from "@/modules/auth/application/current-user-profile-repository";
 
+import type { CashSession } from "../domain/cash-session";
 import type {
   CashSessionRepository,
   FindOpenCashSessionResult,
   SaveCashSessionResult,
 } from "./cash-session-repository";
 import { openCashSessionUseCase } from "./open-cash-session-use-case";
-import type { CashSession } from "../domain/cash-session";
 
 class FakeCashSessionRepository implements CashSessionRepository {
-  public findInput?: { eventId: string; operatorId: string };
-  public savedSession?: CashSession;
+  public findOperatorId?: string;
+  public openInput?: { openingAmountInReais: number };
 
   constructor(
     private readonly findResult: FindOpenCashSessionResult = {
       session: null,
       success: true,
     },
-    private readonly saveResult?: SaveCashSessionResult,
+    private readonly openResult: SaveCashSessionResult = {
+      session: createCashSession(),
+      success: true,
+    },
   ) {}
 
-  async findOpenByEventAndOperator(input: {
-    eventId: string;
-    operatorId: string;
-  }): Promise<FindOpenCashSessionResult> {
-    this.findInput = input;
+  async findOpenByOperator(
+    operatorId: string,
+  ): Promise<FindOpenCashSessionResult> {
+    this.findOperatorId = operatorId;
 
     return this.findResult;
   }
 
-  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
+  async findOpenById(): Promise<FindOpenCashSessionResult> {
     return {
       session: null,
       success: true,
@@ -45,15 +47,12 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async save(session: CashSession): Promise<SaveCashSessionResult> {
-    this.savedSession = session;
+  async open(input: {
+    openingAmountInReais: number;
+  }): Promise<SaveCashSessionResult> {
+    this.openInput = input;
 
-    return (
-      this.saveResult ?? {
-        session,
-        success: true,
-      }
-    );
+    return this.openResult;
   }
 
   async update(session: CashSession): Promise<SaveCashSessionResult> {
@@ -65,106 +64,111 @@ class FakeCashSessionRepository implements CashSessionRepository {
 }
 
 describe("openCashSessionUseCase", () => {
-  it("opens a cash session for the current user", async () => {
+  it("opens a cash session for the authenticated operator", async () => {
     const cashSessionRepository = new FakeCashSessionRepository();
 
     const result = await openCashSessionUseCase(
       {
-        eventId: " event-1 ",
         openingAmountInReais: 150.5,
       },
       {
         cashSessionRepository,
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateCashSessionId: () => "cash-session-1",
-        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       },
     );
 
-    expect(result.success).toBe(true);
-    expect(cashSessionRepository.findInput).toEqual({
-      eventId: "event-1",
-      operatorId: "operator-1",
+    expect(result).toEqual({
+      session: createCashSession(),
+      success: true,
     });
-    expect(cashSessionRepository.savedSession).toEqual({
-      eventId: "event-1",
-      id: "cash-session-1",
-      openedAt: new Date("2026-07-10T12:00:00.000Z"),
+    expect(cashSessionRepository.findOperatorId).toBe("operator-1");
+    expect(cashSessionRepository.openInput).toEqual({
       openingAmountInReais: 150.5,
-      operatorId: "operator-1",
-      status: "open",
     });
   });
 
-  it("returns field errors when input is invalid", async () => {
+  it("returns a field error when the opening amount is invalid", async () => {
     const cashSessionRepository = new FakeCashSessionRepository();
 
     const result = await openCashSessionUseCase(
       {
-        eventId: "",
         openingAmountInReais: -1,
       },
       {
         cashSessionRepository,
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateCashSessionId: () => "cash-session-1",
-        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       },
     );
 
     expect(result).toEqual({
       fieldErrors: {
-        eventId: "Informe o evento.",
         openingAmountInReais: "O valor inicial nao pode ser negativo.",
       },
       success: false,
     });
-    expect(cashSessionRepository.savedSession).toBeUndefined();
+    expect(cashSessionRepository.openInput).toBeUndefined();
   });
 
-  it("blocks duplicated open cash sessions", async () => {
-    const existingSession = createCashSession();
+  it("returns a field error when the opening amount is not numeric", async () => {
+    const cashSessionRepository = new FakeCashSessionRepository();
+
+    const result = await openCashSessionUseCase(
+      {
+        openingAmountInReais: Number.NaN,
+      },
+      {
+        cashSessionRepository,
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+      },
+    );
+
+    expect(result).toEqual({
+      fieldErrors: {
+        openingAmountInReais: "Informe um valor inicial valido em Reais.",
+      },
+      success: false,
+    });
+    expect(cashSessionRepository.openInput).toBeUndefined();
+  });
+
+  it("blocks opening when the operator already has an open session", async () => {
     const cashSessionRepository = new FakeCashSessionRepository({
-      session: existingSession,
+      session: createCashSession(),
       success: true,
     });
 
     const result = await openCashSessionUseCase(
       {
-        eventId: "event-1",
         openingAmountInReais: 150.5,
       },
       {
         cashSessionRepository,
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateCashSessionId: () => "cash-session-2",
-        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       },
     );
 
     expect(result).toEqual({
-      formError: "Ja existe um caixa aberto para este evento.",
+      formError: "Ja existe um caixa aberto para este operador.",
       success: false,
     });
-    expect(cashSessionRepository.savedSession).toBeUndefined();
+    expect(cashSessionRepository.openInput).toBeUndefined();
   });
 
   it("maps unauthenticated users to a form error", async () => {
+    const cashSessionRepository = new FakeCashSessionRepository();
+
     const result = await openCashSessionUseCase(
       {
-        eventId: "event-1",
         openingAmountInReais: 150.5,
       },
       {
-        cashSessionRepository: new FakeCashSessionRepository(),
+        cashSessionRepository,
         currentUserProfileRepository: {
           getCurrent: async () => ({
             error: "unauthenticated",
             success: false,
           }),
         },
-        generateCashSessionId: () => "cash-session-1",
-        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       },
     );
 
@@ -172,9 +176,11 @@ describe("openCashSessionUseCase", () => {
       formError: "Sessao expirada. Entre novamente.",
       success: false,
     });
+    expect(cashSessionRepository.findOperatorId).toBeUndefined();
+    expect(cashSessionRepository.openInput).toBeUndefined();
   });
 
-  it("maps persistence duplicated session errors", async () => {
+  it("maps atomic duplicated-session conflicts", async () => {
     const cashSessionRepository = new FakeCashSessionRepository(
       {
         session: null,
@@ -188,19 +194,16 @@ describe("openCashSessionUseCase", () => {
 
     const result = await openCashSessionUseCase(
       {
-        eventId: "event-1",
         openingAmountInReais: 150.5,
       },
       {
         cashSessionRepository,
         currentUserProfileRepository: createCurrentUserProfileRepository(),
-        generateCashSessionId: () => "cash-session-1",
-        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
       },
     );
 
     expect(result).toEqual({
-      formError: "Ja existe um caixa aberto para este evento.",
+      formError: "Ja existe um caixa aberto para este operador.",
       success: false,
     });
   });
@@ -220,7 +223,6 @@ function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
 
 function createCashSession(): CashSession {
   return {
-    eventId: "event-1",
     id: "cash-session-1",
     openedAt: new Date("2026-07-10T12:00:00.000Z"),
     openingAmountInReais: 150.5,

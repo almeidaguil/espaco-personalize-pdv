@@ -1,9 +1,8 @@
 import { z } from "zod";
 
 export const openCashSessionSchema = z.object({
-  eventId: z.string().trim().min(1, "Informe o evento."),
   openingAmountInReais: z
-    .number()
+    .number({ error: "Informe um valor inicial valido em Reais." })
     .finite("Informe um valor inicial valido em Reais.")
     .min(0, "O valor inicial nao pode ser negativo.")
     .refine(

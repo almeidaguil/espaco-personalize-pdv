@@ -18,7 +18,9 @@ const listProductsUseCaseMock = vi.hoisted(() => vi.fn());
 vi.mock("@/modules/products/application/list-products-use-case", () => ({
   listProductsUseCase: listProductsUseCaseMock,
 }));
-
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
 describe("ProductsPage", () => {
   it("renders products returned by the use case", async () => {
     listProductsUseCaseMock.mockResolvedValueOnce({
@@ -39,9 +41,7 @@ describe("ProductsPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Produtos" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Voltar ao painel" }),
-    ).toHaveAttribute("href", "/");
+
     expect(screen.getByRole("link", { name: "Novo produto" })).toHaveAttribute(
       "href",
       "/products/new",

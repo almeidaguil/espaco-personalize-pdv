@@ -7,7 +7,6 @@ describe("createSale", () => {
     const result = createSale({
       cashSessionId: "cash-session-1",
       completedAt: new Date("2026-07-10T12:00:00.000Z"),
-      eventId: "event-1",
       id: "sale-1",
       items: [
         {
@@ -35,7 +34,6 @@ describe("createSale", () => {
       expect(result.sale).toEqual({
         cashSessionId: "cash-session-1",
         completedAt: new Date("2026-07-10T12:00:00.000Z"),
-        eventId: "event-1",
         id: "sale-1",
         items: [
           {
@@ -64,11 +62,10 @@ describe("createSale", () => {
     }
   });
 
-  it("rejects sales without event, cash session or items", () => {
+  it("rejects sales without cash session or items", () => {
     const result = createSale({
       cashSessionId: "",
       completedAt: new Date("invalid"),
-      eventId: "",
       id: "",
       items: [],
       payment: {
@@ -80,7 +77,6 @@ describe("createSale", () => {
     expect(result).toEqual({
       errors: [
         { field: "id", message: "Sale id is required." },
-        { field: "eventId", message: "Sale event id is required." },
         {
           field: "cashSessionId",
           message: "Sale cash session id is required.",
@@ -102,7 +98,6 @@ describe("createSale", () => {
     const result = createSale({
       cashSessionId: "cash-session-1",
       completedAt: new Date("2026-07-10T12:00:00.000Z"),
-      eventId: "event-1",
       id: "sale-1",
       items: [
         {
@@ -141,7 +136,6 @@ describe("createSale", () => {
     const result = createSale({
       cashSessionId: "cash-session-1",
       completedAt: new Date("2026-07-10T12:00:00.000Z"),
-      eventId: "event-1",
       id: "sale-1",
       items: [
         {
@@ -172,7 +166,6 @@ describe("createSale", () => {
     const result = createSale({
       cashSessionId: "cash-session-1",
       completedAt: new Date("2026-07-10T12:00:00.000Z"),
-      eventId: "event-1",
       id: "sale-1",
       items: [
         {
@@ -203,7 +196,6 @@ describe("createSale", () => {
     const result = createSale({
       cashSessionId: "cash-session-1",
       completedAt: new Date("2026-07-10T12:00:00.000Z"),
-      eventId: "event-1",
       id: "sale-1",
       items: [
         {

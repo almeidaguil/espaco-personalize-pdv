@@ -31,8 +31,16 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 
+# Agent execution workspace
+.superpowers/
+.worktrees/
+
 # Vercel
 .vercel/
+
+# Netlify and remote provisioning state
+/.netlify/
+/.provisioning/
 
 # Supabase CLI
 supabase/.temp/
@@ -42,4 +50,3 @@ supabase/.temp/
 Thumbs.db
 .idea/
 .vscode/
-.vercel/

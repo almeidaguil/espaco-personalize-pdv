@@ -14,6 +14,10 @@ vi.mock("@/shared/lib/supabase/server-client", () => ({
   createSupabaseServerClient: vi.fn(async () => ({})),
 }));
 
+vi.mock("@/shared/components/app-navigation", () => ({
+  AppNavigation: () => null,
+}));
+
 vi.mock("@/modules/sales/infra/supabase-sale-detail-repository", () => ({
   SupabaseSaleDetailRepository: vi.fn(),
 }));
@@ -34,8 +38,10 @@ describe("SaleDetailsPage", () => {
       sale: {
         cashSessionId: "cash-session-1",
         completedAt: new Date("2026-07-10T12:00:00.000Z"),
-        eventId: "event-1",
-        eventName: "Evento Julho",
+        operatorId: "operator-1",
+        operatorName: "Ana",
+        businessDate: "2026-07-10",
+        cashSessionOpenedAt: new Date("2026-07-10T11:00:00Z"),
         id: "sale-1",
         items: [
           {
@@ -59,17 +65,27 @@ describe("SaleDetailsPage", () => {
 
     render(
       await SaleDetailsPage({
-        params: Promise.resolve({ id: "sale-1" }),
+        params: Promise.resolve({
+          id: "sale-1",
+        }),
       }),
     );
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Detalhe da venda" }),
+      screen.getByRole("heading", {
+        level: 1,
+        name: "Detalhe da venda",
+      }),
     ).toBeInTheDocument();
-    expect(screen.getByText("Evento Julho")).toBeInTheDocument();
+
+    expect(screen.getByText("Ana")).toBeInTheDocument();
+
     expect(screen.getByText("Chaveiro Polvo")).toBeInTheDocument();
+
     expect(
-      screen.getByRole("button", { name: "Cancelar venda" }),
+      screen.getByRole("button", {
+        name: "Cancelar venda",
+      }),
     ).toBeInTheDocument();
   });
 
@@ -81,9 +97,12 @@ describe("SaleDetailsPage", () => {
 
     await expect(
       SaleDetailsPage({
-        params: Promise.resolve({ id: "missing-sale" }),
+        params: Promise.resolve({
+          id: "missing-sale",
+        }),
       }),
     ).rejects.toThrow("NEXT_NOT_FOUND");
+
     expect(notFound).toHaveBeenCalled();
   });
 
@@ -95,12 +114,14 @@ describe("SaleDetailsPage", () => {
 
     render(
       await SaleDetailsPage({
-        params: Promise.resolve({ id: "sale-1" }),
+        params: Promise.resolve({
+          id: "sale-1",
+        }),
       }),
     );
 
     expect(
-      screen.getByText("Nao foi possivel carregar a venda."),
+      screen.getByText("Não foi possível carregar a venda."),
     ).toBeInTheDocument();
   });
 });

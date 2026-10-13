@@ -1,0 +1,74 @@
+{
+  "version": 2,
+  "supabase": {
+    "organization": {
+      "id": "wcqoluxxlvglqtebcucz",
+      "name": "almeidaguil's Org"
+    },
+    "legacy": {
+      "staging": {
+        "name": "espaco-personalize-pdv-staging",
+        "projectRef": "gpywbeoqcovjrfnmbdqx",
+        "region": "us-west-2",
+        "hostname": "gpywbeoqcovjrfnmbdqx.supabase.co"
+      },
+      "production": {
+        "name": "espaco-personalize-pdv",
+        "projectRef": "ciixpfquwmlsvzleattv",
+        "region": "us-west-2",
+        "hostname": "ciixpfquwmlsvzleattv.supabase.co"
+      }
+    },
+    "targets": {
+      "staging": {
+        "name": "roberto-multimarcas-pdv-staging",
+        "projectRef": "otsxpchqtfypxgzjzrxs",
+        "region": "sa-east-1",
+        "hostname": "otsxpchqtfypxgzjzrxs.supabase.co"
+      },
+      "production": {
+        "name": "roberto-multimarcas-pdv",
+        "projectRef": "wjuzwjbvctbyfvgmprmd",
+        "region": "sa-east-1",
+        "hostname": "wjuzwjbvctbyfvgmprmd.supabase.co"
+      }
+    }
+  },
+  "vercel": {
+    "orgId": "team_jstETBWBHJi0hsir3a3bAkbK",
+    "scope": "guilherme-a-s-projects",
+    "framework": "nextjs",
+    "nodeVersion": "22.x",
+    "repository": "almeidaguil/espaco-personalize-pdv",
+    "repositoryId": 1264018806,
+    "gitConnectionAllowed": false,
+    "targets": {
+      "staging": {
+        "projectId": "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+        "projectName": "roberto-multimarcas-pdv-staging",
+        "sourceRef": "feature/provision-roberto-environments",
+        "allowedSourceRefs": ["feature/provision-roberto-environments"],
+        "releaseBranch": "develop",
+        "environment": "production",
+        "dedicatedStaging": true,
+        "deploymentProtection": "vercel-authentication",
+        "deploymentId": "dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD",
+        "deploymentUrl": "https://roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app",
+        "siteUrl": "https://roberto-multimarcas-pdv-staging.vercel.app"
+      },
+      "production": {
+        "projectId": "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+        "projectName": "roberto-multimarcas-pdv",
+        "sourceRef": "feature/production-cutover",
+        "allowedSourceRefs": ["feature/production-cutover", "main"],
+        "releaseBranch": "main",
+        "environment": "production",
+        "dedicatedStaging": false,
+        "deploymentProtection": "application-auth",
+        "deploymentId": "dpl_TPMhRTBXKrsfz4GBraLXV7fg2PuC",
+        "deploymentUrl": "https://roberto-multimarcas-gvgkm8qvh-guilherme-a-s-projects.vercel.app",
+        "siteUrl": "https://roberto-multimarcas-pdv.vercel.app"
+      }
+    }
+  }
+}

@@ -1,80 +1,99 @@
 # Gate E2E De Release
 
-Este projeto usa Playwright como validacao final antes de uma release estavel.
+Playwright valida o runtime da loja física Roberto Multimarcas em PRs para
+`develop` e `main`. O PR07 entrega um gate contra Supabase local isolado;
+provisionamento remoto e promoção de produção continuam nos PR08 e PR09.
 
-## Quando Rodar
+## Cobertura E Identidades
 
-Rode o gate E2E antes de promover `develop` para `main` ou antes de entregar uma versao para uso real em evento.
+A seed idempotente cria ou atualiza três identidades: `admin`, `operatorA` e
+`operatorB`, com os perfis correspondentes. Cada identidade usa clientes
+autenticados e contextos de navegador separados. O servidor deriva o operador
+da sessão autenticada; a preparação financeira usa RPCs públicas, preservando
+histórico, sem atualização ou exclusão financeira direta.
 
-O workflow normal de PR continua executando lint, type-check, testes unitarios e
-build. O E2E usa Supabase real, usuario real e pode criar dados operacionais;
-por isso ele roda automaticamente apenas em PRs para `main` e tambem pode ser
-acionado manualmente.
+A suíte cobre login, produto, estoque, PDV, venda, cancelamento, fechamento,
+reabertura no mesmo dia, relatórios e segurança financeira. A cobertura
+multioperador automatizada inclui:
 
-## Secrets Necessarios No GitHub
+- duas tentativas de abertura do mesmo operador deixando uma única sessão;
+- caixas simultâneos, isolamento de acesso e fechamento administrativo auditado;
+- continuidade do caixa B depois do fechamento do caixa A;
+- disputa pela última unidade com uma venda, uma rejeição e saldo final zero;
+- serialização de venda e fechamento concorrentes;
+- vendas vinculadas aos caixas corretos e relatório consolidado, por operador
+  e sessão, com CSV equivalente.
 
-Configure estes secrets no repositorio:
+O smoke do [Runbook operacional](runbook-operacional.md) complementa os testes
+com a conferência da operação e dos dispositivos após deploy.
 
-- `E2E_USER_EMAIL`
-- `E2E_USER_PASSWORD`
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-- `SUPABASE_SECRET_KEY`
+## Execução Local Com Reset
 
-O usuario E2E deve ser admin, porque os fluxos cobrem produtos, eventos, caixa, venda e cancelamento.
-
-Use uma base de homologacao/staging para este workflow. O setup E2E fecha caixas abertos apenas de eventos com `e2e` no nome para limpar residuos de execucoes anteriores.
-
-O workflow fixa o project ref esperado de staging e encerra antes dos testes se
-`NEXT_PUBLIC_SUPABASE_URL` apontar para outro projeto. Essa trava impede que o
-gate altere dados de producao por configuracao incorreta de secrets.
-
-## Como Rodar No GitHub
-
-Em um PR de `develop` para `main`, o gate inicia automaticamente e deve ser um
-check obrigatorio da branch `main`.
-
-Para uma execucao manual:
-
-1. Abra `Actions`.
-2. Selecione `E2E Release Gate`.
-3. Clique em `Run workflow`.
-4. Opcionalmente informe `base_url` para testar uma URL ja publicada.
-5. Aguarde o resultado de `Playwright E2E`.
-
-Se `base_url` ficar vazio, o Playwright inicia o servidor Next.js local do runner.
-
-## Como Rodar Localmente
-
-Configure as variaveis na sessao atual ou em `.env.e2e.local`:
+Use Docker e Supabase CLI na raiz do repositório. Confirme que a stack é local,
+isolada e exclusiva de testes. O comando apaga os dados locais, reaplica
+migrations, cria as três identidades efêmeras e executa a suíte obrigatória:
 
 ```powershell
-$env:E2E_USER_EMAIL="admin@example.com"
-$env:E2E_USER_PASSWORD="senha-do-admin"
-$env:NEXT_PUBLIC_SUPABASE_URL="https://seu-projeto.supabase.co"
-$env:NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="sua-chave-publica"
-$env:SUPABASE_SECRET_KEY="sua-chave-secreta"
+npx.cmd supabase start
+npm.cmd run test:e2e:local-reset
 ```
 
-Depois execute:
+`test:e2e:local-reset` lê as chaves da stack local em memória e gera credenciais
+efêmeras, sem exigir arquivos de credenciais. Executa `supabase db reset --local`,
+seed e `test:e2e:required` no mesmo ambiente filho, propagando a primeira falha.
+Recusa argumentos, project ref e URLs remotas; valida o alvo imediatamente antes
+do reset. Não executa reset remoto nem provisiona ambientes.
+
+Não imprima a saída de `supabase status -o env`: ela contém chaves. O gate redige
+valores sensíveis dos subprocessos. Credenciais e arquivos `.env*` locais devem
+permanecer fora do Git e não devem apontar para ambientes remotos neste comando.
+
+O Playwright usa o Next.js em `http://localhost:3000`. Se houver servidor já
+iniciado, confira se ele usa o código da branch e a mesma stack local.
+
+## Seed E Suíte Separadas
+
+Para executar separadamente em uma stack local já preparada, configure as
+variáveis da sessão ou os arquivos não versionados `.env.local` e `.env.e2e.local`.
+Variáveis da sessão têm precedência. Os nomes obrigatórios são:
+
+- `E2E_USER_EMAIL` e `E2E_USER_PASSWORD` (admin);
+- `E2E_OPERATOR_A_EMAIL` e `E2E_OPERATOR_A_PASSWORD`;
+- `E2E_OPERATOR_B_EMAIL` e `E2E_OPERATOR_B_PASSWORD`;
+- `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`;
+- `SUPABASE_SECRET_KEY`.
 
 ```powershell
 npm.cmd run e2e:seed-local
 npm.cmd run test:e2e:required
 ```
 
-O comando `e2e:seed-local` cria ou atualiza o administrador E2E usando as
-credenciais locais. Ele recusa URLs que nao sejam `localhost` ou `127.0.0.1`,
-portanto nunca deve ser usado para preparar staging ou producao. Execute-o
-novamente depois de `supabase db reset`.
+A seed aceita somente `localhost`, `127.0.0.1` ou loopback IPv6 e deve ser
+reexecutada após reset local. Não serve para bootstrap remoto. O verificador
+exige as três identidades antes do Playwright; `test:e2e` isolado pode pular
+cenários autenticados e não comprova o gate.
 
-Use `npm.cmd run test:e2e` apenas durante desenvolvimento local, quando aceitar que testes sejam pulados por falta de credenciais.
+## Execução No GitHub
 
-## Criterio De Release
+O workflow [E2E Release Gate](../.github/workflows/e2e-release.yml) executa em
+todos os PRs para `develop` e `main` e por `workflow_dispatch`, sem parâmetros.
+Inicia Supabase local efêmero no runner, executa `test:e2e:local-reset` e para a
+stack com `if: always()`. Não usa secrets do GitHub, project ref ou staging
+remoto. Historicamente o gate usava staging legado; esse vínculo foi removido.
 
-Uma release so deve ser promovida quando:
+O workflow `Quality` inclui `test:no-event-legacy` e contrato de banco local.
+Para execução manual, selecionar `E2E Release Gate` em `Actions`, clicar em
+`Run workflow`, selecionar a branch e conferir `Playwright E2E`.
 
-- `Quality checks` estiver verde no PR;
-- `E2E Release Gate` passar;
-- nao houver dados de teste misturados na base de entrega final;
-- credenciais sensiveis expostas durante desenvolvimento tiverem sido rotacionadas.
+Somente em falha do passo E2E são publicados `playwright-report/` e
+`test-results/`, com retenção de três dias. O HTML é habilitado no CI; traces
+usam `retain-on-failure`. Artefatos podem conter sessões autenticadas efêmeras:
+tratar como sensíveis e não reutilizar credenciais fora da stack local.
+
+## Critério De Aprovação
+
+- `Quality checks`, `Database contract` e `Playwright E2E` aprovados.
+- `test:e2e:local-reset` completo, sem skips de testes autenticados.
+- Smoke manual aplicável registrado e dados mantidos no ambiente isolado.
+- Falhas analisadas sem expor senhas, cookies, tokens ou chaves.
+- PR08 e PR09 validados nos respectivos gates antes da operação em produção.

@@ -21,15 +21,8 @@ class FakeCashSessionRepository implements CashSessionRepository {
     },
   ) {}
 
-  async findOpenByIdAndOperator(): Promise<FindOpenCashSessionResult> {
+  async findOpenById(): Promise<FindOpenCashSessionResult> {
     return this.findResult;
-  }
-
-  async findOpenByEventAndOperator(): Promise<FindOpenCashSessionResult> {
-    return {
-      session: null,
-      success: true,
-    };
   }
 
   async listOpenByOperator() {
@@ -39,9 +32,18 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async save(session: CashSession): Promise<SaveCashSessionResult> {
+  async findOpenByOperator(): Promise<FindOpenCashSessionResult> {
+    return { session: null, success: true };
+  }
+
+  async open(input: {
+    openingAmountInReais: number;
+  }): Promise<SaveCashSessionResult> {
     return {
-      session,
+      session: {
+        ...createCashSession(),
+        openingAmountInReais: input.openingAmountInReais,
+      },
       success: true,
     };
   }
@@ -169,7 +171,6 @@ function createFormData(input: {
 
 function createCashSession(): CashSession {
   return {
-    eventId: "event-1",
     id: "cash-session-1",
     openedAt: new Date("2026-07-10T12:00:00.000Z"),
     openingAmountInReais: 150.5,

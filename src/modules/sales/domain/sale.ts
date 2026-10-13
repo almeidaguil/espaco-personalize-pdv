@@ -25,7 +25,6 @@ export type Payment = {
 export type Sale = {
   cashSessionId: string;
   completedAt: Date;
-  eventId: string;
   id: string;
   items: SaleItem[];
   payment: Payment;
@@ -48,20 +47,13 @@ export type CreatePaymentInput = {
 export type CreateSaleInput = {
   cashSessionId: string;
   completedAt: Date;
-  eventId: string;
   id: string;
   items: CreateSaleItemInput[];
   payment: CreatePaymentInput;
 };
 
 export type SaleValidationError = {
-  field:
-    | "cashSessionId"
-    | "completedAt"
-    | "eventId"
-    | "id"
-    | "items"
-    | "payment";
+  field: "cashSessionId" | "completedAt" | "id" | "items" | "payment";
   message: string;
 };
 
@@ -78,16 +70,11 @@ export type CreateSaleResult =
 export function createSale(input: CreateSaleInput): CreateSaleResult {
   const errors: SaleValidationError[] = [];
   const id = input.id.trim();
-  const eventId = input.eventId.trim();
   const cashSessionId = input.cashSessionId.trim();
   const items = input.items.map(normalizeSaleItem);
 
   if (!id) {
     errors.push({ field: "id", message: "Sale id is required." });
-  }
-
-  if (!eventId) {
-    errors.push({ field: "eventId", message: "Sale event id is required." });
   }
 
   if (!cashSessionId) {
@@ -158,7 +145,6 @@ export function createSale(input: CreateSaleInput): CreateSaleResult {
     sale: {
       cashSessionId,
       completedAt: input.completedAt,
-      eventId,
       id,
       items,
       payment: {

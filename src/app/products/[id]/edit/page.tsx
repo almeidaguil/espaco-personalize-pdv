@@ -15,7 +15,7 @@ import { Panel } from "@/shared/components/panel";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
 
 export const metadata: Metadata = {
-  title: "Editar produto | Espaco Personalize PDV",
+  title: "Editar produto | Roberto Multimarcas PDV",
 };
 
 type EditProductPageProps = {

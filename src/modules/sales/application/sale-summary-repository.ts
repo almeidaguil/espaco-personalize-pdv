@@ -3,8 +3,10 @@ import type { SaleStatus } from "../domain/sale";
 export type SaleSummary = {
   cashSessionId: string;
   completedAt: Date;
-  eventId: string;
-  eventName: string;
+  businessDate: string | null;
+  cashSessionOpenedAt: Date | null;
+  operatorId: string;
+  operatorName: string;
   id: string;
   status: SaleStatus;
   totalInReais: number;
