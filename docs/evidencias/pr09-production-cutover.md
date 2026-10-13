@@ -24,34 +24,34 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 
 ## Git E Pull Requests
 
-| Evidência                                             | Valor                                                            |
-| ----------------------------------------------------- | ---------------------------------------------------------------- |
-| PR09-A URL (`feature/production-cutover` → `develop`) | `https://github.com/almeidaguil/espaco-personalize-pdv/pull/169` |
-| PR09-A commit SHA assinado                            | `e2473eb05cb659b5a55d1e8da9084ff6aace3a14`                       |
-| PR09-A Quality URL/resultado                          | `APROVADO` (2m27s)                                               |
-| PR09-A Database contract URL/resultado                | `APROVADO` (3m49s)                                               |
-| PR09-A E2E Release Gate URL/resultado                 | `APROVADO` (5m41s)                                               |
-| PR09-A revisão independente                           | `PENDENTE`                                                       |
-| PR09-A merge SHA assinado em `develop`                | `PENDENTE`                                                       |
-| PR09-B URL (`develop` → `main`)                       | `PENDENTE`                                                       |
-| PR09-B Quality URL/resultado                          | `PENDENTE`                                                       |
-| PR09-B Database contract URL/resultado                | `PENDENTE`                                                       |
-| PR09-B E2E Release Gate URL/resultado                 | `PENDENTE`                                                       |
-| PR09-B merge SHA assinado em `main`                   | `PENDENTE`                                                       |
+| Evidência                                             | Valor                                                                                                               |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| PR09-A URL (`feature/production-cutover` → `develop`) | `https://github.com/almeidaguil/espaco-personalize-pdv/pull/169`                                                    |
+| PR09-A commit SHA assinado revisado                   | `95702ee5b7499030ec23cb5ca977ed5d0094dbaf`                                                                          |
+| PR09-A Quality URL/resultado                          | [APROVADO (2m30s)](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/38385201534/job/115255143433) |
+| PR09-A Database contract URL/resultado                | [APROVADO (3m42s)](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/38385201534/job/115255143752) |
+| PR09-A E2E Release Gate URL/resultado                 | [APROVADO (5m42s)](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/38385201548/job/115255143921) |
+| PR09-A revisão independente                           | `APROVADO`; zero Critical/Important após correções                                                                  |
+| PR09-A merge SHA assinado em `develop`                | `PENDENTE`                                                                                                          |
+| PR09-B URL (`develop` → `main`)                       | `PENDENTE`                                                                                                          |
+| PR09-B Quality URL/resultado                          | `PENDENTE`                                                                                                          |
+| PR09-B Database contract URL/resultado                | `PENDENTE`                                                                                                          |
+| PR09-B E2E Release Gate URL/resultado                 | `PENDENTE`                                                                                                          |
+| PR09-B merge SHA assinado em `main`                   | `PENDENTE`                                                                                                          |
 
 ## Gates Locais Do PR09-A
 
 | Comando                                                | Resultado                    | Data/hora (`America/Sao_Paulo`) |
 | ------------------------------------------------------ | ---------------------------- | ------------------------------- |
-| `npm.cmd run format:check`                             | `APROVADO`                   | `2026-10-10 08:43:45 -03:00`    |
-| `npm.cmd run lint`                                     | `APROVADO`                   | `2026-10-10 08:43:45 -03:00`    |
-| `npm.cmd run type-check`                               | `APROVADO`                   | `2026-10-10 08:43:45 -03:00`    |
-| `npm.cmd test`                                         | `APROVADO` (124/124; 670)    | `2026-10-10 08:43:45 -03:00`    |
-| `npm.cmd run test:no-event-legacy`                     | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
-| `npm.cmd run test:db`                                  | `APROVADO` (upgrade PR05)    | `2026-10-10 03:33:11 -03:00`    |
-| `npm.cmd run build`                                    | `APROVADO`                   | `2026-10-10 03:33:11 -03:00`    |
-| `npm.cmd run test:e2e:local-reset`                     | `APROVADO` (48/48)           | `2026-10-10 03:33:11 -03:00`    |
-| Scan de segredos/e-mail pessoal em arquivos rastreados | `APROVADO` (diff PR09 limpo) | `2026-10-10 03:33:11 -03:00`    |
+| `npm.cmd run format:check`                             | `APROVADO`                   | `2026-10-13 07:41:26 -03:00`    |
+| `npm.cmd run lint`                                     | `APROVADO`                   | `2026-10-13 07:41:26 -03:00`    |
+| `npm.cmd run type-check`                               | `APROVADO`                   | `2026-10-13 07:41:26 -03:00`    |
+| `npm.cmd test`                                         | `APROVADO` (125/125; 692)    | `2026-10-13 07:41:26 -03:00`    |
+| `npm.cmd run test:no-event-legacy`                     | `APROVADO`                   | `2026-10-13 07:41:26 -03:00`    |
+| `npm.cmd run test:db`                                  | `APROVADO` (upgrade e fresh) | `2026-10-13 07:41:26 -03:00`    |
+| `npm.cmd run build`                                    | `APROVADO`                   | `2026-10-13 07:41:26 -03:00`    |
+| `npm.cmd run test:e2e:local-reset`                     | `APROVADO` (48/48)           | `2026-10-13 07:41:26 -03:00`    |
+| Scan de segredos/e-mail pessoal em arquivos rastreados | `APROVADO` (diff PR09 limpo) | `2026-10-13 07:41:26 -03:00`    |
 
 O scan global encontrou duas referências históricas ao e-mail do autor em
 documentos de configuração Git anteriores ao PR09. O diff completo do PR09 e
@@ -62,6 +62,14 @@ locais simultâneas e disputaram a porta `54322`. Os workflows agora compartilha
 um grupo de concorrência por PR/ref, com cancelamento desativado, para serializar
 somente os gates que usam essas portas. O contrato dessa configuração possui
 teste automatizado.
+
+A revisão independente final encontrou e bloqueou o merge até a correção de
+dois contratos: o sentinela de ausência de bypass da Vercel e o conteúdo das
+policies RLS. O gate agora aceita somente as formas conhecidas de
+`protectionBypass` e falha fechado para estruturas malformadas. O fingerprint
+das 17 policies inclui tabela, nome, comando, modo `PERMISSIVE`/`RESTRICTIVE`,
+roles, `qual` e `with_check`. A re-revisão terminou sem achados Critical ou
+Important.
 
 ## Fase 1 - Preflight E Backup
 
@@ -252,6 +260,12 @@ administrador, inventário de usuários, banco operacional vazio, grants
 financeiros, variáveis Vercel, deployment, alias e ausência de proteção. O
 smoke navegou autenticado por todos os módulos previstos sem emitir request
 mutável e registrou a fase terminal `verified`.
+
+Depois do endurecimento solicitado pela revisão independente, o mesmo
+verificador remoto repetiu os 16 checks em `2026-10-13` e o smoke autenticado
+somente leitura passou novamente no deployment provisório original. Nenhum
+dado operacional foi criado e nenhuma variável remota foi alterada nessa
+revalidação.
 
 A janela explícita começou no primeiro checkpoint completo, às `18:57:50`, e
 terminou às `19:27:59`. Foram realizadas releituras de disponibilidade,
