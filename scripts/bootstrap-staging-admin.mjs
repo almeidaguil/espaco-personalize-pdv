@@ -4,9 +4,10 @@ import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
 import {
-  loadRemoteEnvironmentManifest,
-  validateRemoteOperation,
-} from "./remote-environment-policy.mjs";
+  bootstrapRemoteAdmin,
+  createRemoteAdminAdapter,
+} from "./bootstrap-remote-admin.mjs";
+import { loadRemoteEnvironmentManifest } from "./remote-environment-policy.mjs";
 import {
   buildSupabaseUrl,
   createSupabaseManagementClient,
@@ -31,86 +32,37 @@ export async function bootstrapStagingAdmin({
     password,
   });
   const target = resolveStagingTarget(manifest);
-  validateRemoteOperation({
+  const result = await bootstrapRemoteAdmin({
+    adminApi: supabaseAdmin,
     confirmation,
+    credentials,
     environment: "staging",
     execute,
+    logger: () => {},
     manifest,
-    operation: execute ? "mutate" : "read",
-    provider: "supabase",
-    target,
+    requireEmptyOperationalData: false,
+    sensitiveValues: [environment.SUPABASE_SECRET_KEY],
   });
-
-  const users = await supabaseAdmin.listUsers();
-  if (users.length > 1) {
-    throw new Error("Bootstrap requires exactly zero or one Auth user.");
-  }
-
-  const existingUser = users[0];
-  if (
-    existingUser &&
-    existingUser.email?.toLowerCase() !== credentials.email.toLowerCase()
-  ) {
-    throw new Error("A different Auth user already exists in staging.");
-  }
 
   if (!execute) {
-    const result = {
-      action: existingUser ? "verify-admin" : "create-admin",
+    const stagingResult = {
+      action: result.userId ? "verify-admin" : "create-admin",
       mode: "dry-run",
       projectRef: target.projectRef,
-      userCount: users.length,
+      userCount: result.userId ? 1 : 0,
     };
-    log(result);
-    return result;
+    log(stagingResult);
+    return stagingResult;
   }
 
-  if (existingUser) {
-    const profile = await supabaseAdmin.getProfile(existingUser.id);
-    if (!isCompatibleProfile(profile, existingUser.id, credentials)) {
-      throw new Error(
-        "The existing staging user has an incompatible admin profile.",
-      );
-    }
-
-    const result = {
-      action: "unchanged",
-      mode: "executed",
-      projectRef: target.projectRef,
-      userCount: 1,
-    };
-    log(result);
-    return result;
-  }
-
-  let createdUser;
-  try {
-    createdUser = await supabaseAdmin.createUser({
-      email: credentials.email,
-      email_confirm: true,
-      password: credentials.password,
-      user_metadata: { full_name: credentials.fullName, role: "admin" },
-    });
-  } catch {
-    throw new Error("Unable to create the staging administrator.");
-  }
-
-  await supabaseAdmin.getProfile(createdUser.id);
-  await supabaseAdmin.upsertProfile({
-    email: credentials.email,
-    full_name: credentials.fullName,
-    id: createdUser.id,
-    role: "admin",
-  });
-
-  const result = {
-    action: "created",
+  const stagingResult = {
+    action: result.created ? "created" : "unchanged",
     mode: "executed",
     projectRef: target.projectRef,
     userCount: 1,
   };
-  log(result);
-  return result;
+  log(stagingResult);
+  return stagingResult;
 }
 
 function resolveCredentials({ email, environment, fullName, password }) {
@@ -174,52 +126,6 @@ function resolveStagingTarget(manifest) {
   };
 }
 
-function isCompatibleProfile(profile, userId, credentials) {
-  return Boolean(
-    profile &&
-    profile.id === userId &&
-    profile.email?.toLowerCase() === credentials.email.toLowerCase() &&
-    profile.full_name === credentials.fullName &&
-    profile.role === "admin",
-  );
-}
-
-function createSupabaseAdminAdapter(supabase) {
-  return {
-    async createUser(input) {
-      const { data, error } = await supabase.auth.admin.createUser(input);
-      if (error || !data.user) throw new Error("Create user failed.");
-      return data.user;
-    },
-    async getProfile(userId) {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,email,full_name,role")
-        .eq("id", userId)
-        .maybeSingle();
-      if (error) throw new Error("Profile lookup failed.");
-      return data;
-    },
-    async listUsers() {
-      const users = [];
-      for (let page = 1; ; page += 1) {
-        const { data, error } = await supabase.auth.admin.listUsers({
-          page,
-          perPage: 100,
-        });
-        if (error) throw new Error("Auth user listing failed.");
-        users.push(...data.users);
-        if (data.users.length < 100) return users;
-      }
-    },
-    async upsertProfile(profile) {
-      const { error } = await supabase.from("profiles").upsert(profile);
-      if (error) throw new Error("Profile reconciliation failed.");
-      return profile;
-    },
-  };
-}
-
 export async function runBootstrapStagingAdminCli(
   argv = process.argv.slice(2),
   environment = process.env,
@@ -254,7 +160,7 @@ export async function runBootstrapStagingAdminCli(
     execute: argv.includes("--execute"),
     log: (value) => console.log(JSON.stringify(value, null, 2)),
     manifest,
-    supabaseAdmin: createSupabaseAdminAdapter(supabase),
+    supabaseAdmin: createRemoteAdminAdapter(supabase),
   });
 }
 

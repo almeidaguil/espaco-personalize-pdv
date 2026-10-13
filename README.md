@@ -26,8 +26,7 @@ identifica o responsavel pela sessao autenticada. Consulte o
 - Husky
 - Commitlint
 - GitHub Actions
-- Vercel (projeto dedicado de staging no PR08 e produção legada preservada até
-  o corte do PR09)
+- Vercel (projetos independentes para staging e produção)
 
 ## Ambiente Local
 
@@ -67,10 +66,16 @@ npm.cmd ci
   compor `develop`. O PR08 não implementa deploy contínuo: promoções futuras
   exigem um fluxo versionado posterior. O ambiente `Production` desse projeto
   Vercel representa exclusivamente staging.
-- Durante o PR08, a produção usa `main`, Vercel legado e o Supabase legado;
-  o projeto Vercel reservado `roberto-multimarcas-pdv` permanece sem variáveis
-  e sem deployments; o novo banco de produção será criado somente no corte
-  aprovado do PR09.
+- O PR09-A prepara o corte na branch `feature/production-cutover`, preserva a
+  produção legada pausada por 30 dias e provisiona Supabase/Vercel exclusivos
+  para `roberto-multimarcas-pdv`. Toda mutação exige o checkpoint literal do
+  runbook; resultados remotos continuam `PENDENTE` até serem evidenciados.
+- O PR09-B promove `develop` para `main` exclusivamente por pull request e
+  publica o commit assinado resultante na URL
+  `https://roberto-multimarcas-pdv.vercel.app`.
+- A produção nova começa com somente um administrador e banco operacional
+  vazio. Vendedores, produtos e estoque são cadastrados manualmente pela
+  aplicação; a validação com dois operadores ocorre depois desse preparo.
 - Arquivos com valores reais são locais ou gerenciados pelo provedor e nunca
   são versionados.
 - Commits diretos na `main` sao proibidos. O fluxo oficial e
@@ -93,6 +98,8 @@ promocao de migrations e processo de release.
 - [Runbook operacional](docs/runbook-operacional.md)
 - [Plano de preparacao do ambiente](docs/plano-preparacao-ambiente.md)
 - [Ambientes](docs/ambientes.md)
+- [Desenho do corte de produção PR09](docs/superpowers/specs/2026-10-08-production-cutover-design.md)
+- [Evidências do corte de produção PR09](docs/evidencias/pr09-production-cutover.md)
 - [Supabase CLI](docs/supabase-cli.md)
 - [Vercel CLI](docs/vercel-cli.md)
 - [Git e GitHub](docs/git-github.md)

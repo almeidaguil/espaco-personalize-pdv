@@ -11,8 +11,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: e2e-local-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: local-supabase-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: false
 
 jobs:
   e2e:

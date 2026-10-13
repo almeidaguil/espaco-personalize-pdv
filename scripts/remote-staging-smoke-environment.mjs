@@ -1,6 +1,11 @@
 import { buildSupabaseUrl } from "./supabase-management-client.mjs";
+import { resolveRemoteTarget } from "./remote-environment-policy.mjs";
 
 export function resolveRemoteStagingSmokeEnvironment(environment, manifest) {
+  const vercelTarget = resolveRemoteTarget(manifest, {
+    environment: "staging",
+    provider: "vercel",
+  });
   const projectRef = manifest.supabase.targets.staging.projectRef;
   if (!projectRef) {
     throw new Error(
@@ -22,12 +27,12 @@ export function resolveRemoteStagingSmokeEnvironment(environment, manifest) {
   }
 
   const baseUrl = parseUrl(environment.E2E_BASE_URL);
-  if (!manifest.vercel.siteUrl) {
+  if (!vercelTarget.siteUrl) {
     throw new Error(
       "The Vercel staging URL must be registered for remote smoke.",
     );
   }
-  const expectedBaseUrl = new URL(manifest.vercel.siteUrl);
+  const expectedBaseUrl = new URL(vercelTarget.siteUrl);
   if (
     baseUrl.protocol !== "https:" ||
     baseUrl.hostname !== expectedBaseUrl.hostname ||

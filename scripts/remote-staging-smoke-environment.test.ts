@@ -102,9 +102,15 @@ function createManifest() {
     ...manifestFixture,
     vercel: {
       ...manifestFixture.vercel,
-      deploymentId: "dpl_preview123",
-      deploymentUrl: "https://roberto-preview-build.vercel.app",
-      siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
+      targets: {
+        ...manifestFixture.vercel.targets,
+        staging: {
+          ...manifestFixture.vercel.targets.staging,
+          deploymentId: "dpl_preview123",
+          deploymentUrl: "https://roberto-preview-build.vercel.app",
+          siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
+        },
+      },
     },
     supabase: {
       ...manifestFixture.supabase,

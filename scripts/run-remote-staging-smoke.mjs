@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import {
   loadRemoteEnvironmentManifest,
   parseRemoteEnvironmentManifest,
+  resolveRemoteTarget,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
 import { resolveRemoteStagingSmokeEnvironment } from "./remote-staging-smoke-environment.mjs";
@@ -30,7 +31,10 @@ export async function runManagedRemoteStagingSmoke({
   secretGenerator = () => randomBytes(16).toString("hex"),
 }) {
   const parsedManifest = parseRemoteEnvironmentManifest(manifest);
-  const target = parsedManifest.vercel;
+  const target = resolveRemoteTarget(parsedManifest, {
+    environment: "staging",
+    provider: "vercel",
+  });
   const options = parseArguments(args);
   if (!options.execute) {
     return {

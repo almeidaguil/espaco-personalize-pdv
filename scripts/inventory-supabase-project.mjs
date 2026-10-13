@@ -7,6 +7,7 @@ import { createClient } from "@supabase/supabase-js";
 
 import {
   loadRemoteEnvironmentManifest,
+  resolveRemoteTarget,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
 import {
@@ -49,10 +50,17 @@ export async function collectSupabaseInventory({
   );
 
   let migrations;
+  let schema;
   try {
     migrations = [...(await databaseReader.listMigrations())].sort();
+    schema = {
+      extensions: [...(await databaseReader.listExtensions())].sort(
+        (left, right) => left.name.localeCompare(right.name),
+      ),
+      tables: [...(await databaseReader.listSchemaTables())].sort(),
+    };
   } catch {
-    throw new Error("Unable to list known migrations.");
+    throw new Error("Unable to inventory the database schema.");
   }
 
   let users;
@@ -103,6 +111,7 @@ export async function collectSupabaseInventory({
       region: project.region,
       status: project.status,
     },
+    schema,
     storage: { buckets },
     tables,
   };
@@ -285,17 +294,35 @@ async function connectInventoryDependencies({ manifest }) {
   );
 
   return {
-    authReader: createAuthReader(supabase),
-    databaseReader: createDatabaseReader(supabase),
+    ...createSupabaseInventoryReaders({
+      managementClient,
+      projectRef,
+      supabase,
+    }),
     githubReader: createKnownGitHubReader(manifest),
     managementClient,
     project,
-    storageReader: createStorageReader(supabase),
     vercelReader: createKnownVercelReader(manifest),
   };
 }
 
-function createDatabaseReader(supabase) {
+export function createSupabaseInventoryReaders({
+  managementClient,
+  projectRef,
+  supabase,
+}) {
+  return {
+    authReader: createAuthReader(supabase),
+    databaseReader: createDatabaseReader({
+      managementClient,
+      projectRef,
+      supabase,
+    }),
+    storageReader: createStorageReader(supabase),
+  };
+}
+
+function createDatabaseReader({ managementClient, projectRef, supabase }) {
   return {
     async countRows(table) {
       const { count, error } = await supabase
@@ -304,11 +331,42 @@ function createDatabaseReader(supabase) {
       if (error) throw new Error("Count failed.");
       return count ?? 0;
     },
+    async listExtensions() {
+      const rows = normalizeQueryRows(
+        await managementClient.runReadOnlyQuery(projectRef, {
+          query:
+            "select extname as name, extversion as version from pg_extension order by extname",
+        }),
+      );
+      return rows.map(({ name, version }) => ({ name, version }));
+    },
     async listMigrations() {
-      const files = await readdir(resolve("supabase/migrations"));
-      return files.filter((file) => file.endsWith(".sql"));
+      const rows = normalizeQueryRows(
+        await managementClient.runReadOnlyQuery(projectRef, {
+          query:
+            "select version::text as version from supabase_migrations.schema_migrations order by version",
+        }),
+      );
+      return rows.map(({ version }) => version);
+    },
+    async listSchemaTables() {
+      const rows = normalizeQueryRows(
+        await managementClient.runReadOnlyQuery(projectRef, {
+          query:
+            "select table_name from information_schema.tables where table_schema = 'public' and table_type = 'BASE TABLE' order by table_name",
+        }),
+      );
+      return rows.map(({ table_name: tableName }) => tableName);
     },
   };
+}
+
+function normalizeQueryRows(response) {
+  const rows = response?.result ?? response;
+  if (!Array.isArray(rows)) {
+    throw new Error("Read-only database query returned an invalid result.");
+  }
+  return rows;
 }
 
 function createAuthReader(supabase) {
@@ -370,12 +428,16 @@ function createKnownGitHubReader(manifest) {
 }
 
 function createKnownVercelReader(manifest) {
+  const target = resolveRemoteTarget(manifest, {
+    environment: "staging",
+    provider: "vercel",
+  });
   return {
     async getProject() {
       return {
         framework: "nextjs",
-        id: manifest.vercel.projectId,
-        name: manifest.vercel.projectName,
+        id: target.projectId,
+        name: target.projectName,
         repository: manifest.vercel.repository,
       };
     },

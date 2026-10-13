@@ -3,6 +3,7 @@ import { pathToFileURL } from "node:url";
 
 import {
   loadRemoteEnvironmentManifest,
+  resolveRemoteTarget,
   validateRemoteOperation,
 } from "./remote-environment-policy.mjs";
 
@@ -75,10 +76,14 @@ function resolveTarget(manifest, options) {
   }
 
   if (options.provider === "vercel") {
+    const expected = resolveRemoteTarget(manifest, {
+      environment: options.environment,
+      provider: "vercel",
+    });
     return {
-      orgId: options.orgId ?? manifest.vercel.orgId,
-      projectId: options.projectId ?? manifest.vercel.projectId,
-      projectName: options.projectName ?? manifest.vercel.projectName,
+      orgId: options.orgId ?? expected.orgId,
+      projectId: options.projectId ?? expected.projectId,
+      projectName: options.projectName ?? expected.projectName,
     };
   }
 

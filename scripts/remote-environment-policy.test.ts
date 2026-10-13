@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from "vitest";
 
+import * as remoteEnvironmentPolicy from "./remote-environment-policy.mjs";
 import {
   createSafeLogger,
   parseRemoteEnvironmentManifest,
@@ -9,26 +10,42 @@ import {
 
 const manifestFixture = {
   vercel: {
-    dedicatedStaging: true,
-    deploymentProtection: "vercel-authentication",
-    deploymentId: "dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD",
-    deploymentUrl:
-      "https://roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app",
-    environment: "production",
     framework: "nextjs",
     gitConnectionAllowed: false,
     nodeVersion: "22.x",
     orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
-    projectId: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
-    projectName: "roberto-multimarcas-pdv-staging",
-    reservedProductionProjectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
-    reservedProductionProjectName: "roberto-multimarcas-pdv",
     repository: "almeidaguil/espaco-personalize-pdv",
     repositoryId: 1264018806,
-    siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
     scope: "guilherme-a-s-projects",
-    sourceRef: "feature/provision-roberto-environments",
-    stagingBranch: "develop",
+    targets: {
+      production: {
+        allowedSourceRefs: ["feature/production-cutover", "main"],
+        dedicatedStaging: false,
+        deploymentId: null,
+        deploymentProtection: "application-auth",
+        deploymentUrl: null,
+        environment: "production",
+        projectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+        projectName: "roberto-multimarcas-pdv",
+        releaseBranch: "main",
+        siteUrl: "https://roberto-multimarcas-pdv.vercel.app",
+        sourceRef: "feature/production-cutover",
+      },
+      staging: {
+        allowedSourceRefs: ["feature/provision-roberto-environments"],
+        dedicatedStaging: true,
+        deploymentId: "dpl_3oB2HRYi5KBaHzQAk7Y6cnZvfdqD",
+        deploymentProtection: "vercel-authentication",
+        deploymentUrl:
+          "https://roberto-multimarcas-pdv-staging-6emhr7cxk.vercel.app",
+        environment: "production",
+        projectId: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+        projectName: "roberto-multimarcas-pdv-staging",
+        releaseBranch: "develop",
+        siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
+        sourceRef: "feature/provision-roberto-environments",
+      },
+    },
   },
   supabase: {
     legacy: {
@@ -64,7 +81,7 @@ const manifestFixture = {
       },
     },
   },
-  version: 1,
+  version: 2,
 };
 
 describe("parseRemoteEnvironmentManifest", () => {
@@ -85,18 +102,24 @@ describe("parseRemoteEnvironmentManifest", () => {
     });
     expect(manifest.supabase.targets.production.projectRef).toBeNull();
     expect(manifest.vercel).toMatchObject({
-      dedicatedStaging: true,
-      environment: "production",
       framework: "nextjs",
       gitConnectionAllowed: false,
       orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
-      projectId: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
-      projectName: "roberto-multimarcas-pdv-staging",
-      reservedProductionProjectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
-      sourceRef: "feature/provision-roberto-environments",
       repository: "almeidaguil/espaco-personalize-pdv",
       repositoryId: 1264018806,
-      stagingBranch: "develop",
+      targets: {
+        production: {
+          deploymentId: null,
+          deploymentProtection: "application-auth",
+          projectId: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+          sourceRef: "feature/production-cutover",
+        },
+        staging: {
+          deploymentProtection: "vercel-authentication",
+          projectId: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+          sourceRef: "feature/provision-roberto-environments",
+        },
+      },
     });
   });
 
@@ -107,7 +130,10 @@ describe("parseRemoteEnvironmentManifest", () => {
     ],
     [
       "invalid Vercel project id",
-      { path: ["vercel", "projectId"], value: "not-a-project-id" },
+      {
+        path: ["vercel", "targets", "staging", "projectId"],
+        value: "not-a-project-id",
+      },
     ],
   ])("rejects %s", (_name, mutation) => {
     const invalidManifest = structuredClone(manifestFixture) as Record<
@@ -125,10 +151,85 @@ describe("parseRemoteEnvironmentManifest", () => {
       /manifest/i,
     );
   });
+
+  test("rejects unrecognized fields instead of silently accepting secrets", () => {
+    const invalidManifest = structuredClone(manifestFixture);
+    Object.assign(invalidManifest.vercel.targets.production, {
+      secretKey: "must-not-be-accepted",
+    });
+
+    expect(() => parseRemoteEnvironmentManifest(invalidManifest)).toThrow(
+      /manifest/i,
+    );
+  });
+
+  test("rejects unrecognized fields inside Supabase targets", () => {
+    const invalidManifest = structuredClone(manifestFixture);
+    Object.assign(invalidManifest.supabase.targets.production, {
+      databasePassword: "must-not-be-accepted",
+    });
+
+    expect(() => parseRemoteEnvironmentManifest(invalidManifest)).toThrow(
+      /manifest/i,
+    );
+  });
+});
+
+describe("resolveRemoteTarget", () => {
+  test("normalizes common Vercel metadata with the selected staging target", () => {
+    const target = remoteEnvironmentPolicy.resolveRemoteTarget(
+      manifestFixture,
+      {
+        environment: "staging",
+        provider: "vercel",
+      },
+    );
+
+    expect(target).toMatchObject({
+      environment: "staging",
+      framework: "nextjs",
+      identifier: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+      logicalEnvironment: "staging",
+      orgId: "team_jstETBWBHJi0hsir3a3bAkbK",
+      projectId: "prj_fb7pug2hcbCGI1XIMLz5VuMr4S79",
+      projectName: "roberto-multimarcas-pdv-staging",
+      provider: "vercel",
+      siteUrl: "https://roberto-multimarcas-pdv-staging.vercel.app",
+    });
+    expect(Object.isFrozen(target)).toBe(true);
+    expect(Object.isFrozen(target.allowedSourceRefs)).toBe(true);
+  });
+
+  test("normalizes a nullable pre-provisioning Supabase production target", () => {
+    expect(
+      remoteEnvironmentPolicy.resolveRemoteTarget(manifestFixture, {
+        environment: "production",
+        provider: "supabase",
+      }),
+    ).toEqual({
+      environment: "production",
+      hostname: null,
+      identifier: "roberto-multimarcas-pdv",
+      name: "roberto-multimarcas-pdv",
+      organizationId: "wcqoluxxlvglqtebcucz",
+      projectRef: null,
+      provider: "supabase",
+      region: "sa-east-1",
+    });
+  });
+
+  test("rejects an unsupported provider or logical environment", () => {
+    expect(() =>
+      remoteEnvironmentPolicy.resolveRemoteTarget(manifestFixture, {
+        environment: "preview",
+        provider: "vercel",
+      }),
+    ).toThrow(/unsupported remote provider or environment/i);
+  });
 });
 
 describe("validateRemoteOperation", () => {
-  const manifest = parseRemoteEnvironmentManifest(manifestFixture);
+  const manifest = manifestFixture;
 
   test("authorizes a read against the exact legacy staging target", () => {
     expect(
@@ -269,10 +370,12 @@ describe("validateRemoteOperation", () => {
     });
   });
 
-  test("rejects production as a logical Vercel environment", () => {
-    expect(() =>
+  test("authorizes production only for the exact Vercel project", () => {
+    const target = manifest.vercel.targets.production;
+
+    expect(
       validateRemoteOperation({
-        confirmation: manifest.vercel.projectId,
+        confirmation: target.projectId,
         environment: "production",
         execute: true,
         manifest,
@@ -280,11 +383,15 @@ describe("validateRemoteOperation", () => {
         provider: "vercel",
         target: {
           orgId: manifest.vercel.orgId,
-          projectId: manifest.vercel.projectId,
-          projectName: manifest.vercel.projectName,
+          projectId: target.projectId,
+          projectName: target.projectName,
         },
       }),
-    ).toThrow(/unsupported remote provider or environment/i);
+    ).toMatchObject({
+      environment: "production",
+      identifier: "prj_oBs2uc7uxsHMc7ssHFKczfi52LMq",
+      result: "authorized",
+    });
   });
 });
 

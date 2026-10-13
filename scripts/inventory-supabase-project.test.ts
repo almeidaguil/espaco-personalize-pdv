@@ -41,12 +41,16 @@ describe("collectSupabaseInventory", () => {
       },
       databaseReader: {
         countRows: vi.fn(async (table: string) => table.length),
+        listExtensions: vi
+          .fn()
+          .mockResolvedValue([{ name: "pgcrypto", version: "1.3" }]),
         listMigrations: vi
           .fn()
           .mockResolvedValue([
             "20261001000000_initial.sql",
             "20261002000000_cash.sql",
           ]),
+        listSchemaTables: vi.fn().mockResolvedValue(["products", "sales"]),
       },
       managementClient: {
         getAuthConfig: vi.fn().mockResolvedValue({
@@ -108,6 +112,10 @@ describe("collectSupabaseInventory", () => {
       storage: {
         buckets: [{ name: "product-images", objectCount: 2, totalBytes: 200 }],
       },
+      schema: {
+        extensions: [{ name: "pgcrypto", version: "1.3" }],
+        tables: ["products", "sales"],
+      },
       tables: {
         cash_sessions: 13,
         categories: 10,
@@ -135,7 +143,9 @@ describe("collectSupabaseInventory", () => {
         },
         databaseReader: {
           countRows: vi.fn().mockResolvedValue(0),
+          listExtensions: vi.fn().mockResolvedValue([]),
           listMigrations: vi.fn().mockResolvedValue([]),
+          listSchemaTables: vi.fn().mockResolvedValue([]),
         },
         managementClient: {
           getAuthConfig: vi.fn().mockResolvedValue({}),
