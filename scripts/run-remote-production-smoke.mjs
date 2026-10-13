@@ -16,6 +16,7 @@ import {
 } from "./remote-production-smoke-environment.mjs";
 import { runCliCommand } from "./run-cli-command.mjs";
 import { createVercelManagementClient } from "./vercel-management-client.mjs";
+import { hasActiveVercelProtectionBypass } from "./vercel-protection-bypass.mjs";
 import { readProductionDeploymentTarget } from "./verify-remote-production.mjs";
 
 const statePath = resolve(".provisioning/production-cutover-state.json");
@@ -87,7 +88,7 @@ export async function runManagedRemoteProductionSmoke({
 
   const project = await client.getProject(target.projectId, target.orgId);
   if (
-    Object.keys(project?.protectionBypass ?? {}).length > 0 ||
+    hasActiveVercelProtectionBypass(project?.protectionBypass) ||
     (project?.ssoProtection && project.ssoProtection.deploymentType !== "none")
   ) {
     throw new Error(

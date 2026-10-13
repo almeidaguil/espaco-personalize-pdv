@@ -1,6 +1,7 @@
 import { expect, test, vi } from "vitest";
 
 import manifestFixture from "../config/remote-environments.json";
+import { requiredPolicyContract } from "./verify-remote-environment.mjs";
 import {
   resolveProductionSourceCommit,
   verifyRemoteProduction,
@@ -79,6 +80,16 @@ test("rejects disabled HIBP without the recorded Free-plan exception", async () 
 test("accepts Vercel's explicit none deployment protection", async () => {
   const { input } = fixture({
     project: { ssoProtection: { deploymentType: "none" } },
+  });
+
+  await expect(verifyRemoteProduction(input)).resolves.toMatchObject({
+    status: "passed",
+  });
+});
+
+test("accepts Vercel's empty protection bypass sentinel", async () => {
+  const { input } = fixture({
+    project: { protectionBypass: { "": null } },
   });
 
   await expect(verifyRemoteProduction(input)).resolves.toMatchObject({
@@ -218,7 +229,7 @@ test.each([
   [
     "active bypass",
     {
-      project: { protectionBypass: { bypass: { scope: "automation-bypass" } } },
+      project: { protectionBypass: { "automation-secret-sentinel": null } },
     },
     /bypass|protection/i,
   ],
@@ -307,8 +318,7 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
             tables_with_policies_count: 8,
           },
         ];
-      if (query.includes("policy_contract_matches"))
-        return [{ policy_contract_matches: true }];
+      if (query.includes("policy_contract_row")) return requiredPolicyContract;
       if (query.includes("auth.users"))
         return [
           {

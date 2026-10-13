@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -23,6 +24,121 @@ const requiredRpcs = [
   "cancel_sale",
   "get_store_sales_report_v2",
 ];
+const adminPredicate = `
+  (exists (select 1
+    from profiles
+    where ((profiles.id = (select auth.uid() as uid))
+      and (profiles.role = 'admin'::user_role))))
+`;
+const activeOwnProfilePredicate = `
+  ((id = (select auth.uid() as uid))
+  and (select current_user_is_active() as current_user_is_active))
+`;
+const activeAllowedSalePredicate = `
+  ((select current_user_is_active() as current_user_is_active)
+  and (
+    (operator_id = (select auth.uid() as uid))
+    or (select current_user_is_admin() as current_user_is_admin)
+  ))
+`;
+
+export const requiredPolicyContract = Object.freeze([
+  policy("profiles", "Admins can read operator profiles", "SELECT", {
+    qual: "(select current_user_is_admin() as current_user_is_admin)",
+  }),
+  policy("profiles", "Active users can read own profile", "SELECT", {
+    qual: activeOwnProfilePredicate,
+  }),
+  policy("profiles", "Active users can update own profile name", "UPDATE", {
+    qual: activeOwnProfilePredicate,
+    withCheck: activeOwnProfilePredicate,
+  }),
+  policy("categories", "Authenticated users can read categories", "SELECT", {
+    qual: "true",
+  }),
+  policy("categories", "Admins can create categories", "INSERT", {
+    withCheck: adminPredicate,
+  }),
+  policy("categories", "Admins can update categories", "UPDATE", {
+    qual: adminPredicate,
+    withCheck: adminPredicate,
+  }),
+  policy("categories", "Admins can delete categories", "DELETE", {
+    qual: adminPredicate,
+  }),
+  policy("products", "Authenticated users can read products", "SELECT", {
+    qual: "true",
+  }),
+  policy("products", "Admins can create products", "INSERT", {
+    withCheck: adminPredicate,
+  }),
+  policy("products", "Admins can update products", "UPDATE", {
+    qual: adminPredicate,
+    withCheck: adminPredicate,
+  }),
+  policy("products", "Admins can delete products", "DELETE", {
+    qual: adminPredicate,
+  }),
+  policy(
+    "stock_movements",
+    "Authenticated users can read stock movements",
+    "SELECT",
+    { qual: "true" },
+  ),
+  policy(
+    "stock_movements",
+    "Admins can create manual stock movements",
+    "INSERT",
+    {
+      withCheck: `
+        (((type)::text = any (
+          array['initial_adjustment'::text, 'manual_adjustment'::text]
+        ))
+        and (sale_id is null)
+        and ${adminPredicate})
+      `,
+    },
+  ),
+  policy(
+    "cash_sessions",
+    "Active users can read allowed cash sessions",
+    "SELECT",
+    { qual: activeAllowedSalePredicate },
+  ),
+  policy("sales", "Active users can read allowed sales", "SELECT", {
+    qual: activeAllowedSalePredicate,
+  }),
+  policy(
+    "sale_items",
+    "Active users can read items from allowed sales",
+    "SELECT",
+    {
+      qual: `
+        ((select current_user_is_active() as current_user_is_active)
+        and (exists (
+          select 1
+          from sales
+          where (sales.id = sale_items.sale_id)
+        )))
+      `,
+    },
+  ),
+  policy(
+    "payments",
+    "Active users can read payments from allowed sales",
+    "SELECT",
+    {
+      qual: `
+        ((select current_user_is_active() as current_user_is_active)
+        and (exists (
+          select 1
+          from sales
+          where (sales.id = payments.sale_id)
+        )))
+      `,
+    },
+  ),
+]);
 
 export async function verifyRemoteEnvironment({
   authPolicy = /** @type {any} */ (undefined),
@@ -86,62 +202,30 @@ export async function verifyRemoteEnvironment({
     throw new Error("Local and remote migrations are not aligned.");
   }
 
-  const policyContract = firstQueryRow(
-    await supabase.managementClient.runReadOnlyQuery(target.projectRef, {
+  const policyRows = await supabase.managementClient.runReadOnlyQuery(
+    target.projectRef,
+    {
       query: `
-        with expected(table_name, policy_name, command) as (
-          values
-            ('profiles', 'Admins can read operator profiles', 'SELECT'),
-            ('profiles', 'Active users can read own profile', 'SELECT'),
-            ('profiles', 'Active users can update own profile name', 'UPDATE'),
-            ('categories', 'Authenticated users can read categories', 'SELECT'),
-            ('categories', 'Admins can create categories', 'INSERT'),
-            ('categories', 'Admins can update categories', 'UPDATE'),
-            ('categories', 'Admins can delete categories', 'DELETE'),
-            ('products', 'Authenticated users can read products', 'SELECT'),
-            ('products', 'Admins can create products', 'INSERT'),
-            ('products', 'Admins can update products', 'UPDATE'),
-            ('products', 'Admins can delete products', 'DELETE'),
-            ('stock_movements', 'Authenticated users can read stock movements', 'SELECT'),
-            ('stock_movements', 'Admins can create manual stock movements', 'INSERT'),
-            ('cash_sessions', 'Active users can read allowed cash sessions', 'SELECT'),
-            ('sales', 'Active users can read allowed sales', 'SELECT'),
-            ('sale_items', 'Active users can read items from allowed sales', 'SELECT'),
-            ('payments', 'Active users can read payments from allowed sales', 'SELECT')
-        ), actual as (
-          select tablename as table_name, policyname as policy_name, cmd as command,
-            roles, qual, with_check
-          from pg_catalog.pg_policies
-          where schemaname = 'public'
-            and tablename in (
-              'profiles', 'categories', 'products', 'stock_movements',
-              'cash_sessions', 'sales', 'sale_items', 'payments'
-            )
-        )
         select
-          not exists (
-            (select table_name, policy_name, command from expected)
-            except
-            (select table_name, policy_name, command from actual)
+          tablename,
+          policyname,
+          permissive,
+          cmd,
+          to_jsonb(roles) as roles,
+          qual,
+          with_check,
+          true as policy_contract_row
+        from pg_catalog.pg_policies
+        where schemaname = 'public'
+          and tablename in (
+            'profiles', 'categories', 'products', 'stock_movements',
+            'cash_sessions', 'sales', 'sale_items', 'payments'
           )
-          and not exists (
-            (select table_name, policy_name, command from actual)
-            except
-            (select table_name, policy_name, command from expected)
-          )
-          and not exists (
-            select 1 from actual
-            where roles::text <> '{authenticated}'
-              or (
-                command <> 'SELECT'
-                and lower(coalesce(qual, '') || ' ' || coalesce(with_check, ''))
-                  ~ '(^|[^a-z_])true([^a-z_]|$)'
-              )
-          ) as policy_contract_matches
+        order by tablename, policyname
       `,
-    }),
+    },
   );
-  if (policyContract?.policy_contract_matches !== true) {
+  if (!policyContractsMatch(requiredPolicyContract, queryRows(policyRows))) {
     throw new Error(`${capitalize(environment)} policy contract is divergent.`);
   }
 
@@ -338,8 +422,119 @@ function matchesLeakedPasswordProtection(authConfig, authPolicy) {
 }
 
 function firstQueryRow(response) {
-  const rows = Array.isArray(response) ? response : response?.result;
+  const rows = queryRows(response);
   return rows?.[0];
+}
+
+function queryRows(response) {
+  return Array.isArray(response) ? response : response?.result;
+}
+
+export function policyContractsMatch(expectedPolicies, actualPolicies) {
+  if (!Array.isArray(expectedPolicies) || !Array.isArray(actualPolicies)) {
+    return false;
+  }
+
+  const expectedFingerprints = expectedPolicies.map(policyFingerprint);
+  const actualFingerprints = actualPolicies.map(policyFingerprint);
+  if (
+    expectedFingerprints.includes(null) ||
+    actualFingerprints.includes(null) ||
+    expectedFingerprints.length !== actualFingerprints.length
+  ) {
+    return false;
+  }
+
+  expectedFingerprints.sort();
+  actualFingerprints.sort();
+  return actualFingerprints.every(
+    (fingerprint, index) => fingerprint === expectedFingerprints[index],
+  );
+}
+
+function policyFingerprint(policyRow) {
+  if (
+    !policyRow ||
+    typeof policyRow.tablename !== "string" ||
+    typeof policyRow.policyname !== "string" ||
+    typeof policyRow.cmd !== "string"
+  ) {
+    return null;
+  }
+
+  const roles = normalizeRoles(policyRow.roles);
+  const permissive = normalizePermissive(policyRow.permissive);
+  const qual = normalizePolicyExpression(policyRow.qual);
+  const withCheck = normalizePolicyExpression(policyRow.with_check);
+  if (!roles || !permissive || qual === undefined || withCheck === undefined) {
+    return null;
+  }
+
+  const canonicalPolicy = JSON.stringify({
+    cmd: policyRow.cmd.toUpperCase(),
+    permissive,
+    policyname: policyRow.policyname,
+    qual,
+    roles,
+    tablename: policyRow.tablename,
+    withCheck,
+  });
+  return createHash("sha256").update(canonicalPolicy).digest("hex");
+}
+
+function normalizeRoles(value) {
+  if (!Array.isArray(value) || value.length === 0) return null;
+  if (!value.every((role) => typeof role === "string" && role.length > 0)) {
+    return null;
+  }
+  return [...value].sort();
+}
+
+function normalizePermissive(value) {
+  return ["PERMISSIVE", "RESTRICTIVE"].includes(value) ? value : null;
+}
+
+function normalizePolicyExpression(value) {
+  if (value === null) return null;
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+
+  let canonical = "";
+  let quote = null;
+  for (let index = 0; index < value.length; index += 1) {
+    const character = value[index];
+    if (quote) {
+      canonical += character;
+      if (character === quote) {
+        if (value[index + 1] === quote) {
+          canonical += value[index + 1];
+          index += 1;
+        } else {
+          quote = null;
+        }
+      }
+      continue;
+    }
+    if (character === "'" || character === '"') {
+      quote = character;
+      canonical += character;
+    } else if (!/\s/u.test(character)) {
+      canonical += character.toLowerCase();
+    }
+  }
+
+  return quote ? undefined : canonical;
+}
+
+function policy(tablename, policyname, cmd, { qual = null, withCheck = null }) {
+  return Object.freeze({
+    cmd,
+    permissive: "PERMISSIVE",
+    policyname,
+    qual,
+    roles: Object.freeze(["authenticated"]),
+    tablename,
+    with_check: withCheck,
+  });
 }
 
 function parseRemoteMigrationIds(output) {

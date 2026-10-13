@@ -13,6 +13,7 @@ import {
 } from "./remote-environment-policy.mjs";
 import { createProductionEnvironmentFingerprint } from "./production-environment-fingerprint.mjs";
 import { createVercelManagementClient } from "./vercel-management-client.mjs";
+import { hasActiveVercelProtectionBypass } from "./vercel-protection-bypass.mjs";
 import { runCliCommand } from "./run-cli-command.mjs";
 
 const authorizedOrgId = "team_jstETBWBHJi0hsir3a3bAkbK";
@@ -408,10 +409,7 @@ async function auditReservedProject(
   ) {
     throw new Error("Production has incompatible deployment protection.");
   }
-  const hasActiveProtectionBypass = Object.entries(
-    project?.protectionBypass ?? {},
-  ).some(([secret, value]) => secret !== "" || value !== null);
-  if (hasActiveProtectionBypass) {
+  if (hasActiveVercelProtectionBypass(project?.protectionBypass)) {
     throw new Error("Production has an active protection bypass.");
   }
 

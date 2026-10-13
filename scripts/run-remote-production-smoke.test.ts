@@ -32,9 +32,17 @@ test("accepts Vercel's explicit none deployment protection", async () => {
   });
 });
 
+test("accepts Vercel's empty protection bypass sentinel", async () => {
+  const { input } = fixture({ protectionBypass: { "": null } });
+
+  await expect(runManagedRemoteProductionSmoke(input)).resolves.toMatchObject({
+    smokeStatus: "passed",
+  });
+});
+
 test("rejects any production protection or failed smoke and does not record verified", async () => {
   const protectedFixture = fixture({
-    protectionBypass: { key: { scope: "automation-bypass" } },
+    protectionBypass: { "automation-secret-sentinel": null },
   });
   await expect(
     runManagedRemoteProductionSmoke(protectedFixture.input),

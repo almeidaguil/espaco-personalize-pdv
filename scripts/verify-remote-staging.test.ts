@@ -2,6 +2,7 @@ import { describe, expect, test, vi } from "vitest";
 
 import manifestFixture from "../config/remote-environments.json";
 import { parseRemoteEnvironmentManifest } from "./remote-environment-policy.mjs";
+import { requiredPolicyContract } from "./verify-remote-environment.mjs";
 import {
   runRemoteCommand,
   verifyRemoteStaging,
@@ -401,8 +402,10 @@ function createManagementClient(
     getDatabaseOpenApi: vi.fn().mockResolvedValue(toOpenApi(schema)),
     runReadOnlyQuery: vi.fn(async (_projectRef, { query }) => {
       if (query.includes("pg_catalog.pg_class")) return [rlsSummary];
-      if (query.includes("policy_contract_matches"))
-        return [{ policy_contract_matches: policyContractMatches }];
+      if (query.includes("policy_contract_row"))
+        return policyContractMatches
+          ? requiredPolicyContract
+          : requiredPolicyContract.slice(1);
       if (query.includes("auth.users")) return [userSummary];
       if (query.includes("operational_row_count"))
         return [{ operational_row_count: operationalRowCount }];

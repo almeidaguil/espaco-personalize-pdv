@@ -18,6 +18,7 @@ import {
   parseSupabaseApiKeys,
 } from "./supabase-management-client.mjs";
 import { createVercelManagementClient } from "./vercel-management-client.mjs";
+import { hasActiveVercelProtectionBypass } from "./vercel-protection-bypass.mjs";
 import { verifyRemoteEnvironment } from "./verify-remote-environment.mjs";
 
 const expectedVariables = new Map([
@@ -232,7 +233,7 @@ function assertExpectedVercelEnvironment(values, manifest) {
 
 function assertNoVercelProtection(project) {
   if (
-    Object.keys(project?.protectionBypass ?? {}).length > 0 ||
+    hasActiveVercelProtectionBypass(project?.protectionBypass) ||
     (project?.ssoProtection && project.ssoProtection.deploymentType !== "none")
   ) {
     throw new Error("Production cannot use a Vercel bypass or protection.");
