@@ -68,7 +68,7 @@ O SKU continuará opcional. Quando informado, seu valor canônico será:
 2. transformar todas as letras em maiúsculas;
 3. converter uma string vazia em ausência de SKU.
 
-Exemplo: `  rm-camisa-01 ` será persistido como `RM-CAMISA-01`.
+Exemplo: ` rm-camisa-01` será persistido como `RM-CAMISA-01`.
 
 O domínio aplicará a regra tanto na criação quanto na atualização. A validação
 de entrada também devolverá o valor normalizado, mas o domínio continuará
