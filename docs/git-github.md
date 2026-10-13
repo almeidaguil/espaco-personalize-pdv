@@ -69,6 +69,31 @@ feature/* -> develop -> main
 - Commits e pushes diretos em `main` sao proibidos.
 - Force push em `main` e `develop` e proibido.
 
+### Releases Com Squash
+
+O titulo usado no squash merge também se torna a mensagem do commit em
+`main`. Ele deve usar um tipo aceito pelo Commitlint. Para releases, use:
+
+```txt
+chore(release): descricao da release
+```
+
+Nao use `release:` como tipo, pois ele nao pertence ao `type-enum` do projeto e
+faz o check `Quality checks` do push falhar.
+
+Como squash merges nao preservam a ancestralidade de `develop`, um PR direto
+para `main` pode conflitar mesmo quando o conteudo aprovado esta correto. Nesse
+caso, sem desabilitar protecoes ou reescrever historico:
+
+1. crie uma branch `feature/*` a partir do `main` atual;
+2. carregue nela o snapshot rastreado exato do `develop` aprovado;
+3. comprove que os hashes das duas arvores sao iguais;
+4. crie um commit assinado e abra o PR de release para `main`;
+5. exija todos os gates e use `chore(release): ...` no squash merge.
+
+Registre no PR os SHAs de origem, o pai em `main` e o hash da arvore. Nunca
+resolva essa divergencia com force push, merge commit, `ours` ou `theirs`.
+
 ## Protecoes No GitHub
 
 As branches `main` e `develop` exigem:
