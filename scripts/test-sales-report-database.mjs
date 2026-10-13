@@ -72,7 +72,7 @@ try {
       is_active: true,
       name: `Report product ${testRunId}`,
       price_in_cents: 1_000,
-      sku: `REPORT-${testRunId}`,
+      sku: `REPORT-${testRunId}`.toUpperCase(),
     })
     .select("id")
     .single();
@@ -86,7 +86,7 @@ try {
         is_active: true,
         name: `Report product ${suffix} ${testRunId}`,
         price_in_cents: 0,
-        sku: `REPORT-${suffix}-${testRunId}`,
+        sku: `REPORT-${suffix}-${testRunId}`.toUpperCase(),
       })),
     )
     .select("id");

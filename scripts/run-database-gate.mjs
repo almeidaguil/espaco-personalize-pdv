@@ -62,8 +62,28 @@ runRequiredCommand(process.execPath, [
   "scripts/test-remove-events-upgrade.mjs",
   "seed",
 ]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-product-sku-upgrade.mjs",
+  "seed-normalization",
+]);
 runRequiredCommand(npxCommand, ["supabase", "migration", "up", "--local"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-product-sku-upgrade.mjs",
+  "verify-normalization",
+]);
 runDatabaseTests(true);
+
+console.log("Database gate: product SKU collision guard.");
+resetLocalDatabase(["--version", "20261005143000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-product-sku-upgrade.mjs",
+  "seed-collision",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Product SKU normalization collision",
+);
 
 console.log("Database gate: fresh reset.");
 resetLocalDatabase([]);
@@ -82,6 +102,23 @@ function runRequiredCommand(command, args) {
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
   }
+}
+
+function runExpectedFailure(command, args, expectedMessage) {
+  const result = spawnSync(command, args, {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: testEnvironment,
+    shell: process.platform === "win32" && command === npxCommand,
+  });
+  const output = `${result.stdout ?? ""}\n${result.stderr ?? ""}`;
+
+  if (result.status === 0 || !output.includes(expectedMessage)) {
+    console.error("Expected migration failure was not observed.");
+    process.exit(1);
+  }
+
+  console.log(`Expected local migration failure verified: ${expectedMessage}`);
 }
 
 function resetLocalDatabase(versionArgs) {
