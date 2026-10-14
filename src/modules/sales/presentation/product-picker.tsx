@@ -150,7 +150,7 @@ function ProductListItem({
 
         <p className="mt-1 text-sm text-[var(--brand-muted)]">
           {product.sku ?? "Sem SKU"} •{" "}
-          {moneyFormatter.format(product.priceInReais)}
+          {moneyFormatter.format(product.priceInCents / 100)}
         </p>
 
         <p
