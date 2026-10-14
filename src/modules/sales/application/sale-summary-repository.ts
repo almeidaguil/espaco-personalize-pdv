@@ -9,7 +9,9 @@ export type SaleSummary = {
   operatorName: string;
   id: string;
   status: SaleStatus;
-  totalInReais: number;
+  subtotalInCents: number;
+  discountInCents: number;
+  totalInCents: number;
 };
 
 export type ListSaleSummariesResult =

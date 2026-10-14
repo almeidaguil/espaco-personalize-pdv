@@ -72,9 +72,26 @@ export function SalesList({
                   <p className="mt-1 text-sm text-[var(--brand-muted)]">
                     Venda em {dateFormatter.format(sale.completedAt)}
                   </p>
-                  <strong className="mt-3 block text-xl font-bold">
-                    {moneyFormatter.format(sale.totalInReais)}
-                  </strong>
+                  <dl className="mt-3 grid max-w-sm gap-1.5">
+                    <FinancialRow
+                      label="Subtotal"
+                      value={sale.subtotalInCents}
+                    />
+                    <FinancialRow
+                      label="Desconto"
+                      value={sale.discountInCents}
+                    />
+                    <FinancialRow
+                      emphasized
+                      label="Total líquido"
+                      value={sale.totalInCents}
+                    />
+                  </dl>
+                  {sale.discountInCents > 0 ? (
+                    <p className="mt-2 text-sm font-semibold text-[var(--brand-accent-foreground)]">
+                      Desconto concedido por {sale.operatorName}
+                    </p>
+                  ) : null}
                 </div>
                 <Link className={linkClass} href={`/sales/${sale.id}`}>
                   Ver detalhes
@@ -108,6 +125,25 @@ export function SalesList({
         )}
       </nav>
     </section>
+  );
+}
+
+function FinancialRow({
+  emphasized = false,
+  label,
+  value,
+}: {
+  emphasized?: boolean;
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-sm text-[var(--brand-muted)]">{label}</dt>
+      <dd className={emphasized ? "text-xl font-bold" : "font-semibold"}>
+        {moneyFormatter.format(value / 100)}
+      </dd>
+    </div>
   );
 }
 

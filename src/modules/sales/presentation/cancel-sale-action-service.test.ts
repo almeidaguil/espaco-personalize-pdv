@@ -155,7 +155,9 @@ function createSaleDetail(): SaleDetail {
     operatorId: "operator-1",
     operatorName: "Operador 1",
     status: "completed",
-    totalInReais: 30,
+    subtotalInCents: 3000,
+    discountInCents: 0,
+    totalInCents: 3000,
   };
 }
 

@@ -30,7 +30,9 @@ describe("SaleDetailCard", () => {
             method: "cash",
           },
           status: "completed",
-          totalInReais: 30,
+          subtotalInCents: 3500,
+          discountInCents: 500,
+          totalInCents: 3000,
         }}
       />,
     );
@@ -40,6 +42,16 @@ describe("SaleDetailCard", () => {
     expect(screen.getByText("cash-session-1")).toBeInTheDocument();
 
     expect(screen.getAllByText("R$ 30,00")).toHaveLength(2);
+
+    expect(screen.getByText("Subtotal").parentElement).toHaveTextContent(
+      "R$ 35,00",
+    );
+
+    expect(screen.getByText("Desconto").parentElement).toHaveTextContent(
+      "R$ 5,00",
+    );
+
+    expect(screen.getByText("Desconto concedido por Ana")).toBeInTheDocument();
 
     expect(screen.getByText("Chaveiro Polvo")).toBeInTheDocument();
 

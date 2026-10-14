@@ -36,7 +36,9 @@ describe("getSaleDetailUseCase", () => {
           method: "cash",
         },
         status: "completed",
-        totalInReais: 30,
+        subtotalInCents: 3000,
+        discountInCents: 0,
+        totalInCents: 3000,
       },
       success: true,
     });
