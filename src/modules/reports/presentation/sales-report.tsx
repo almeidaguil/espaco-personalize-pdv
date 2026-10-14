@@ -135,14 +135,24 @@ export function SalesReport({
               </Link>
             </div>
 
-            <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <dl className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <SummaryCard
                 highlight
                 label="Receita líquida"
                 value={formatMoney(report.netRevenueInCents)}
               />
               <SummaryCard
-                label="Vendas reconhecidas"
+                label="Vendas brutas"
+                tone="success"
+                value={formatMoney(report.completedSubtotalInCents)}
+              />
+              <SummaryCard
+                label="Descontos concedidos"
+                tone="danger"
+                value={formatMoney(report.completedDiscountInCents)}
+              />
+              <SummaryCard
+                label="Vendas líquidas"
                 tone="success"
                 value={`${report.completedSalesCount} (${formatMoney(report.completedTotalInCents)})`}
               />
@@ -260,8 +270,15 @@ export function SalesReport({
                         </p>
                       </div>
                       <div className="text-left lg:text-right">
-                        <strong className="text-base text-[var(--brand-foreground)]">
-                          {formatMoney(session.completedTotalInCents)}
+                        <p className="text-sm text-[var(--brand-muted)]">
+                          Bruto: {formatMoney(session.completedSubtotalInCents)}
+                        </p>
+                        <p className="mt-1 text-sm text-red-700">
+                          Desconto:{" "}
+                          {formatMoney(session.completedDiscountInCents)}
+                        </p>
+                        <strong className="mt-1 block text-base text-[var(--brand-foreground)]">
+                          Líquido: {formatMoney(session.completedTotalInCents)}
                         </strong>
                         <p className="mt-1 text-sm text-[var(--brand-muted)]">
                           {session.differenceAmountInCents === null

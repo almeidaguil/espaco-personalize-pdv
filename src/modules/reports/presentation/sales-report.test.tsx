@@ -19,13 +19,27 @@ const filters = {
 describe("SalesReport", () => {
   it("renders period, filters, canonical totals and the matching CSV link", () => {
     render(
-      <SalesReport filters={filters} report={createSalesReportFixture()} />,
+      <SalesReport
+        filters={filters}
+        report={createSalesReportFixture({
+          completedDiscountInCents: 1000,
+          completedSubtotalInCents: 10000,
+          completedTotalInCents: 9000,
+          netRevenueInCents: 9000,
+        })}
+      />,
     );
 
     expect(screen.getByLabelText("Data inicial")).toHaveValue("2026-10-02");
     expect(screen.getByLabelText("Vendedor")).toBeInTheDocument();
     expect(screen.getByLabelText("Sessão de caixa")).toBeInTheDocument();
-    expect(screen.getAllByText("R$ 45,00")).toHaveLength(3);
+    expect(screen.getByText("Vendas brutas")).toBeInTheDocument();
+    expect(screen.getByText("R$ 100,00")).toBeInTheDocument();
+    expect(screen.getByText("Descontos concedidos")).toBeInTheDocument();
+    expect(screen.getByText("R$ 10,00")).toBeInTheDocument();
+    expect(screen.getByText("Vendas líquidas")).toBeInTheDocument();
+    expect(screen.getByText("R$ 90,00")).toBeInTheDocument();
+    expect(screen.getByText("2 (R$ 90,00)")).toBeInTheDocument();
     expect(screen.getByText("1 (R$ 15,00)")).toBeInTheDocument();
     expect(screen.getByText("R$ 2,00")).toBeInTheDocument();
     expect(screen.getByText("R$ 1,00")).toBeInTheDocument();

@@ -6,7 +6,11 @@ import { exportSalesReportCsvUseCase } from "./export-sales-report-csv-use-case"
 describe("exportSalesReportCsvUseCase", () => {
   it("exports the same canonical totals, payments, products and sessions", () => {
     const result = exportSalesReportCsvUseCase({
-      report: createSalesReportFixture(),
+      report: createSalesReportFixture({
+        completedDiscountInCents: 1000,
+        completedSubtotalInCents: 10000,
+        completedTotalInCents: 9000,
+      }),
     });
 
     expect(result.filename).toBe(
@@ -14,7 +18,13 @@ describe("exportSalesReportCsvUseCase", () => {
     );
     expect(result.mimeType).toBe("text/csv; charset=utf-8");
     expect(result.content).toContain(
-      "Resumo;vendas_concluidas;Vendas concluídas;2;45,00",
+      "Resumo;vendas_brutas;Vendas brutas;2;100,00",
+    );
+    expect(result.content).toContain(
+      "Resumo;descontos_concedidos;Descontos concedidos;;10,00",
+    );
+    expect(result.content).toContain(
+      "Resumo;vendas_liquidas;Vendas líquidas;2;90,00",
     );
     expect(result.content).toContain(
       "Resumo;vendas_canceladas;Vendas canceladas (fora da receita);1;15,00",
