@@ -85,6 +85,30 @@ runExpectedFailure(
   "Product SKU normalization collision",
 );
 
+console.log("Database gate: sale discount upgrade and legacy V3 retry.");
+resetLocalDatabase(["--version", "20261013190000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-sale-discount-upgrade.mjs",
+  "seed-valid",
+]);
+runRequiredCommand(npxCommand, ["supabase", "migration", "up", "--local"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-sale-discount-upgrade.mjs",
+  "verify-valid",
+]);
+
+console.log("Database gate: sale discount incompatible-history guard.");
+resetLocalDatabase(["--version", "20261013190000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-sale-discount-upgrade.mjs",
+  "seed-invalid",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Sale discount migration requires every existing sale total to be positive",
+);
+
 console.log("Database gate: fresh reset.");
 resetLocalDatabase([]);
 runDatabaseTests(false);
@@ -149,6 +173,9 @@ function runDatabaseTests(verifyUpgrade) {
     ]);
   }
   runRequiredCommand(process.execPath, ["scripts/test-store-database.mjs"]);
+  runRequiredCommand(process.execPath, [
+    "scripts/test-sale-discount-database.mjs",
+  ]);
   runRequiredCommand(process.execPath, [
     "scripts/test-sales-report-database.mjs",
   ]);

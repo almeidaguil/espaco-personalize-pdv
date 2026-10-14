@@ -853,6 +853,8 @@ function saleFixture({
     id: randomUUID(),
     operator_id: operatorId,
     status,
+    subtotal_in_cents: total,
+    discount_in_cents: 0,
     total_in_cents: total,
   };
 }
