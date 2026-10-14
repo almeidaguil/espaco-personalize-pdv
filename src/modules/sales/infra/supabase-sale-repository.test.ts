@@ -26,7 +26,7 @@ class FakeSupabaseSaleClient implements SupabaseSaleClient {
     },
   ) {}
 
-  async rpc(functionName: "finalize_sale_v3", args: unknown) {
+  async rpc(functionName: "finalize_sale_v4", args: unknown) {
     this.rpcCalls += 1;
     this.functionName = functionName;
     this.rpcArgs = args;
@@ -36,7 +36,7 @@ class FakeSupabaseSaleClient implements SupabaseSaleClient {
 }
 
 describe("SupabaseSaleRepository", () => {
-  it("finalizes sales through V3 with the exact trusted cash session", async () => {
+  it("finalizes sales through V4 with the exact trusted cash session and discount", async () => {
     const supabaseClient = new FakeSupabaseSaleClient();
     const repository = new SupabaseSaleRepository(supabaseClient);
     const sale = createSale();
@@ -46,7 +46,7 @@ describe("SupabaseSaleRepository", () => {
       success: true,
     });
 
-    expect(supabaseClient.functionName).toBe("finalize_sale_v3");
+    expect(supabaseClient.functionName).toBe("finalize_sale_v4");
     expect(supabaseClient.rpcArgs).toEqual({
       p_cash_session_id: "cash-session-1",
       p_items: [
@@ -55,6 +55,7 @@ describe("SupabaseSaleRepository", () => {
           quantity: 2,
         },
       ],
+      p_discount_in_cents: 0,
       p_payment: {
         amount_in_cents: 5000,
         change_in_cents: 2000,
@@ -117,6 +118,7 @@ describe("SupabaseSaleRepository", () => {
 
     expect(supabaseClient.rpcArgs).toEqual({
       p_cash_session_id: "cash-session-1",
+      p_discount_in_cents: 0,
       p_items: [
         {
           product_id: "product-1",
@@ -145,7 +147,7 @@ describe("SupabaseSaleRepository", () => {
       error: "cash_session_closed",
       success: false,
     });
-    expect(supabaseClient.functionName).toBe("finalize_sale_v3");
+    expect(supabaseClient.functionName).toBe("finalize_sale_v4");
     expect(supabaseClient.rpcCalls).toBe(1);
   });
 });

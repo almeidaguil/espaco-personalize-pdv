@@ -355,6 +355,64 @@ describe("createSaleUseCase", () => {
       method: "pix",
     });
   });
+
+  it("calculates and persists a valid sale discount from current product prices", async () => {
+    const saleRepository = new FakeSaleRepository();
+    const result = await createSaleUseCase(
+      {
+        ...createInput(),
+        discountInCents: 500,
+        payment: { amountInCents: 3000, method: "cash" },
+      },
+      {
+        cashSessionRepository: new FakeCashSessionRepository(),
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        generateSaleId: () => "sale-1",
+        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+        productRepository: new FakeProductRepository(),
+        saleRepository,
+        stockMovementRepository: new FakeStockMovementRepository([
+          createStockMovement(3),
+        ]),
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(saleRepository.savedSale).toMatchObject({
+      discountInCents: 500,
+      subtotalInCents: 3000,
+      totalInCents: 2500,
+      payment: { amountInCents: 3000, changeInCents: 500 },
+    });
+  });
+
+  it("rejects a discount that consumes the subtotal before persistence", async () => {
+    const saleRepository = new FakeSaleRepository();
+    const result = await createSaleUseCase(
+      {
+        ...createInput(),
+        discountInCents: 3000,
+        payment: { amountInCents: 0, method: "cash" },
+      },
+      {
+        cashSessionRepository: new FakeCashSessionRepository(),
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        generateSaleId: () => "sale-1",
+        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+        productRepository: new FakeProductRepository(),
+        saleRepository,
+        stockMovementRepository: new FakeStockMovementRepository([
+          createStockMovement(3),
+        ]),
+      },
+    );
+
+    expect(result).toEqual({
+      formError: "Sale discount must be lower than the subtotal.",
+      success: false,
+    });
+    expect(saleRepository.savedSale).toBeUndefined();
+  });
 });
 
 function createInput() {

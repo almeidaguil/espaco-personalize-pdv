@@ -198,6 +198,30 @@ describe("createSaleActionService", () => {
     });
   });
 
+  it("creates a discounted sale from BRL form fields", async () => {
+    const saleRepository = new FakeSaleRepository();
+    const formData = createFormData();
+    formData.set("discountInReais", "5,00");
+
+    const result = await createSaleActionService({}, formData, {
+      cashSessionRepository: new FakeCashSessionRepository(),
+      currentUserProfileRepository: createCurrentUserProfileRepository(),
+      generateSaleId: () => "sale-1",
+      getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+      productRepository: new FakeProductRepository(),
+      saleRepository,
+      stockMovementRepository: new FakeStockMovementRepository(),
+    });
+
+    expect(result).toEqual({ successMessage: "Venda finalizada com sucesso." });
+    expect(saleRepository.savedSale).toMatchObject({
+      discountInCents: 500,
+      subtotalInCents: 3000,
+      totalInCents: 2500,
+      payment: { amountInCents: 5000, changeInCents: 2500 },
+    });
+  });
+
   it("returns validation errors from invalid form data", async () => {
     const result = await createSaleActionService({}, new FormData(), {
       cashSessionRepository: new FakeCashSessionRepository(),

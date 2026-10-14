@@ -15,8 +15,9 @@ type FinalizeSalePaymentPayload = {
   method: Sale["payment"]["method"];
 };
 
-type FinalizeSaleV3Args = {
+type FinalizeSaleV4Args = {
   p_cash_session_id: string;
+  p_discount_in_cents: number;
   p_items: FinalizeSaleItemPayload[];
   p_payment: FinalizeSalePaymentPayload;
   p_sale_id: string;
@@ -34,8 +35,8 @@ type SupabaseRpcResult = PromiseLike<{
 
 export type SupabaseSaleClient = {
   rpc(
-    functionName: "finalize_sale_v3",
-    args: FinalizeSaleV3Args,
+    functionName: "finalize_sale_v4",
+    args: FinalizeSaleV4Args,
   ): SupabaseRpcResult;
 };
 
@@ -43,13 +44,9 @@ export class SupabaseSaleRepository implements SaleRepository {
   constructor(private readonly supabaseClient: SupabaseSaleClient) {}
 
   async save(sale: Sale): Promise<SaveSaleResult> {
-    if (sale.discountInCents !== 0) {
-      return { error: "unknown", success: false };
-    }
-
     const result = await this.supabaseClient.rpc(
-      "finalize_sale_v3",
-      toFinalizeSaleV3Args(sale),
+      "finalize_sale_v4",
+      toFinalizeSaleV4Args(sale),
     );
 
     if (result.error || result.data !== sale.id) {
@@ -68,9 +65,10 @@ export class SupabaseSaleRepository implements SaleRepository {
   }
 }
 
-function toFinalizeSaleV3Args(sale: Sale): FinalizeSaleV3Args {
+function toFinalizeSaleV4Args(sale: Sale): FinalizeSaleV4Args {
   return {
     p_cash_session_id: sale.cashSessionId,
+    p_discount_in_cents: sale.discountInCents,
     p_items: sale.items.map((item) => ({
       product_id: item.productId,
       quantity: item.quantity,
