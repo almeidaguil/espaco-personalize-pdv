@@ -7,6 +7,8 @@ const ids = {
   collisionA: "13100000-0000-4000-8000-000000000002",
   collisionB: "13100000-0000-4000-8000-000000000003",
   normalization: "13100000-0000-4000-8000-000000000001",
+  unicodeWhitespace: "13100000-0000-4000-8000-000000000004",
+  whitespaceOnly: "13100000-0000-4000-8000-000000000005",
 };
 const mode = process.argv[2];
 
@@ -30,13 +32,29 @@ const client = createClient(apiUrl.toString(), environment.key, {
 });
 
 if (mode === "seed-normalization") {
-  const { error } = await client.from("products").insert({
-    id: ids.normalization,
-    is_active: true,
-    name: "Product SKU normalization fixture",
-    price_in_cents: 1_000,
-    sku: " rm-camisa-01 ",
-  });
+  const { error } = await client.from("products").insert([
+    {
+      id: ids.normalization,
+      is_active: true,
+      name: "Product SKU normalization fixture",
+      price_in_cents: 1_000,
+      sku: " rm-camisa-01 ",
+    },
+    {
+      id: ids.unicodeWhitespace,
+      is_active: true,
+      name: "Product SKU Unicode whitespace fixture",
+      price_in_cents: 1_000,
+      sku: "\t\u00a0rm-calca-02\u00a0\t",
+    },
+    {
+      id: ids.whitespaceOnly,
+      is_active: true,
+      name: "Product SKU whitespace-only fixture",
+      price_in_cents: 1_000,
+      sku: "\t\u00a0\n",
+    },
+  ]);
 
   assert.equal(error, null, "could not seed the mixed-case product SKU");
   console.log("Product SKU normalization fixture seeded locally.");
@@ -44,14 +62,15 @@ if (mode === "seed-normalization") {
   const { data, error } = await client
     .from("products")
     .select("id,sku")
-    .eq("id", ids.normalization)
-    .single();
+    .in("id", [ids.normalization, ids.unicodeWhitespace, ids.whitespaceOnly])
+    .order("id");
 
   assert.equal(error, null, "could not read the normalized product SKU");
-  assert.deepEqual(data, {
-    id: ids.normalization,
-    sku: "RM-CAMISA-01",
-  });
+  assert.deepEqual(data, [
+    { id: ids.normalization, sku: "RM-CAMISA-01" },
+    { id: ids.unicodeWhitespace, sku: "RM-CALCA-02" },
+    { id: ids.whitespaceOnly, sku: null },
+  ]);
   console.log("Product SKU normalization upgrade verified locally.");
 } else {
   const { error } = await client.from("products").insert([
@@ -67,7 +86,7 @@ if (mode === "seed-normalization") {
       is_active: true,
       name: "Product SKU collision fixture B",
       price_in_cents: 1_000,
-      sku: "SKU-COLLISION",
+      sku: "\tSKU-COLLISION\u00a0",
     },
   ]);
 
