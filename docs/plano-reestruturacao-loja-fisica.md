@@ -92,6 +92,12 @@ Opcionalmente abrir outra sessao no mesmo dia
 - O servidor deriva `operator_id` a partir de `auth.uid()`.
 - O servidor valida caixa aberto, produtos, estoque, precos, total, pagamento e
   troco dentro da mesma transacao.
+- Admin e operador podem informar desconto em Reais para a venda inteira; o
+  desconto positivo minimo e R$ 0,01 e o total final minimo tambem e R$ 0,01.
+- O banco recalcula e persiste subtotal bruto, desconto e total liquido sem
+  confiar em valores calculados pelo navegador.
+- A autoria do desconto e o `operator_id` derivado da sessao autenticada; o
+  frontend nunca escolhe o responsavel.
 - Venda concluida gera pagamento e movimentacoes de estoque.
 - Caixa fechado rejeita novas vendas.
 - Cancelamento preserva o historico e devolve o estoque.
@@ -104,6 +110,8 @@ Opcionalmente abrir outra sessao no mesmo dia
   diferenca.
 - O valor esperado em dinheiro considera saldo inicial, pagamentos em dinheiro
   liquidos de troco e cancelamentos.
+- Descontos reduzem o pagamento liquido; subtotal bruto nunca entra no valor
+  fisico esperado do caixa.
 - Pix, credito e debito aparecem na conciliacao, mas nao compoem o dinheiro
   fisico esperado.
 - Falta de caixa mantem a validacao administrativa ja adotada pelo sistema.
@@ -116,6 +124,8 @@ Opcionalmente abrir outra sessao no mesmo dia
 - O relatorio diario consolida todos os caixas e tambem permite detalhamento
   individual.
 - A exportacao CSV usa os mesmos filtros e totais exibidos na tela.
+- Interface e CSV distinguem vendas brutas, descontos concedidos e vendas
+  liquidas, inclusive no detalhamento por sessao.
 - Relatorios administrativos incluem vendas concluidas, canceladas, produtos,
   pagamentos e divergencias de caixa.
 
@@ -155,6 +165,9 @@ Indices adicionais:
 
 - Remover `event_id`.
 - Manter `cash_session_id` e `operator_id` obrigatorios.
+- Manter `subtotal_in_cents`, `discount_in_cents` e `total_in_cents`
+  obrigatorios, com `total_in_cents = subtotal_in_cents - discount_in_cents`,
+  desconto menor que o subtotal e total minimo de um centavo.
 - Garantir na RPC que venda, sessao e usuario autenticado representam o mesmo
   operador.
 - Indexar `(completed_at desc)`, `(operator_id, completed_at desc)` e
@@ -176,7 +189,8 @@ transacao:
 
 - `open_cash_session`
 - `close_cash_session`
-- `finalize_sale`
+- `finalize_sale_v3` para compatibilidade sem desconto
+- `finalize_sale_v4` para o runtime com desconto
 - `cancel_sale`
 
 As RPCs nao devem confiar em `operator_id`, datas ou totais enviados pelo
@@ -538,12 +552,15 @@ Testes e aceite:
 | Seguranca    | operador acessa caixa alheio                  | RLS, RPC e E2E             |
 | Venda        | venda sem caixa aberto                        | Unitario e E2E             |
 | Venda        | venda vinculada ao caixa do usuario           | Banco e E2E                |
+| Venda        | desconto em dinheiro preserva autoria e total | Unitario, banco e E2E      |
+| Venda        | v3 sem desconto e v4 com desconto coexistem   | Banco e E2E                |
 | Venda        | caixa fecha durante tentativa de venda        | Concorrencia               |
 | Estoque      | dois vendedores disputam o ultimo item        | Concorrencia               |
 | Cancelamento | estoque e financeiro sao compensados          | Integracao e E2E           |
 | Relatorio    | consolidacao de varios caixas no dia          | Unitario e E2E             |
 | Relatorio    | filtro por vendedor e sessao                  | Unitario e E2E             |
 | CSV          | mesmos totais da interface                    | Integracao                 |
+| CSV          | bruto, desconto e liquido reconciliados       | Integracao e E2E           |
 | Reset        | ambiente vazio recebe schema e seed           | Integracao                 |
 
 ## 10. Gates Obrigatorios Por PR
