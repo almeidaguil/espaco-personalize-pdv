@@ -1,6 +1,6 @@
 import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { StockProductCombobox } from "./stock-product-combobox";
 
@@ -92,6 +92,53 @@ describe("StockProductCombobox", () => {
 
     expect(search).toHaveAttribute("aria-expanded", "false");
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+  });
+
+  it("keeps arrow navigation visible in long result lists", async () => {
+    const user = userEvent.setup();
+    const scrollIntoView = vi.fn();
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView;
+
+    Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+      configurable: true,
+      value: scrollIntoView,
+    });
+
+    try {
+      const longProductList = Array.from({ length: 10 }, (_, index) => ({
+        id: `product-${index + 1}`,
+        name: `Produto ${index + 1}`,
+        sku: `SKU-${index + 1}`,
+      }));
+
+      render(<StockProductCombobox products={longProductList} />);
+
+      const search = screen.getByRole("combobox", { name: "Buscar produto" });
+
+      await user.click(search);
+      await user.keyboard("{ArrowDown}");
+
+      expect(search).toHaveAttribute(
+        "aria-activedescendant",
+        expect.stringContaining("product-1"),
+      );
+      expect(scrollIntoView).toHaveBeenCalledWith({ block: "nearest" });
+
+      await user.keyboard("{Escape}");
+      await user.keyboard("{ArrowUp}");
+
+      expect(search).toHaveAttribute(
+        "aria-activedescendant",
+        expect.stringContaining("product-10"),
+      );
+      expect(scrollIntoView).toHaveBeenCalledTimes(2);
+      expect(scrollIntoView).toHaveBeenLastCalledWith({ block: "nearest" });
+    } finally {
+      Object.defineProperty(HTMLElement.prototype, "scrollIntoView", {
+        configurable: true,
+        value: originalScrollIntoView,
+      });
+    }
   });
 
   it("shows an explicit empty result state", async () => {

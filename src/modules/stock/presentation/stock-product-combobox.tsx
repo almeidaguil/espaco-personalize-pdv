@@ -1,6 +1,13 @@
 "use client";
 
-import { type KeyboardEvent, useId, useMemo, useRef, useState } from "react";
+import {
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { normalizeSearchTerm } from "@/shared/utils/search";
 
@@ -43,6 +50,14 @@ export function StockProductCombobox({
 
   const activeProduct = filteredProducts[activeIndex];
   const hasProducts = products.length > 0;
+
+  useEffect(() => {
+    if (!isOpen || !activeProduct) return;
+
+    document
+      .getElementById(getOptionId(listboxId, activeProduct.id))
+      ?.scrollIntoView?.({ block: "nearest" });
+  }, [activeProduct, isOpen, listboxId]);
 
   return (
     <div className="grid gap-2">
