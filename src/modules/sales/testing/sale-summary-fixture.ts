@@ -12,7 +12,9 @@ export function saleSummaryFixture(
     cashSessionOpenedAt: new Date("2026-07-10T11:00:00Z"),
     completedAt: new Date("2026-07-10T12:00:00Z"),
     status: "completed",
-    totalInReais: 30,
+    subtotalInCents: 3000,
+    discountInCents: 0,
+    totalInCents: 3000,
     ...overrides,
   };
 }

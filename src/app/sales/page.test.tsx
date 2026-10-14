@@ -54,7 +54,7 @@ describe("SalesPage", () => {
     expect(
       screen.getByRole("heading", { level: 1, name: "Vendas" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
+    expect(screen.getAllByText("R$ 30,00")).toHaveLength(2);
     expect(screen.getByLabelText("Data operacional inicial")).toHaveValue(
       "2026-07-01",
     );

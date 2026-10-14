@@ -31,12 +31,14 @@ describe("getSaleDetailUseCase", () => {
         id: "sale-1",
         items: [],
         payment: {
-          amountInReais: 50,
-          changeInReais: 20,
+          amountInCents: 5000,
+          changeInCents: 2000,
           method: "cash",
         },
         status: "completed",
-        totalInReais: 30,
+        subtotalInCents: 3000,
+        discountInCents: 0,
+        totalInCents: 3000,
       },
       success: true,
     });

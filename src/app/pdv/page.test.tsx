@@ -66,7 +66,7 @@ describe("PdvPage", () => {
           id: "product-1",
           isActive: true,
           name: "Chaveiro Polvo",
-          price: { toReais: () => 15 },
+          price: { toCents: () => 1500 },
         },
       ],
       success: true,

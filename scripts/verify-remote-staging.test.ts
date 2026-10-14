@@ -25,6 +25,7 @@ const rpcs = [
   "open_cash_session_v3",
   "close_cash_session",
   "finalize_sale_v3",
+  "finalize_sale_v4",
   "cancel_sale",
   "get_store_sales_report_v2",
 ];
@@ -153,7 +154,7 @@ describe("verifyRemoteStaging", () => {
 
   test.each([
     ["table", { tables: tables.filter((table) => table !== "payments"), rpcs }],
-    ["RPC", { tables, rpcs: rpcs.filter((rpc) => rpc !== "finalize_sale_v3") }],
+    ["RPC", { tables, rpcs: rpcs.filter((rpc) => rpc !== "finalize_sale_v4") }],
   ])("rejects a missing required %s", async (_name, schema) => {
     const managementClient = createManagementClient({ schema });
     await expect(
@@ -303,6 +304,7 @@ describe("verifyRemoteStaging", () => {
         "migrations",
         "database-lint",
         "schema",
+        "sale-discount-contract",
         "auth",
         "rls-policies",
         "admin-profile",
@@ -363,6 +365,7 @@ function createManagementClient(
     operationalRowCount?: number;
     policyContractMatches?: boolean;
     rlsSummary?: Record<string, number>;
+    saleDiscountContractMatches?: boolean;
     schema?: { rpcs: string[]; tables: string[] };
     secret?: string;
     userSummary?: Record<string, number | string>;
@@ -387,6 +390,7 @@ function createManagementClient(
       table_count: 8,
       tables_with_policies_count: 8,
     },
+    saleDiscountContractMatches = true,
     schema = { rpcs, tables },
     secret = undefined,
     userSummary = {
@@ -406,6 +410,15 @@ function createManagementClient(
         return policyContractMatches
           ? requiredPolicyContract
           : requiredPolicyContract.slice(1);
+      if (query.includes("sale_discount_contract_row"))
+        return [
+          {
+            anon_finalize_v4_execute: !saleDiscountContractMatches,
+            authenticated_finalize_v3_execute: true,
+            authenticated_finalize_v4_execute: true,
+            sales_financial_column_count: 3,
+          },
+        ];
       if (query.includes("auth.users")) return [userSummary];
       if (query.includes("operational_row_count"))
         return [{ operational_row_count: operationalRowCount }];

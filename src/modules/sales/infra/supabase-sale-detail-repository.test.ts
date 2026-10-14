@@ -15,8 +15,15 @@ describe("SupabaseSaleDetailRepository", () => {
         operatorName: "Ana",
         cashSessionId: "cash-session-1",
         businessDate: "2026-07-10",
-        items: [{ productName: "Camiseta", quantity: 2, totalInReais: 30 }],
-        payment: { method: "cash", amountInReais: 50, changeInReais: 20 },
+        subtotalInCents: 3000,
+        discountInCents: 0,
+        totalInCents: 3000,
+        items: [{ productName: "Camiseta", quantity: 2, totalInCents: 3000 }],
+        payment: {
+          method: "cash",
+          amountInCents: 5000,
+          changeInCents: 2000,
+        },
       },
     });
     expect(client.calls).toContainEqual(["eq", "id", "sale-1"]);

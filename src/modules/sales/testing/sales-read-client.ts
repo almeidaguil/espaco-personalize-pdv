@@ -6,6 +6,8 @@ export function saleRow(overrides: Row = {}) {
     operator_id: "operator-1",
     completed_at: "2026-07-10T12:00:00.000Z",
     status: "completed",
+    subtotal_in_cents: 3000,
+    discount_in_cents: 0,
     total_in_cents: 3000,
     cash_sessions: {
       business_date: "2026-07-10",

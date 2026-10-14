@@ -54,7 +54,7 @@ describe("GET /reports/export", () => {
       "relatorio-vendas-2026-10-02-a-2026-10-03.csv",
     );
     expect(await response.text()).toContain(
-      "Resumo;vendas_concluidas;Vendas concluídas;2;45,00",
+      "Resumo;vendas_liquidas;Vendas líquidas;2;45,00",
     );
     expect(getCompleteSalesReportUseCaseMock).toHaveBeenCalledWith(
       expect.objectContaining({

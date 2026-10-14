@@ -143,19 +143,21 @@ function createSaleDetail(): SaleDetail {
         productId: "product-1",
         productName: "Chaveiro Polvo",
         quantity: 2,
-        totalInReais: 30,
-        unitPriceInReais: 15,
+        totalInCents: 3000,
+        unitPriceInCents: 1500,
       },
     ],
     payment: {
-      amountInReais: 50,
-      changeInReais: 20,
+      amountInCents: 5000,
+      changeInCents: 2000,
       method: "cash",
     },
     operatorId: "operator-1",
     operatorName: "Operador 1",
     status: "completed",
-    totalInReais: 30,
+    subtotalInCents: 3000,
+    discountInCents: 0,
+    totalInCents: 3000,
   };
 }
 

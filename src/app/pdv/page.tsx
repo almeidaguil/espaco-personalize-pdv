@@ -169,7 +169,7 @@ function toPdvCartProduct(
   return {
     id: product.id,
     name: product.name,
-    priceInReais: product.price.toReais(),
+    priceInCents: product.price.toCents(),
     quantityOnHand,
     ...(product.sku ? { sku: product.sku } : {}),
   };

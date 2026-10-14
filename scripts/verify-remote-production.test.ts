@@ -288,6 +288,7 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
     "open_cash_session_v3",
     "close_cash_session",
     "finalize_sale_v3",
+    "finalize_sale_v4",
     "cancel_sale",
     "get_store_sales_report_v2",
   ];
@@ -319,6 +320,15 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
           },
         ];
       if (query.includes("policy_contract_row")) return requiredPolicyContract;
+      if (query.includes("sale_discount_contract_row"))
+        return [
+          {
+            anon_finalize_v4_execute: false,
+            authenticated_finalize_v3_execute: true,
+            authenticated_finalize_v4_execute: true,
+            sales_financial_column_count: 3,
+          },
+        ];
       if (query.includes("auth.users"))
         return [
           {
