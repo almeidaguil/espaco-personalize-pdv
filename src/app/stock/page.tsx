@@ -154,6 +154,7 @@ function toActiveProductOptions(
     .filter((product) => product.isActive)
     .map((product) => ({
       id: product.id,
-      label: product.sku ? `${product.name} (${product.sku})` : product.name,
+      name: product.name,
+      ...(product.sku ? { sku: product.sku } : {}),
     }));
 }

@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { StockAdjustmentForm } from "./stock-adjustment-form";
@@ -19,22 +20,38 @@ describe("StockAdjustmentForm", () => {
     actionState.current = {};
   });
 
-  it("renders stock adjustment fields and enabled submit button", () => {
+  it("requires an explicit product selection before enabling submit", async () => {
+    const user = userEvent.setup();
+
     render(
       <StockAdjustmentForm
         action={vi.fn()}
-        products={[{ id: "product-1", label: "Caneca personalizada" }]}
+        products={[
+          {
+            id: "product-1",
+            name: "Caneca personalizada",
+            sku: "CANECA-001",
+          },
+        ]}
       />,
     );
 
-    expect(screen.getByLabelText("Produto")).toBeInTheDocument();
-    expect(screen.getByText("Caneca personalizada")).toBeInTheDocument();
+    const submit = screen.getByRole("button", { name: "Registrar ajuste" });
+
+    expect(screen.getByLabelText("Buscar produto")).toBeInTheDocument();
     expect(screen.getByLabelText("Quantidade")).toBeInTheDocument();
     expect(screen.getByLabelText(/Ajuste inicial/)).toBeChecked();
     expect(screen.getByLabelText(/Ajuste manual/)).not.toBeChecked();
-    expect(
-      screen.getByRole("button", { name: "Registrar ajuste" }),
-    ).toBeEnabled();
+    expect(submit).toBeDisabled();
+
+    await user.type(screen.getByLabelText("Buscar produto"), "caneca");
+    await user.click(
+      screen.getByRole("option", {
+        name: "Caneca personalizada — CANECA-001",
+      }),
+    );
+
+    expect(submit).toBeEnabled();
   });
 
   it("disables submit when there are no active products", () => {
@@ -58,11 +75,11 @@ describe("StockAdjustmentForm", () => {
     render(
       <StockAdjustmentForm
         action={vi.fn()}
-        products={[{ id: "product-1", label: "Caneca personalizada" }]}
+        products={[{ id: "product-1", name: "Caneca personalizada" }]}
       />,
     );
 
-    expect(screen.getByLabelText("Produto")).toHaveAttribute(
+    expect(screen.getByLabelText("Buscar produto")).toHaveAttribute(
       "aria-describedby",
       "productId-error",
     );
@@ -75,7 +92,7 @@ describe("StockAdjustmentForm", () => {
     );
 
     for (const field of [
-      screen.getByLabelText("Produto"),
+      screen.getByLabelText("Buscar produto"),
       screen.getByRole("group", { name: "Tipo de ajuste" }),
       screen.getByLabelText("Quantidade"),
     ]) {

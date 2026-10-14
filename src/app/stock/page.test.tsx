@@ -29,11 +29,13 @@ vi.mock("@/modules/stock/presentation/stock-adjustment-form", () => ({
   StockAdjustmentForm: ({
     products,
   }: {
-    products: { id: string; label: string }[];
+    products: { id: string; name: string; sku?: string }[];
   }) => (
     <form aria-label="Formulario de ajuste de estoque">
       {products.map((product) => (
-        <span key={product.id}>{product.label}</span>
+        <span key={product.id}>
+          {product.sku ? `${product.name} — ${product.sku}` : product.name}
+        </span>
       ))}
     </form>
   ),
@@ -123,6 +125,10 @@ describe("StockPage", () => {
 
     expect(
       screen.getByLabelText("Formulario de ajuste de estoque"),
+    ).toBeInTheDocument();
+
+    expect(
+      screen.getByText("Caneca personalizada — CANECA-001"),
     ).toBeInTheDocument();
 
     expect(
