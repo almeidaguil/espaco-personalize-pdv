@@ -10,14 +10,15 @@ test("admin creates a product and sees it in the products list", async ({
 }) => {
   const uniqueSuffix = crypto.randomUUID();
   const productName = `Produto E2E ${uniqueSuffix}`;
-  const productSku = `E2E-${uniqueSuffix}`;
+  const productSku = `SKU-${uniqueSuffix}`.toUpperCase();
+  const productSkuInput = ` sku-${uniqueSuffix.toLowerCase()} `;
 
   await authenticatePage(page);
 
   await page.goto("/products/new");
   await page.getByLabel("Nome do produto").fill(productName);
   await page.getByLabel("Preço").fill("35,00");
-  await page.getByLabel("SKU").fill(productSku);
+  await page.getByLabel("SKU").fill(productSkuInput);
   await page.getByRole("button", { name: "Salvar produto" }).click();
 
   await expect(page.getByText("Produto cadastrado com sucesso.")).toBeVisible();
@@ -31,5 +32,6 @@ test("admin creates a product and sees it in the products list", async ({
 
   await expect(productCard).toBeVisible();
   await expect(productCard.getByText(productSku)).toBeVisible();
+  await expect(productCard).not.toContainText(productSkuInput.trim());
   await expect(productCard.getByText("R$ 35,00")).toBeVisible();
 });

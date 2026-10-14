@@ -1,4 +1,5 @@
 import type { CreateProductUseCaseInput } from "../application/product-validation";
+import { normalizeProductSku } from "../domain/product";
 import type { ProductFormValues } from "./product-action-state";
 
 export function parseCreateProductFormData(
@@ -8,7 +9,7 @@ export function parseCreateProductFormData(
     isActive: parseOptionalBoolean(formData.getAll("isActive")),
     name: getTrimmedString(formData, "name"),
     priceInReais: parseBrlPrice(formData.get("priceInReais")),
-    sku: getOptionalTrimmedString(formData, "sku"),
+    sku: normalizeProductSku(getTrimmedString(formData, "sku")) ?? null,
   };
 }
 
@@ -17,7 +18,7 @@ export function getProductFormValues(formData: FormData): ProductFormValues {
     isActive: parseOptionalBoolean(formData.getAll("isActive")),
     name: getTrimmedString(formData, "name"),
     priceInReais: getTrimmedString(formData, "priceInReais"),
-    sku: getTrimmedString(formData, "sku"),
+    sku: normalizeProductSku(getTrimmedString(formData, "sku")) ?? "",
   };
 }
 
@@ -40,7 +41,7 @@ export function createProductFormValuesFromProduct(input: {
     isActive: input.isActive,
     name: input.name,
     priceInReais: input.priceInReais.toFixed(2).replace(".", ","),
-    sku: input.sku ?? "",
+    sku: normalizeProductSku(input.sku) ?? "",
   };
 }
 
@@ -48,15 +49,6 @@ function getTrimmedString(formData: FormData, key: string): string {
   const value = formData.get(key);
 
   return typeof value === "string" ? value.trim() : "";
-}
-
-function getOptionalTrimmedString(
-  formData: FormData,
-  key: string,
-): string | null {
-  const value = getTrimmedString(formData, key);
-
-  return value ? value : null;
 }
 
 function parseOptionalBoolean(values: FormDataEntryValue[]): boolean {

@@ -57,7 +57,7 @@ describe("createProductUseCase", () => {
       {
         name: " Caneca personalizada ",
         priceInReais: 35,
-        sku: " CANECA-001 ",
+        sku: " caneca-001 ",
       },
       {
         generateProductId: () => "product-1",
@@ -82,6 +82,32 @@ describe("createProductUseCase", () => {
       price: Money.fromReais(35),
       sku: "CANECA-001",
     });
+  });
+
+  it("returns a field error when uppercase expansion makes SKU too long", async () => {
+    const productRepository = new FakeProductRepository();
+
+    const result = await createProductUseCase(
+      {
+        name: "Caneca personalizada",
+        priceInReais: 35,
+        sku: "ß".repeat(33),
+      },
+      {
+        generateProductId: () => "product-1",
+        productRepository,
+      },
+    );
+
+    expect(result).toEqual({
+      fieldErrors: {
+        name: undefined,
+        priceInReais: undefined,
+        sku: "O SKU deve ter no maximo 64 caracteres.",
+      },
+      success: false,
+    });
+    expect(productRepository.savedProduct).toBeUndefined();
   });
 
   it("returns field errors when input is invalid", async () => {
