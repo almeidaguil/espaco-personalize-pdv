@@ -446,5 +446,91 @@ grant execute on function public.finalize_sale_v4(
   uuid, uuid, jsonb, jsonb, integer
 ) to authenticated;
 
+do $report_migration$
+declare
+  v_definition text;
+  v_updated_definition text;
+begin
+  select pg_get_functiondef(
+    'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
+  )
+  into v_definition;
+
+  v_updated_definition := replace(
+    v_definition,
+    $old_global$    'completed_total_in_cents', coalesce((
+      select sum(total_in_cents) from recognized_sales
+    ), 0),$old_global$,
+    $new_global$    'completed_subtotal_in_cents', coalesce((
+      select sum(subtotal_in_cents) from recognized_sales
+    ), 0),
+    'completed_discount_in_cents', coalesce((
+      select sum(discount_in_cents) from recognized_sales
+    ), 0),
+    'completed_total_in_cents', coalesce((
+      select sum(total_in_cents) from recognized_sales
+    ), 0),$new_global$
+  );
+
+  if v_updated_definition = v_definition then
+    raise exception 'Could not extend global sale report discount totals.';
+  end if;
+
+  v_definition := v_updated_definition;
+  v_updated_definition := replace(
+    v_definition,
+    $old_session_json$          'completed_sales_count', session_totals.completed_sales_count,
+          'completed_total_in_cents', session_totals.completed_total_in_cents,$old_session_json$,
+    $new_session_json$          'completed_sales_count', session_totals.completed_sales_count,
+          'completed_subtotal_in_cents', session_totals.completed_subtotal_in_cents,
+          'completed_discount_in_cents', session_totals.completed_discount_in_cents,
+          'completed_total_in_cents', session_totals.completed_total_in_cents,$new_session_json$
+  );
+
+  if v_updated_definition = v_definition then
+    raise exception 'Could not extend session sale report discount JSON.';
+  end if;
+
+  v_definition := v_updated_definition;
+  v_updated_definition := replace(
+    v_definition,
+    $old_session_totals$          coalesce(sum(filtered_sales.total_in_cents) filter (
+            where filtered_sales.status = 'completed'
+              or (
+                filtered_sales.status = 'canceled'
+                and filtered_sales.canceled_after_cash_close
+              )
+          ), 0)::bigint as completed_total_in_cents,$old_session_totals$,
+    $new_session_totals$          coalesce(sum(filtered_sales.subtotal_in_cents) filter (
+            where filtered_sales.status = 'completed'
+              or (
+                filtered_sales.status = 'canceled'
+                and filtered_sales.canceled_after_cash_close
+              )
+          ), 0)::bigint as completed_subtotal_in_cents,
+          coalesce(sum(filtered_sales.discount_in_cents) filter (
+            where filtered_sales.status = 'completed'
+              or (
+                filtered_sales.status = 'canceled'
+                and filtered_sales.canceled_after_cash_close
+              )
+          ), 0)::bigint as completed_discount_in_cents,
+          coalesce(sum(filtered_sales.total_in_cents) filter (
+            where filtered_sales.status = 'completed'
+              or (
+                filtered_sales.status = 'canceled'
+                and filtered_sales.canceled_after_cash_close
+              )
+          ), 0)::bigint as completed_total_in_cents,$new_session_totals$
+  );
+
+  if v_updated_definition = v_definition then
+    raise exception 'Could not extend session sale report discount totals.';
+  end if;
+
+  execute v_updated_definition;
+end;
+$report_migration$;
+
 notify pgrst, 'reload schema';
 commit;

@@ -154,7 +154,9 @@ try {
     saleFixture({
       cashSessionId: cashSessionIds.operatorAFirst,
       completedAt: "2026-09-15T15:00:00.000Z",
+      discount: 1_000,
       operatorId: identities.operatorA.userId,
+      subtotal: 11_000,
       total: 10_000,
     }),
     saleFixture({
@@ -215,8 +217,8 @@ try {
     product_name: `Report product ${testRunId}`,
     quantity: 1,
     sale_id: sale.id,
-    total_in_cents: sale.total_in_cents,
-    unit_price_in_cents: sale.total_in_cents,
+    total_in_cents: sale.subtotal_in_cents,
+    unit_price_in_cents: sale.subtotal_in_cents,
   }));
   const { error: paymentError } = await serviceClient
     .from("payments")
@@ -258,6 +260,8 @@ try {
     );
   assert.equal(operatorAReportError, null, "operator A report must succeed");
   assert.equal(operatorAReport.completed_sales_count, 4);
+  assert.equal(operatorAReport.completed_subtotal_in_cents, 42_000);
+  assert.equal(operatorAReport.completed_discount_in_cents, 1_000);
   assert.equal(operatorAReport.completed_total_in_cents, 41_000);
   assert.equal(operatorAReport.canceled_sales_count, 1);
   assert.equal(operatorAReport.canceled_total_in_cents, 5_000);
@@ -376,6 +380,8 @@ try {
     );
   assert.equal(adminReportError, null, "admin report must succeed");
   assert.equal(adminReport.completed_sales_count, 5);
+  assert.equal(adminReport.completed_subtotal_in_cents, 72_000);
+  assert.equal(adminReport.completed_discount_in_cents, 1_000);
   assert.equal(adminReport.completed_total_in_cents, 71_000);
   assert.equal(adminReport.canceled_sales_count, 1);
   assert.deepEqual(
@@ -401,7 +407,17 @@ try {
     "session filter must succeed for admin",
   );
   assert.equal(sessionReport.completed_sales_count, 2);
+  assert.equal(sessionReport.completed_subtotal_in_cents, 18_000);
+  assert.equal(sessionReport.completed_discount_in_cents, 1_000);
   assert.equal(sessionReport.completed_total_in_cents, 17_000);
+  assert.deepEqual(
+    sessionReport.sessions.map((session) => ({
+      discount: session.completed_discount_in_cents,
+      subtotal: session.completed_subtotal_in_cents,
+      total: session.completed_total_in_cents,
+    })),
+    [{ discount: 1_000, subtotal: 18_000, total: 17_000 }],
+  );
   assert.equal(sessionReport.canceled_sales_count, 1);
   assert.equal(sessionReport.canceled_total_in_cents, 5_000);
 
@@ -841,8 +857,10 @@ function saleFixture({
   canceledAt = null,
   cashSessionId,
   completedAt,
+  discount = 0,
   operatorId,
   status = "completed",
+  subtotal,
   total,
 }) {
   return {
@@ -853,8 +871,8 @@ function saleFixture({
     id: randomUUID(),
     operator_id: operatorId,
     status,
-    subtotal_in_cents: total,
-    discount_in_cents: 0,
+    subtotal_in_cents: subtotal ?? total,
+    discount_in_cents: discount,
     total_in_cents: total,
   };
 }
