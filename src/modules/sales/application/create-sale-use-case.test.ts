@@ -186,16 +186,18 @@ describe("createSaleUseCase", () => {
           productId: "product-1",
           productName: "Chaveiro Polvo",
           quantity: 2,
-          totalInReais: 30,
-          unitPriceInReais: 15,
+          totalInCents: 3000,
+          unitPriceInCents: 1500,
         },
       ],
       payment: {
-        amountInReais: 50,
-        changeInReais: 20,
+        amountInCents: 5000,
+        changeInCents: 2000,
         method: "cash",
       },
-      totalInReais: 30,
+      discountInCents: 0,
+      subtotalInCents: 3000,
+      totalInCents: 3000,
     });
     await expect(
       stockMovementRepository.listByProductId("product-1"),
@@ -299,7 +301,7 @@ describe("createSaleUseCase", () => {
       {
         ...createInput(),
         payment: {
-          amountInReais: 10,
+          amountInCents: 1000,
           method: "cash",
         },
       },
@@ -329,7 +331,7 @@ describe("createSaleUseCase", () => {
       {
         ...createInput(),
         payment: {
-          amountInReais: 30,
+          amountInCents: 3000,
           method: "pix",
         },
       },
@@ -348,8 +350,8 @@ describe("createSaleUseCase", () => {
 
     expect(result.success).toBe(true);
     expect(saleRepository.savedSale?.payment).toEqual({
-      amountInReais: 30,
-      changeInReais: 0,
+      amountInCents: 3000,
+      changeInCents: 0,
       method: "pix",
     });
   });
@@ -358,6 +360,7 @@ describe("createSaleUseCase", () => {
 function createInput() {
   return {
     cashSessionId: "forged-cash-session",
+    discountInCents: 0,
     items: [
       {
         productId: "product-1",
@@ -365,7 +368,7 @@ function createInput() {
       },
     ],
     payment: {
-      amountInReais: 50,
+      amountInCents: 5000,
       method: "cash" as const,
     },
   };

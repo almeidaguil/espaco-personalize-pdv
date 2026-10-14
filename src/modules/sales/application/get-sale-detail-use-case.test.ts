@@ -31,8 +31,8 @@ describe("getSaleDetailUseCase", () => {
         id: "sale-1",
         items: [],
         payment: {
-          amountInReais: 50,
-          changeInReais: 20,
+          amountInCents: 5000,
+          changeInCents: 2000,
           method: "cash",
         },
         status: "completed",

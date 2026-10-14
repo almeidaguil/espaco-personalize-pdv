@@ -2,6 +2,11 @@ import { z } from "zod";
 import { paymentMethods } from "../domain/sale";
 
 export const createSaleSchema = z.object({
+  discountInCents: z
+    .number()
+    .int("Informe o desconto em centavos inteiros.")
+    .nonnegative("O desconto nao pode ser negativo.")
+    .safe("O desconto informado e muito alto."),
   items: z
     .array(
       z.object({
@@ -14,16 +19,11 @@ export const createSaleSchema = z.object({
     )
     .min(1, "Adicione pelo menos um item."),
   payment: z.object({
-    amountInReais: z
+    amountInCents: z
       .number()
-      .finite("Informe um valor recebido valido em Reais.")
-      .min(0, "O valor recebido nao pode ser negativo.")
-      .refine(
-        (amountInReais) =>
-          Math.abs(amountInReais * 100 - Math.round(amountInReais * 100)) <
-          1e-8,
-        "Informe o valor recebido com no maximo 2 casas decimais.",
-      ),
+      .int("Informe um valor recebido em centavos inteiros.")
+      .nonnegative("O valor recebido nao pode ser negativo.")
+      .safe("O valor recebido informado e muito alto."),
     method: z.enum(paymentMethods),
   }),
 });

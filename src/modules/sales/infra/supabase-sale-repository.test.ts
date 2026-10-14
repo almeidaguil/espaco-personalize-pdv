@@ -104,8 +104,8 @@ describe("SupabaseSaleRepository", () => {
     const sale = {
       ...createSale(),
       payment: {
-        amountInReais: 30,
-        changeInReais: 0,
+        amountInCents: 3000,
+        changeInCents: 0,
         method: "pix" as const,
       },
     };
@@ -160,16 +160,18 @@ function createSale(): Sale {
         productId: "product-1",
         productName: "Chaveiro Polvo",
         quantity: 2,
-        totalInReais: 30,
-        unitPriceInReais: 15,
+        totalInCents: 3000,
+        unitPriceInCents: 1500,
       },
     ],
     payment: {
-      amountInReais: 50,
-      changeInReais: 20,
+      amountInCents: 5000,
+      changeInCents: 2000,
       method: "cash",
     },
     status: "completed",
-    totalInReais: 30,
+    discountInCents: 0,
+    subtotalInCents: 3000,
+    totalInCents: 3000,
   };
 }

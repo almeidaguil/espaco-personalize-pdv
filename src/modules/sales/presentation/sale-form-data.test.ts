@@ -17,6 +17,7 @@ describe("parseCreateSaleFormData", () => {
       ]),
     );
     formData.set("amountReceivedInReais", "50,00");
+    formData.set("discountInReais", "1,25");
 
     expect(parseCreateSaleFormData(formData)).toEqual({
       items: [
@@ -25,8 +26,9 @@ describe("parseCreateSaleFormData", () => {
           quantity: 2,
         },
       ],
+      discountInCents: 125,
       payment: {
-        amountInReais: 50,
+        amountInCents: 5000,
         method: "cash",
       },
     });
@@ -39,7 +41,7 @@ describe("parseCreateSaleFormData", () => {
 
     expect(parseCreateSaleFormData(formData)).toMatchObject({
       payment: {
-        amountInReais: 30,
+        amountInCents: 3000,
         method: "pix",
       },
     });
@@ -52,5 +54,25 @@ describe("parseCreateSaleFormData", () => {
     expect(parseCreateSaleFormData(formData)).toMatchObject({
       items: [],
     });
+  });
+
+  it("uses zero when the discount field is empty", () => {
+    const formData = new FormData();
+    formData.set("amountReceivedInReais", "10,00");
+
+    expect(parseCreateSaleFormData(formData)).toMatchObject({
+      discountInCents: 0,
+    });
+  });
+
+  it("does not round invalid monetary input", () => {
+    const formData = new FormData();
+    formData.set("amountReceivedInReais", "10,001");
+    formData.set("discountInReais", "-0,01");
+
+    const parsed = parseCreateSaleFormData(formData);
+
+    expect(parsed.discountInCents).toBeNaN();
+    expect(parsed.payment.amountInCents).toBeNaN();
   });
 });

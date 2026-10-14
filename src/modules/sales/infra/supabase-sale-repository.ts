@@ -43,6 +43,10 @@ export class SupabaseSaleRepository implements SaleRepository {
   constructor(private readonly supabaseClient: SupabaseSaleClient) {}
 
   async save(sale: Sale): Promise<SaveSaleResult> {
+    if (sale.discountInCents !== 0) {
+      return { error: "unknown", success: false };
+    }
+
     const result = await this.supabaseClient.rpc(
       "finalize_sale_v3",
       toFinalizeSaleV3Args(sale),
@@ -72,8 +76,8 @@ function toFinalizeSaleV3Args(sale: Sale): FinalizeSaleV3Args {
       quantity: item.quantity,
     })),
     p_payment: {
-      amount_in_cents: reaisToCents(sale.payment.amountInReais),
-      change_in_cents: reaisToCents(sale.payment.changeInReais),
+      amount_in_cents: sale.payment.amountInCents,
+      change_in_cents: sale.payment.changeInCents,
       method: sale.payment.method,
     },
     p_sale_id: sale.id,
@@ -85,8 +89,4 @@ function isCashSessionClosedError(error: SupabaseError | null): boolean {
     `${error?.code ?? ""} ${error?.message ?? ""}`.toLowerCase();
 
   return errorText.includes("there is no open cash session for this sale");
-}
-
-function reaisToCents(amountInReais: number): number {
-  return Math.round(amountInReais * 100);
 }

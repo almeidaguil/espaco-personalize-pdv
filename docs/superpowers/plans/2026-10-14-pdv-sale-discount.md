@@ -36,6 +36,7 @@
 ### Task 1: Contrato monetário e domínio da venda em centavos
 
 **Files:**
+
 - Create: `src/shared/utils/brl-currency.ts`
 - Create: `src/shared/utils/brl-currency.test.ts`
 - Modify: `src/modules/sales/domain/sale.ts`
@@ -46,6 +47,7 @@
 - Modify: `src/modules/sales/presentation/sale-action-state.ts`
 
 **Interfaces:**
+
 - Produces: `parseBrlCurrencyToCents(value: string): number`, `formatBrlCentsForInput(cents: number): string`.
 - Produces: `Sale` e entradas com `subtotalInCents`, `discountInCents`, `totalInCents`, itens `unitPriceInCents/totalInCents` e pagamento `amountInCents/changeInCents`.
 - Produces: formulário `{ items, discountInCents, payment: { amountInCents, method } }`.
@@ -62,6 +64,7 @@
 ### Task 2: Schema financeiro e RPC transacional versionada
 
 **Files:**
+
 - Create: `supabase/migrations/20261014120000_add_sale_discounts.sql`
 - Create: `supabase/tests/database/004_sale_discounts.test.sql`
 - Create: `scripts/test-sale-discount-upgrade.mjs`
@@ -71,6 +74,7 @@
 - Modify: `supabase/tests/database/002_remove_events_legacy.test.sql`
 
 **Interfaces:**
+
 - Produces: colunas `sales.subtotal_in_cents integer not null` e `sales.discount_in_cents integer not null`.
 - Produces: `finalize_sale_v4(p_sale_id uuid, p_cash_session_id uuid, p_items jsonb, p_payment jsonb, p_discount_in_cents integer) returns uuid`.
 - Preserves: `finalize_sale_v3(uuid,uuid,jsonb,jsonb)` com fingerprint legado e desconto zero.
@@ -87,11 +91,13 @@
 ### Task 3: Relatório SQL com bruto, desconto e líquido
 
 **Files:**
+
 - Modify: `supabase/migrations/20261014120000_add_sale_discounts.sql`
 - Modify: `supabase/tests/database/001_store_sales_report.test.sql`
 - Modify: `scripts/test-sales-report-database.mjs`
 
 **Interfaces:**
+
 - Extends: retorno JSON de `get_store_sales_report_v2` com `completed_subtotal_in_cents`, `completed_discount_in_cents` e equivalentes por sessão, mantendo `completed_total_in_cents` líquido.
 - Preserves: assinatura, filtros, paginação, RLS, ajustes pós-fechamento e resumo por pagamento.
 
@@ -104,6 +110,7 @@
 ### Task 4: Aplicação e persistência usando `finalize_sale_v4`
 
 **Files:**
+
 - Modify: `src/modules/sales/application/create-sale-use-case.ts`
 - Modify: `src/modules/sales/application/create-sale-use-case.test.ts`
 - Modify: `src/modules/sales/application/sale-repository.ts`
@@ -112,6 +119,7 @@
 - Modify: `src/modules/sales/presentation/create-sale-action-service.test.ts`
 
 **Interfaces:**
+
 - Consumes: contrato em centavos da Task 1 e RPC v4 da Task 2.
 - Produces: payload v4 com `p_discount_in_cents`; nenhum preço/subtotal/operador é enviado pelo frontend.
 
@@ -125,6 +133,7 @@
 ### Task 5: PDV mobile first com desconto em reais
 
 **Files:**
+
 - Modify: `src/modules/sales/presentation/pdv-cart.tsx`
 - Modify: `src/modules/sales/presentation/pdv-cart.test.tsx`
 - Modify: `src/modules/sales/presentation/cart-items.tsx`
@@ -133,6 +142,7 @@
 - Modify: `src/app/pdv/page.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `priceInCents`, parser/formatador BRL e action da Task 4.
 - Produces: campos `discountInReais` e `amountReceivedInReais`, resumo Subtotal/Desconto/Total e intenção em centavos via parser do servidor.
 
@@ -146,6 +156,7 @@
 ### Task 6: Histórico, detalhe e auditoria do desconto
 
 **Files:**
+
 - Modify: `src/modules/sales/application/sale-summary-repository.ts`
 - Modify: `src/modules/sales/application/sale-detail-repository.ts`
 - Modify: `src/modules/sales/infra/supabase-sales-read-model.ts`
@@ -160,6 +171,7 @@
 - Modify: consumers/tests de `SaleSummary` e `SaleDetail` encontrados por `rg`.
 
 **Interfaces:**
+
 - Produces: resumos/detalhes com `subtotalInCents`, `discountInCents`, `totalInCents` e valores de itens/pagamento em centavos.
 - Produces: autoria visual `Desconto concedido por <operatorName>` apenas quando desconto > 0.
 
@@ -172,6 +184,7 @@
 ### Task 7: Relatórios e CSV reconciliados
 
 **Files:**
+
 - Modify: `src/modules/reports/application/sales-report-repository.ts`
 - Modify: `src/modules/reports/infra/supabase-sales-report-repository.ts`
 - Modify: `src/modules/reports/infra/supabase-sales-report-repository.test.ts`
@@ -183,6 +196,7 @@
 - Modify: `src/modules/cash/infra/supabase-cash-session-closing-summary-repository.test.ts`
 
 **Interfaces:**
+
 - Consumes: JSON estendido da Task 3.
 - Produces: `completedSubtotalInCents`, `completedDiscountInCents`, `completedTotalInCents` globais e por sessão; CSV com linhas bruto/desconto/líquido.
 
@@ -196,6 +210,7 @@
 ### Task 8: Gates E2E, verificação operacional e documentação
 
 **Files:**
+
 - Modify: `tests/e2e/support/store.ts`
 - Modify: `tests/e2e/sale-flow.spec.ts`
 - Modify: `tests/e2e/reports.spec.ts`
@@ -208,6 +223,7 @@
 - Modify: `docs/plano-reestruturacao-loja-fisica.md` quando houver checklist correspondente.
 
 **Interfaces:**
+
 - Consumes: fluxo completo Tasks 1-7.
 - Produces: helper E2E v4 com `discountInCents?: number`, inventário remoto exigindo v3 e v4, e evidência operacional versionada.
 

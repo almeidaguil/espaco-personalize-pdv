@@ -89,12 +89,12 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
 
                 <p className="mt-1 text-sm text-[var(--brand-muted)]">
                   {item.quantity} ×{" "}
-                  {moneyFormatter.format(item.unitPriceInReais)}
+                  {moneyFormatter.format(item.unitPriceInCents / 100)}
                 </p>
               </div>
 
               <strong className="text-base font-bold text-[var(--brand-foreground)]">
-                {moneyFormatter.format(item.totalInReais)}
+                {moneyFormatter.format(item.totalInCents / 100)}
               </strong>
             </li>
           ))}
@@ -115,12 +115,12 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
 
           <PaymentItem
             label="Valor recebido"
-            value={moneyFormatter.format(sale.payment.amountInReais)}
+            value={moneyFormatter.format(sale.payment.amountInCents / 100)}
           />
 
           <PaymentItem
             label="Troco"
-            value={moneyFormatter.format(sale.payment.changeInReais)}
+            value={moneyFormatter.format(sale.payment.changeInCents / 100)}
           />
         </dl>
       </section>

@@ -12,60 +12,63 @@ export type SaleItem = {
   productId: string;
   productName: string;
   quantity: number;
-  totalInReais: number;
-  unitPriceInReais: number;
+  totalInCents: number;
+  unitPriceInCents: number;
 };
 
 export type Payment = {
-  amountInReais: number;
-  changeInReais: number;
+  amountInCents: number;
+  changeInCents: number;
   method: PaymentMethod;
 };
 
 export type Sale = {
   cashSessionId: string;
   completedAt: Date;
+  discountInCents: number;
   id: string;
   items: SaleItem[];
   payment: Payment;
   status: SaleStatus;
-  totalInReais: number;
+  subtotalInCents: number;
+  totalInCents: number;
 };
 
 export type CreateSaleItemInput = {
   productId: string;
   productName: string;
   quantity: number;
-  unitPriceInReais: number;
+  unitPriceInCents: number;
 };
 
 export type CreatePaymentInput = {
-  amountInReais: number;
+  amountInCents: number;
   method: PaymentMethod;
 };
 
 export type CreateSaleInput = {
   cashSessionId: string;
   completedAt: Date;
+  discountInCents: number;
   id: string;
   items: CreateSaleItemInput[];
   payment: CreatePaymentInput;
 };
 
 export type SaleValidationError = {
-  field: "cashSessionId" | "completedAt" | "id" | "items" | "payment";
+  field:
+    | "cashSessionId"
+    | "completedAt"
+    | "discount"
+    | "id"
+    | "items"
+    | "payment";
   message: string;
 };
 
 export type CreateSaleResult =
-  | {
-      sale: Sale;
-      success: true;
-    }
-  | {
-      errors: SaleValidationError[];
-      success: false;
-    };
+  | { sale: Sale; success: true }
+  | { errors: SaleValidationError[]; success: false };
 
 export function createSale(input: CreateSaleInput): CreateSaleResult {
   const errors: SaleValidationError[] = [];
@@ -102,58 +105,87 @@ export function createSale(input: CreateSaleInput): CreateSaleResult {
     validateSaleItem(item, errors);
   }
 
-  if (!Number.isFinite(input.payment.amountInReais)) {
+  const subtotalInCents = items.reduce(
+    (subtotal, item) => subtotal + item.totalInCents,
+    0,
+  );
+  const canValidateSubtotal = items.every(
+    (item) =>
+      Number.isInteger(item.quantity) &&
+      item.quantity > 0 &&
+      Number.isSafeInteger(item.unitPriceInCents) &&
+      item.unitPriceInCents >= 0 &&
+      Number.isSafeInteger(item.totalInCents),
+  );
+  const hasValidSubtotal =
+    items.length > 0 &&
+    canValidateSubtotal &&
+    Number.isSafeInteger(subtotalInCents) &&
+    subtotalInCents > 0;
+
+  if (items.length > 0 && canValidateSubtotal && subtotalInCents === 0) {
     errors.push({
-      field: "payment",
-      message: "Payment amount must be a valid BRL amount.",
+      field: "items",
+      message: "Sale subtotal must be greater than zero.",
     });
   }
 
-  if (input.payment.amountInReais < 0) {
+  const hasValidDiscount =
+    Number.isSafeInteger(input.discountInCents) && input.discountInCents >= 0;
+
+  if (!hasValidDiscount) {
     errors.push({
-      field: "payment",
-      message: "Payment amount cannot be negative.",
+      field: "discount",
+      message: "Sale discount must be a non-negative integer.",
+    });
+  } else if (hasValidSubtotal && input.discountInCents >= subtotalInCents) {
+    errors.push({
+      field: "discount",
+      message: "Sale discount must be lower than the subtotal.",
     });
   }
+
+  const hasValidPayment =
+    Number.isSafeInteger(input.payment.amountInCents) &&
+    input.payment.amountInCents >= 0;
+
+  if (!hasValidPayment) {
+    errors.push({
+      field: "payment",
+      message: "Payment amount must be a non-negative integer.",
+    });
+  }
+
+  const totalInCents = subtotalInCents - input.discountInCents;
 
   if (
-    Number.isFinite(input.payment.amountInReais) &&
-    !hasBrlPrecision(input.payment.amountInReais)
+    hasValidSubtotal &&
+    hasValidDiscount &&
+    input.discountInCents < subtotalInCents &&
+    hasValidPayment
   ) {
-    errors.push({
-      field: "payment",
-      message: "Payment amount can have at most 2 decimal places.",
-    });
-  }
-
-  const totalInReais = roundBrl(
-    items.reduce((total, item) => total + item.totalInReais, 0),
-  );
-
-  if (items.length > 0 && Number.isFinite(input.payment.amountInReais)) {
-    validatePaymentAgainstTotal(input.payment, totalInReais, errors);
+    validatePaymentAgainstTotal(input.payment, totalInCents, errors);
   }
 
   if (errors.length > 0) {
-    return {
-      errors,
-      success: false,
-    };
+    return { errors, success: false };
   }
 
   return {
     sale: {
       cashSessionId,
       completedAt: input.completedAt,
+      discountInCents: input.discountInCents,
       id,
       items,
       payment: {
-        amountInReais: input.payment.amountInReais,
-        changeInReais: getPaymentChangeInReais(input.payment, totalInReais),
+        amountInCents: input.payment.amountInCents,
+        changeInCents: getPaymentChangeInCents(input.payment, totalInCents),
         method: input.payment.method,
       },
       status: "completed",
-      totalInReais,
+      subtotalInCents,
+      totalInCents,
     },
     success: true,
   };
@@ -164,8 +196,8 @@ function normalizeSaleItem(input: CreateSaleItemInput): SaleItem {
     productId: input.productId.trim(),
     productName: input.productName.trim(),
     quantity: input.quantity,
-    totalInReais: roundBrl(input.quantity * input.unitPriceInReais),
-    unitPriceInReais: input.unitPriceInReais,
+    totalInCents: input.quantity * input.unitPriceInCents,
+    unitPriceInCents: input.unitPriceInCents,
   };
 }
 
@@ -184,31 +216,31 @@ function validateSaleItem(item: SaleItem, errors: SaleValidationError[]): void {
     });
   }
 
-  if (!Number.isFinite(item.unitPriceInReais) || item.unitPriceInReais < 0) {
-    errors.push({
-      field: "items",
-      message: "Sale item unit price must be a valid BRL amount.",
-    });
-  }
-
   if (
-    Number.isFinite(item.unitPriceInReais) &&
-    !hasBrlPrecision(item.unitPriceInReais)
+    !Number.isSafeInteger(item.unitPriceInCents) ||
+    item.unitPriceInCents < 0
   ) {
     errors.push({
       field: "items",
-      message: "Sale item unit price can have at most 2 decimal places.",
+      message: "Sale item unit price must be a non-negative integer.",
+    });
+  }
+
+  if (!Number.isSafeInteger(item.totalInCents)) {
+    errors.push({
+      field: "items",
+      message: "Sale item total exceeds the supported range.",
     });
   }
 }
 
 function validatePaymentAgainstTotal(
   payment: CreatePaymentInput,
-  totalInReais: number,
+  totalInCents: number,
   errors: SaleValidationError[],
 ): void {
   if (payment.method === "cash") {
-    if (payment.amountInReais < totalInReais) {
+    if (payment.amountInCents < totalInCents) {
       errors.push({
         field: "payment",
         message: "Payment amount must cover the sale total.",
@@ -218,7 +250,7 @@ function validatePaymentAgainstTotal(
     return;
   }
 
-  if (payment.amountInReais !== totalInReais) {
+  if (payment.amountInCents !== totalInCents) {
     errors.push({
       field: "payment",
       message: "Non-cash payments must match the sale total exactly.",
@@ -226,27 +258,13 @@ function validatePaymentAgainstTotal(
   }
 }
 
-function getPaymentChangeInReais(
+function getPaymentChangeInCents(
   payment: CreatePaymentInput,
-  totalInReais: number,
+  totalInCents: number,
 ): number {
-  if (payment.method !== "cash") {
-    return 0;
-  }
-
-  return roundBrl(payment.amountInReais - totalInReais);
+  return payment.method === "cash" ? payment.amountInCents - totalInCents : 0;
 }
 
 function isValidDate(value: Date): boolean {
   return value instanceof Date && Number.isFinite(value.getTime());
-}
-
-function hasBrlPrecision(amountInReais: number): boolean {
-  const cents = amountInReais * 100;
-
-  return Math.abs(cents - Math.round(cents)) < 1e-8;
-}
-
-function roundBrl(amountInReais: number): number {
-  return Math.round(amountInReais * 100) / 100;
 }

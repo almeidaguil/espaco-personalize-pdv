@@ -161,13 +161,13 @@ describe("createSaleActionService", () => {
         {
           productId: "product-1",
           quantity: 2,
-          totalInReais: 30,
-          unitPriceInReais: 15,
+          totalInCents: 3000,
+          unitPriceInCents: 1500,
         },
       ],
       payment: {
-        amountInReais: 50,
-        changeInReais: 20,
+        amountInCents: 5000,
+        changeInCents: 2000,
       },
     });
   });
@@ -192,8 +192,8 @@ describe("createSaleActionService", () => {
       successMessage: "Venda finalizada com sucesso.",
     });
     expect(saleRepository.savedSale?.payment).toEqual({
-      amountInReais: 30,
-      changeInReais: 0,
+      amountInCents: 3000,
+      changeInCents: 0,
       method: "pix",
     });
   });
