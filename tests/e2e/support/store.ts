@@ -18,16 +18,21 @@ export async function createTestProductWithStock(
     adminPage.getByText("Produto cadastrado com sucesso."),
   ).toBeVisible();
   await adminPage.goto("/stock");
+  const productSearch = adminPage.getByRole("combobox", {
+    name: "Buscar produto",
+  });
+
+  await productSearch.fill(productName);
+  await adminPage.getByRole("option").filter({ hasText: productName }).click();
+
   const productId = await adminPage
-    .locator("select#productId option", { hasText: productName })
-    .getAttribute("value");
+    .locator('input[name="productId"]')
+    .inputValue();
+
   if (!productId)
     throw new Error(
       "The newly created E2E product must be available for stock adjustment.",
     );
-  await adminPage
-    .getByLabel("Produto", { exact: true })
-    .selectOption(productId);
   await adminPage.getByLabel("Quantidade").fill(String(quantity));
   await adminPage.getByRole("button", { name: "Registrar ajuste" }).click();
   await expect(
