@@ -22,25 +22,25 @@ export function ProductList({ products }: ProductListProps) {
         <Panel as="li" key={product.id} padding="sm">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <h2 className="text-base font-semibold text-slate-950">
+              <h2 className="text-base font-semibold text-[var(--brand-foreground)]">
                 {product.name}
               </h2>
-              <p className="mt-1 text-sm text-slate-500">
+              <p className="mt-1 text-sm text-[var(--brand-muted)]">
                 {product.sku ?? "Sem SKU"}
               </p>
             </div>
-            <StatusBadge tone={product.isActive ? "success" : "neutral"}>
+            <StatusBadge showDot tone={product.isActive ? "success" : "danger"}>
               {product.isActive ? "Ativo" : "Inativo"}
             </StatusBadge>
           </div>
 
-          <strong className="mt-4 block text-lg text-[#1e3275]">
+          <strong className="mt-4 block text-lg text-[var(--brand-accent-foreground)]">
             {product.priceLabel}
           </strong>
 
           <div className="mt-4 flex justify-end">
             <Link
-              className="inline-flex h-10 items-center rounded-md border border-slate-300 px-3 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275] hover:bg-[#1e3275]/5"
+              className="inline-flex h-10 items-center rounded-md border border-[var(--brand-accent)]/50 px-3 text-sm font-semibold text-[var(--brand-accent-foreground)] transition hover:border-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/10"
               href={`/products/${product.id}/edit`}
             >
               Editar

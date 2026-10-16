@@ -34,14 +34,14 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
       <Panel padding="sm">
         <div className="grid gap-2">
           <label
-            className="text-sm font-medium text-slate-700"
+            className="text-sm font-medium text-[var(--brand-foreground)]"
             htmlFor="product-search"
           >
             Buscar produto
           </label>
           <input
             autoComplete="off"
-            className="h-11 rounded-md border border-slate-300 bg-white px-3 text-base outline-none transition focus:border-[#1e3275] focus:ring-2 focus:ring-[#1e3275]/15"
+            className="h-11 rounded-md border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] placeholder:text-[var(--brand-muted)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
             id="product-search"
             onChange={(event) => {
               setSearchTerm(event.target.value);
@@ -51,7 +51,7 @@ export function ProductCatalog({ products }: ProductCatalogProps) {
             type="search"
             value={searchTerm}
           />
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-[var(--brand-muted)]">
             {filteredProducts.length} produto(s) encontrado(s)
           </p>
         </div>
