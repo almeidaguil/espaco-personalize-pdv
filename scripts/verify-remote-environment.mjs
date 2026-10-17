@@ -21,6 +21,7 @@ const requiredRpcs = [
   "open_cash_session_v3",
   "close_cash_session",
   "finalize_sale_v3",
+  "finalize_sale_v4",
   "cancel_sale",
   "get_store_sales_report_v2",
 ];
@@ -242,6 +243,48 @@ export async function verifyRemoteEnvironment({
   );
   assertSchemaContract(openApi);
 
+  const saleDiscountContract = firstQueryRow(
+    await supabase.managementClient.runReadOnlyQuery(target.projectRef, {
+      query: `
+        select
+          count(*) filter (
+            where columns.column_name in (
+              'subtotal_in_cents', 'discount_in_cents', 'total_in_cents'
+            )
+          )::integer as sales_financial_column_count,
+          has_function_privilege(
+            'authenticated',
+            'public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)',
+            'execute'
+          ) as authenticated_finalize_v3_execute,
+          has_function_privilege(
+            'authenticated',
+            'public.finalize_sale_v4(uuid,uuid,jsonb,jsonb,integer)',
+            'execute'
+          ) as authenticated_finalize_v4_execute,
+          has_function_privilege(
+            'anon',
+            'public.finalize_sale_v4(uuid,uuid,jsonb,jsonb,integer)',
+            'execute'
+          ) as anon_finalize_v4_execute,
+          true as sale_discount_contract_row
+        from information_schema.columns
+        where columns.table_schema = 'public'
+          and columns.table_name = 'sales'
+      `,
+    }),
+  );
+  if (
+    saleDiscountContract?.sales_financial_column_count !== 3 ||
+    saleDiscountContract.authenticated_finalize_v3_execute !== true ||
+    saleDiscountContract.authenticated_finalize_v4_execute !== true ||
+    saleDiscountContract.anon_finalize_v4_execute !== false
+  ) {
+    throw new Error(
+      `${capitalize(environment)} sale discount contract is divergent.`,
+    );
+  }
+
   const authConfig = await supabase.managementClient.getAuthConfig(
     target.projectRef,
   );
@@ -272,7 +315,13 @@ export async function verifyRemoteEnvironment({
     throw new Error("Production Auth password policy is divergent.");
   }
 
-  const checks = ["linked-project", "migrations", "database-lint", "schema"];
+  const checks = [
+    "linked-project",
+    "migrations",
+    "database-lint",
+    "schema",
+    "sale-discount-contract",
+  ];
   if (
     environment === "production" &&
     authPolicy?.leakedPasswordProtection === "unavailable-free-plan"

@@ -62,6 +62,14 @@ test("relatorio diario consolida vendas reais e preserva filtros e totais no CSV
           sessionA.id,
           productA.productId,
           randomUUID(),
+          {
+            discountInCents: 500,
+            payment: {
+              amount_in_cents: 1000,
+              change_in_cents: 0,
+              method: "cash",
+            },
+          },
         )
       ).error,
     ).toBeNull();
@@ -72,13 +80,16 @@ test("relatorio diario consolida vendas reais e preserva filtros e totais no CSV
           sessionB.id,
           productB.productId,
           randomUUID(),
+          { version: 3 },
         )
       ).error,
     ).toBeNull();
     const consolidated = await readAndAssertReport(admin.page, daily);
     expect(consolidated).toEqual({
       count: baseline.count + 2,
-      total: baseline.total + 3000,
+      discount: baseline.discount + 500,
+      subtotal: baseline.subtotal + 3000,
+      total: baseline.total + 2500,
     });
     const operatorA = await readAndAssertReport(
       admin.page,
@@ -86,7 +97,9 @@ test("relatorio diario consolida vendas reais e preserva filtros e totais no CSV
     );
     expect(operatorA).toEqual({
       count: baselineA.count + 1,
-      total: baselineA.total + 1500,
+      discount: baselineA.discount + 500,
+      subtotal: baselineA.subtotal + 1500,
+      total: baselineA.total + 1000,
     });
     // Operator history may span several item pages; the full CSV must include only this operator's fixture.
     const operatorCsvA = await exportCsv(admin.page);
@@ -100,6 +113,8 @@ test("relatorio diario consolida vendas reais e preserva filtros e totais no CSV
     );
     expect(operatorB).toEqual({
       count: baselineB.count + 1,
+      discount: baselineB.discount,
+      subtotal: baselineB.subtotal + 1500,
       total: baselineB.total + 1500,
     });
     const operatorCsvB = await exportCsv(admin.page);
@@ -107,15 +122,27 @@ test("relatorio diario consolida vendas reais e preserva filtros e totais no CSV
       `Produto;${productB.productId};${productB.productName};1;15,00`,
     );
     expect(operatorCsvB).not.toContain(productA.productId);
-    for (const [session, included, excluded] of [
-      [sessionA, productA, productB],
-      [sessionB, productB, productA],
+    for (const [session, operatorName, included, excluded, expected] of [
+      [
+        sessionA,
+        "E2E Operator A",
+        productA,
+        productB,
+        { count: 1, discount: 500, subtotal: 1500, total: 1000 },
+      ],
+      [
+        sessionB,
+        "E2E Operator B",
+        productB,
+        productA,
+        { count: 1, discount: 0, subtotal: 1500, total: 1500 },
+      ],
     ] as const) {
       const summary = await readAndAssertReport(
         admin.page,
         `${daily}&cashSessionId=${session.id}`,
       );
-      expect(summary).toEqual({ count: 1, total: 1500 });
+      expect(summary).toEqual(expected);
       await expect(
         admin.page.getByText(included.productName, { exact: true }),
       ).toBeVisible();
@@ -128,6 +155,12 @@ test("relatorio diario consolida vendas reais e preserva filtros e totais no CSV
       );
       expect(csv).not.toContain(excluded.productId);
       expect(csv).toContain(`Caixa;${session.id};`);
+      expect(csv).toContain(
+        `Desconto do caixa;${session.id};${operatorName};;${formatCsvMoney(expected.discount)}`,
+      );
+      expect(csv).toContain(
+        `Líquido do caixa;${session.id};${operatorName};1;${formatCsvMoney(expected.total)}`,
+      );
     }
   } finally {
     await admin.context.close();
@@ -154,6 +187,14 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
           session.id,
           product.productId,
           completedSaleId,
+          {
+            discountInCents: 500,
+            payment: {
+              amount_in_cents: 1200,
+              change_in_cents: 200,
+              method: "cash",
+            },
+          },
         )
       ).error,
     ).toBeNull();
@@ -164,6 +205,7 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
           session.id,
           product.productId,
           canceledSaleId,
+          { version: 3 },
         )
       ).error,
     ).toBeNull();
@@ -179,14 +221,16 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
     // Cancel while open: it must leave revenue and cash reconciliation, not create a post-close adjustment.
     const close = await seller.rpc("close_cash_session", {
       p_cash_session_id: session.id,
-      p_counted_amount_in_cents: 11400,
+      p_counted_amount_in_cents: 10900,
       p_closed_at: new Date().toISOString(),
       p_admin_password: adminPassword,
     });
     expect(close.error).toBeNull();
     const { data: sales, error: saleError } = await adminClient
       .from("sales")
-      .select("id,status,canceled_after_cash_close")
+      .select(
+        "id,status,canceled_after_cash_close,operator_id,subtotal_in_cents,discount_in_cents,total_in_cents",
+      )
       .in("id", [completedSaleId, canceledSaleId]);
     expect(saleError).toBeNull();
     expect(sales).toHaveLength(2);
@@ -196,11 +240,19 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
           id: completedSaleId,
           status: "completed",
           canceled_after_cash_close: false,
+          discount_in_cents: 500,
+          operator_id: session.operator_id,
+          subtotal_in_cents: 1500,
+          total_in_cents: 1000,
         },
         {
           id: canceledSaleId,
           status: "canceled",
           canceled_after_cash_close: false,
+          discount_in_cents: 0,
+          operator_id: session.operator_id,
+          subtotal_in_cents: 1500,
+          total_in_cents: 1500,
         },
       ]),
     );
@@ -215,7 +267,7 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
     expect(closed).toMatchObject({
       status: "closed",
       closed_by: session.operator_id,
-      expected_amount_in_cents: 11500,
+      expected_amount_in_cents: 11000,
       difference_amount_in_cents: -100,
     });
 
@@ -226,7 +278,12 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
       admin.page,
       `startDate=${date}&endDate=${date}&cashSessionId=${session.id}`,
     );
-    expect(summary).toEqual({ count: 1, total: 1500 });
+    expect(summary).toEqual({
+      count: 1,
+      discount: 500,
+      subtotal: 1500,
+      total: 1000,
+    });
     const canceledCard = admin.page.locator("dl > div").filter({
       has: admin.page.locator("dt", { hasText: /^Vendas canceladas$/ }),
     });
@@ -234,7 +291,7 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
     const revenueCard = admin.page.locator("dl > div").filter({
       has: admin.page.locator("dt", { hasText: /^Receita líquida$/ }),
     });
-    await expect(revenueCard.locator("dd")).toHaveText("R$ 15,00");
+    await expect(revenueCard.locator("dd")).toHaveText("R$ 10,00");
     const shortageCard = admin.page
       .locator("dl > div")
       .filter({ has: admin.page.locator("dt", { hasText: /^Faltas$/ }) });
@@ -244,12 +301,16 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
     });
     await expect(differenceCard.locator("dd")).toHaveText("-R$ 1,00");
     const csv = await exportCsv(admin.page);
-    expect(csv).toContain("Resumo;vendas_concluidas;Vendas concluídas;1;15,00");
+    expect(csv).toContain("Resumo;vendas_brutas;Vendas brutas;1;15,00");
+    expect(csv).toContain(
+      "Resumo;descontos_concedidos;Descontos concedidos;;5,00",
+    );
+    expect(csv).toContain("Resumo;vendas_liquidas;Vendas líquidas;1;10,00");
     expect(csv).toContain(
       "Resumo;vendas_canceladas;Vendas canceladas (fora da receita);1;15,00",
     );
     expect(csv).toContain(
-      "Resumo;receita_liquida;Receita líquida após ajustes pós-fechamento;;15,00",
+      "Resumo;receita_liquida;Receita líquida após ajustes pós-fechamento;;10,00",
     );
     expect(csv).toContain(
       "Resumo;falta_caixa;Falta apurada em caixas fechados;;1,00",
@@ -292,17 +353,27 @@ async function readAndAssertReport(page: Page, query: string) {
   for (const [key, value] of new URLSearchParams(query))
     expect(exported.get(key)).toBe(value);
   const csv = await exportCsv(page);
-  const completed = csv
-    .split("\n")
-    .find((line) => line.startsWith("Resumo;vendas_concluidas;"))
-    ?.split(";");
-  if (!completed) throw new Error("Completed-sales CSV summary is required.");
-  const count = Number(completed[3]);
-  const total = parseMoney(completed[4]);
-  const summary = page
+  const gross = readCsvSummary(csv, "vendas_brutas");
+  const discountSummary = readCsvSummary(csv, "descontos_concedidos");
+  const net = readCsvSummary(csv, "vendas_liquidas");
+  const count = Number(net[3]);
+  const subtotal = parseMoney(gross[4]);
+  const discount = parseMoney(discountSummary[4]);
+  const total = parseMoney(net[4]);
+  expect(Number(gross[3])).toBe(count);
+  expect(subtotal - discount).toBe(total);
+  const grossCard = page
     .locator("dl > div")
-    .filter({ has: page.locator("dt", { hasText: /^Vendas reconhecidas$/ }) });
-  await expect(summary.locator("dd")).toHaveText(
+    .filter({ has: page.locator("dt", { hasText: /^Vendas brutas$/ }) });
+  await expect(grossCard.locator("dd")).toHaveText(formatMoney(subtotal));
+  const discountCard = page.locator("dl > div").filter({
+    has: page.locator("dt", { hasText: /^Descontos concedidos$/ }),
+  });
+  await expect(discountCard.locator("dd")).toHaveText(formatMoney(discount));
+  const netCard = page
+    .locator("dl > div")
+    .filter({ has: page.locator("dt", { hasText: /^Vendas líquidas$/ }) });
+  await expect(netCard.locator("dd")).toHaveText(
     `${count} (${formatMoney(total)})`,
   );
   const revenue = csv
@@ -316,7 +387,16 @@ async function readAndAssertReport(page: Page, query: string) {
   await expect(revenueCard.locator("dd")).toHaveText(
     formatMoney(parseMoney(revenue[4])),
   );
-  return { count, total };
+  return { count, discount, subtotal, total };
+}
+
+function readCsvSummary(csv: string, identifier: string) {
+  const summary = csv
+    .split("\n")
+    .find((line) => line.startsWith(`Resumo;${identifier};`))
+    ?.split(";");
+  if (!summary) throw new Error(`${identifier} CSV summary is required.`);
+  return summary;
 }
 
 function parseMoney(value: string) {
@@ -329,4 +409,8 @@ function formatMoney(cents: number) {
     style: "currency",
     currency: "BRL",
   }).format(cents / 100);
+}
+
+function formatCsvMoney(cents: number) {
+  return (cents / 100).toFixed(2).replace(".", ",");
 }

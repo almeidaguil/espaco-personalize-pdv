@@ -155,6 +155,32 @@ nessa ordem, todos com exit code `0`. Foram aprovados 369 testes unitarios,
 111 asserts pgTAP em cada caminho de upgrade/reset, integracoes financeiras
 e 42 testes E2E sem skips. Nenhum ambiente remoto foi acessado ou alterado.
 
+## Evolucao Atual - Desconto No PDV
+
+Status: implementacao em branch de funcionalidade; promocao remota depende dos
+gates e do pull request para `develop`.
+
+Escopo:
+
+- desconto em Reais aplicado a venda inteira por admin ou operador;
+- `subtotal_in_cents`, `discount_in_cents` e `total_in_cents` persistidos e
+  validados no servidor;
+- `finalize_sale_v4` como contrato funcional, mantendo `finalize_sale_v3`
+  apenas para compatibilidade de vendas sem desconto;
+- operador do desconto derivado da sessao autenticada e visivel no historico;
+- PDV, detalhes, relatorio e CSV distinguindo bruto, desconto e liquido;
+- pagamento, troco, fechamento e reconciliacao sempre pelo valor liquido.
+
+Criterio de pronto:
+
+- desconto minimo de R$ 0,01 e total final minimo de R$ 0,01;
+- banco recalcula preco, subtotal, desconto, total e pagamento atomicamente;
+- chamada anonima da v4 e escrita financeira direta permanecem bloqueadas;
+- cancelamento preserva bruto, desconto, liquido e autoria;
+- verificador remoto exige colunas financeiras, v3/v4 e grants corretos sem
+  registrar credenciais;
+- gates locais financeiros e E2E passam antes da publicacao do PR.
+
 ## Entrega 7 - QA Multioperador
 
 Status: implementacao entregue no PR07; revisao, checks do PR e integracao

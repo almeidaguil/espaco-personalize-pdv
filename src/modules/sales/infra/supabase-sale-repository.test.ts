@@ -26,7 +26,7 @@ class FakeSupabaseSaleClient implements SupabaseSaleClient {
     },
   ) {}
 
-  async rpc(functionName: "finalize_sale_v3", args: unknown) {
+  async rpc(functionName: "finalize_sale_v4", args: unknown) {
     this.rpcCalls += 1;
     this.functionName = functionName;
     this.rpcArgs = args;
@@ -36,7 +36,7 @@ class FakeSupabaseSaleClient implements SupabaseSaleClient {
 }
 
 describe("SupabaseSaleRepository", () => {
-  it("finalizes sales through V3 with the exact trusted cash session", async () => {
+  it("finalizes sales through V4 with the exact trusted cash session and discount", async () => {
     const supabaseClient = new FakeSupabaseSaleClient();
     const repository = new SupabaseSaleRepository(supabaseClient);
     const sale = createSale();
@@ -46,7 +46,7 @@ describe("SupabaseSaleRepository", () => {
       success: true,
     });
 
-    expect(supabaseClient.functionName).toBe("finalize_sale_v3");
+    expect(supabaseClient.functionName).toBe("finalize_sale_v4");
     expect(supabaseClient.rpcArgs).toEqual({
       p_cash_session_id: "cash-session-1",
       p_items: [
@@ -55,6 +55,7 @@ describe("SupabaseSaleRepository", () => {
           quantity: 2,
         },
       ],
+      p_discount_in_cents: 0,
       p_payment: {
         amount_in_cents: 5000,
         change_in_cents: 2000,
@@ -104,8 +105,8 @@ describe("SupabaseSaleRepository", () => {
     const sale = {
       ...createSale(),
       payment: {
-        amountInReais: 30,
-        changeInReais: 0,
+        amountInCents: 3000,
+        changeInCents: 0,
         method: "pix" as const,
       },
     };
@@ -117,6 +118,7 @@ describe("SupabaseSaleRepository", () => {
 
     expect(supabaseClient.rpcArgs).toEqual({
       p_cash_session_id: "cash-session-1",
+      p_discount_in_cents: 0,
       p_items: [
         {
           product_id: "product-1",
@@ -145,7 +147,7 @@ describe("SupabaseSaleRepository", () => {
       error: "cash_session_closed",
       success: false,
     });
-    expect(supabaseClient.functionName).toBe("finalize_sale_v3");
+    expect(supabaseClient.functionName).toBe("finalize_sale_v4");
     expect(supabaseClient.rpcCalls).toBe(1);
   });
 });
@@ -160,16 +162,18 @@ function createSale(): Sale {
         productId: "product-1",
         productName: "Chaveiro Polvo",
         quantity: 2,
-        totalInReais: 30,
-        unitPriceInReais: 15,
+        totalInCents: 3000,
+        unitPriceInCents: 1500,
       },
     ],
     payment: {
-      amountInReais: 50,
-      changeInReais: 20,
+      amountInCents: 5000,
+      changeInCents: 2000,
       method: "cash",
     },
     status: "completed",
-    totalInReais: 30,
+    discountInCents: 0,
+    subtotalInCents: 3000,
+    totalInCents: 3000,
   };
 }

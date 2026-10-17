@@ -6,7 +6,7 @@ type CartItemsProps = {
   items: PdvCartItem[];
   onAddProduct: (product: PdvCartProduct) => void;
   onDecrementProduct: (productId: string) => void;
-  totalInReais: number;
+  subtotalInCents: number;
 };
 
 const moneyFormatter = new Intl.NumberFormat("pt-BR", {
@@ -18,7 +18,7 @@ export function CartItems({
   items,
   onAddProduct,
   onDecrementProduct,
-  totalInReais,
+  subtotalInCents,
 }: CartItemsProps) {
   return (
     <div className="overflow-hidden rounded-xl border border-[var(--border)] bg-white">
@@ -49,7 +49,8 @@ export function CartItems({
                 </p>
 
                 <p className="mt-1 text-sm text-[var(--brand-muted)]">
-                  {item.quantity} × {moneyFormatter.format(item.priceInReais)}
+                  {item.quantity} ×{" "}
+                  {moneyFormatter.format(item.priceInCents / 100)}
                 </p>
               </div>
 
@@ -83,11 +84,11 @@ export function CartItems({
 
       <div className="flex items-center justify-between border-t border-[var(--border)] bg-[var(--surface-muted)] px-4 py-4">
         <span className="text-sm font-semibold text-[var(--brand-muted)]">
-          Total
+          Subtotal do carrinho
         </span>
 
         <strong className="text-xl font-bold text-[var(--brand-foreground)]">
-          {moneyFormatter.format(totalInReais)}
+          {moneyFormatter.format(subtotalInCents / 100)}
         </strong>
       </div>
     </div>

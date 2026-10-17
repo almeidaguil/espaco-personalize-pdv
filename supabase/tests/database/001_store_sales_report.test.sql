@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(28);
+select extensions.plan(30);
 
 select extensions.ok(
   to_regclass('public.sales_cash_session_status_idx') is not null,
@@ -245,6 +245,20 @@ select extensions.ok(
     'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
   ) like '%v_is_admin or cash_sessions.operator_id = v_user_id%',
   'the report RPC restricts operators to their own cash sessions'
+);
+
+select extensions.ok(
+  pg_get_functiondef(
+    'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
+  ) like '%completed_subtotal_in_cents%',
+  'the report exposes recognized sale subtotals'
+);
+
+select extensions.ok(
+  pg_get_functiondef(
+    'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
+  ) like '%completed_discount_in_cents%',
+  'the report exposes recognized sale discounts'
 );
 
 select * from extensions.finish();

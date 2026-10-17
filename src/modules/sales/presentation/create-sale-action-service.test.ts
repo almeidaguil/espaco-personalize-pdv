@@ -161,13 +161,13 @@ describe("createSaleActionService", () => {
         {
           productId: "product-1",
           quantity: 2,
-          totalInReais: 30,
-          unitPriceInReais: 15,
+          totalInCents: 3000,
+          unitPriceInCents: 1500,
         },
       ],
       payment: {
-        amountInReais: 50,
-        changeInReais: 20,
+        amountInCents: 5000,
+        changeInCents: 2000,
       },
     });
   });
@@ -192,9 +192,33 @@ describe("createSaleActionService", () => {
       successMessage: "Venda finalizada com sucesso.",
     });
     expect(saleRepository.savedSale?.payment).toEqual({
-      amountInReais: 30,
-      changeInReais: 0,
+      amountInCents: 3000,
+      changeInCents: 0,
       method: "pix",
+    });
+  });
+
+  it("creates a discounted sale from BRL form fields", async () => {
+    const saleRepository = new FakeSaleRepository();
+    const formData = createFormData();
+    formData.set("discountInReais", "5,00");
+
+    const result = await createSaleActionService({}, formData, {
+      cashSessionRepository: new FakeCashSessionRepository(),
+      currentUserProfileRepository: createCurrentUserProfileRepository(),
+      generateSaleId: () => "sale-1",
+      getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+      productRepository: new FakeProductRepository(),
+      saleRepository,
+      stockMovementRepository: new FakeStockMovementRepository(),
+    });
+
+    expect(result).toEqual({ successMessage: "Venda finalizada com sucesso." });
+    expect(saleRepository.savedSale).toMatchObject({
+      discountInCents: 500,
+      subtotalInCents: 3000,
+      totalInCents: 2500,
+      payment: { amountInCents: 5000, changeInCents: 2500 },
     });
   });
 
