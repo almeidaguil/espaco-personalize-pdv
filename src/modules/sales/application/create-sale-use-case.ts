@@ -22,7 +22,9 @@ export type CreateSaleUseCaseResult =
       success: true;
     }
   | {
-      fieldErrors?: Partial<Record<"items" | "payment", string>>;
+      fieldErrors?: Partial<
+        Record<"discountInCents" | "items" | "payment", string>
+      >;
       formError?: string;
       success: false;
     };
@@ -61,6 +63,7 @@ export async function createSaleUseCase(
 
     return {
       fieldErrors: {
+        discountInCents: flattenedErrors.discountInCents?.[0],
         items: flattenedErrors.items?.[0],
         payment: flattenedErrors.payment?.[0],
       },
@@ -129,13 +132,14 @@ export async function createSaleUseCase(
       productId: product.id,
       productName: product.name,
       quantity: item.quantity,
-      unitPriceInReais: product.price.toReais(),
+      unitPriceInCents: product.price.toCents(),
     });
   }
 
   const saleResult = createSale({
     cashSessionId: openCashSessionResult.session.id,
     completedAt: dependencies.getCurrentDate(),
+    discountInCents: parsedInput.data.discountInCents,
     id: dependencies.generateSaleId(),
     items: saleItems,
     payment: parsedInput.data.payment,

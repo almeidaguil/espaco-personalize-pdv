@@ -14,7 +14,10 @@ describe("SalesList", () => {
     );
     expect(screen.getByText("Ana")).toBeInTheDocument();
     expect(screen.getByText(/Caixa cash-ses/)).toBeInTheDocument();
-    expect(screen.getByText("R$ 30,00")).toBeInTheDocument();
+    expect(screen.getAllByText("R$ 30,00")).toHaveLength(2);
+    expect(
+      screen.queryByText(/Desconto concedido por/),
+    ).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Ver detalhes" })).toHaveAttribute(
       "href",
       "/sales/sale-1",
@@ -43,6 +46,32 @@ describe("SalesList", () => {
     expect(parameters.get("status")).toBe("canceled");
     expect(parameters.get("startDate")).toBe("2026-07-01");
     expect(screen.getByText("17 vendas")).toBeInTheDocument();
+  });
+  it("shows gross, discount, net total and the discount author", () => {
+    render(
+      <SalesList
+        sales={[
+          saleSummaryFixture({
+            discountInCents: 500,
+            subtotalInCents: 3500,
+            totalInCents: 3000,
+          }),
+        ]}
+        totalCount={1}
+        filters={{ page: 1, pageSize: 8 }}
+      />,
+    );
+
+    expect(screen.getByText("Subtotal").parentElement).toHaveTextContent(
+      "R$ 35,00",
+    );
+    expect(screen.getByText("Desconto").parentElement).toHaveTextContent(
+      "R$ 5,00",
+    );
+    expect(screen.getByText("Total líquido").parentElement).toHaveTextContent(
+      "R$ 30,00",
+    );
+    expect(screen.getByText("Desconto concedido por Ana")).toBeInTheDocument();
   });
   it("renders empty search results and a way back from an out-of-range page", () => {
     render(

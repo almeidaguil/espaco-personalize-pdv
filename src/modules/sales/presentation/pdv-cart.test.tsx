@@ -16,7 +16,7 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
             sku: "CHAVEIRO-001",
           },
@@ -37,7 +37,7 @@ describe("PdvCart", () => {
     );
     expect(screen.getByText("2 × R$ 15,00")).toBeInTheDocument();
 
-    expect(screen.getAllByText("R$ 30,00")).toHaveLength(2);
+    expect(screen.getAllByText("R$ 30,00")).toHaveLength(3);
   });
 
   it("removes products from the cart", async () => {
@@ -50,7 +50,7 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
           },
         ]}
@@ -71,7 +71,7 @@ describe("PdvCart", () => {
 
     expect(screen.getByText("Nenhum item adicionado.")).toBeInTheDocument();
 
-    expect(screen.getAllByText("R$ 0,00")).toHaveLength(2);
+    expect(screen.getAllByText("R$ 0,00")).toHaveLength(3);
   });
 
   it("calculates cash change when received amount covers the total", async () => {
@@ -84,7 +84,7 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
           },
         ]}
@@ -108,6 +108,143 @@ describe("PdvCart", () => {
     ).toBeEnabled();
   });
 
+  it("applies a BRL discount and recalculates the exact non-cash payment", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInCents: 1500,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.type(screen.getByLabelText("Desconto (R$)"), "0,01");
+    await user.click(screen.getByRole("button", { name: "Pix" }));
+
+    expect(screen.getByText("Subtotal").parentElement).toHaveTextContent(
+      "R$ 15,00",
+    );
+    expect(screen.getByText("Desconto").parentElement).toHaveTextContent(
+      "R$ 0,01",
+    );
+    expect(screen.getByText("Total da venda").parentElement).toHaveTextContent(
+      "R$ 14,99",
+    );
+    expect(screen.getByDisplayValue("14,99")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Finalizar venda" }),
+    ).toBeEnabled();
+  });
+
+  it("accepts the maximum valid discount and rejects a discount equal to the subtotal", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInCents: 1500,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    const discountInput = screen.getByLabelText("Desconto (R$)");
+    await user.type(discountInput, "14,99");
+    await user.click(screen.getByRole("button", { name: "Pix" }));
+
+    expect(screen.getByDisplayValue("0,01")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Finalizar venda" }),
+    ).toBeEnabled();
+
+    await user.clear(discountInput);
+    await user.type(discountInput, "15,00");
+
+    expect(
+      screen.getByText("O desconto deve ser menor que o subtotal."),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Finalizar venda" }),
+    ).toBeDisabled();
+  });
+
+  it("rejects malformed and negative discounts without rounding", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInCents: 1500,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    const discountInput = screen.getByLabelText("Desconto (R$)");
+    await user.type(discountInput, "-0,01");
+
+    expect(discountInput).toHaveAttribute("aria-invalid", "true");
+    expect(
+      screen.getByText(/Informe um desconto válido em reais/),
+    ).toBeInTheDocument();
+
+    await user.clear(discountInput);
+    await user.type(discountInput, "1,001");
+    expect(
+      screen.getByRole("button", { name: "Finalizar venda" }),
+    ).toBeDisabled();
+  });
+
+  it("recalculates total and cash difference when cart quantities change", async () => {
+    const user = userEvent.setup();
+
+    render(
+      <PdvCart
+        action={createAction()}
+        products={[
+          {
+            id: "product-1",
+            name: "Chaveiro Polvo",
+            priceInCents: 1500,
+            quantityOnHand: 5,
+          },
+        ]}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Adicionar" }));
+    await user.type(screen.getByLabelText("Desconto (R$)"), "5,00");
+    await user.type(screen.getByLabelText("Valor recebido"), "20,00");
+    expect(screen.getByText("Troco R$ 10,00")).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "Adicionar uma unidade de Chaveiro Polvo",
+      }),
+    );
+    expect(screen.getByText("Falta R$ 5,00")).toBeInTheDocument();
+  });
+
   it("fills received amount from cash shortcuts", async () => {
     const user = userEvent.setup();
 
@@ -118,7 +255,7 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
           },
         ]}
@@ -160,7 +297,7 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
           },
         ]}
@@ -188,14 +325,14 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
             sku: "CHAVEIRO-001",
           },
           {
             id: "product-2",
             name: "Caneca Personalizada",
-            priceInReais: 35,
+            priceInCents: 3500,
             quantityOnHand: 5,
             sku: "CANECA-001",
           },
@@ -229,7 +366,7 @@ describe("PdvCart", () => {
         products={Array.from({ length: 9 }, (_, index) => ({
           id: `product-${index + 1}`,
           name: `Produto ${index + 1}`,
-          priceInReais: 10 + index,
+          priceInCents: (10 + index) * 100,
           quantityOnHand: 5,
           sku: `SKU-${index + 1}`,
         }))}
@@ -274,7 +411,7 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
           },
         ]}
@@ -307,6 +444,8 @@ describe("PdvCart", () => {
 
     expect(formData.get("amountReceivedInReais")).toBe("20,00");
 
+    expect(formData.get("discountInReais")).toBe("");
+
     expect(formData.get("paymentMethod")).toBe("cash");
 
     expect(formData.get("itemsJson")).toBe(
@@ -329,7 +468,7 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
           },
         ]}
@@ -341,6 +480,8 @@ describe("PdvCart", () => {
         name: "Adicionar",
       }),
     );
+
+    await user.type(screen.getByLabelText("Desconto (R$)"), "5,00");
 
     await user.click(
       screen.getByRole("button", {
@@ -369,6 +510,8 @@ describe("PdvCart", () => {
 
     expect(screen.getByLabelText("Valor recebido")).toHaveValue("");
 
+    expect(screen.getByLabelText("Desconto (R$)")).toHaveValue("");
+
     expect(
       screen.getByRole("button", {
         name: "Dinheiro",
@@ -392,7 +535,7 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Chaveiro Polvo",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 5,
           },
         ]}
@@ -438,13 +581,13 @@ describe("PdvCart", () => {
           {
             id: "product-1",
             name: "Produto sem estoque",
-            priceInReais: 15,
+            priceInCents: 1500,
             quantityOnHand: 0,
           },
           {
             id: "product-2",
             name: "Produto limitado",
-            priceInReais: 20,
+            priceInCents: 2000,
             quantityOnHand: 2,
           },
         ]}

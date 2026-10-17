@@ -1,18 +1,19 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { FieldError } from "@/shared/components/field-error";
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 
 import type { StockAdjustmentActionState } from "./stock-adjustment-action-state";
+import {
+  StockProductCombobox,
+  type StockAdjustmentProductOption,
+} from "./stock-product-combobox";
 
 const initialState: StockAdjustmentActionState = {};
 
-export type StockAdjustmentProductOption = {
-  id: string;
-  label: string;
-};
+export type { StockAdjustmentProductOption } from "./stock-product-combobox";
 
 type StockAdjustmentFormProps = {
   action: (
@@ -27,6 +28,7 @@ export function StockAdjustmentForm({
   products,
 }: StockAdjustmentFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
+  const [selectedProductId, setSelectedProductId] = useState("");
 
   const hasProducts = products.length > 0;
   const errors = state.fieldErrors;
@@ -34,31 +36,12 @@ export function StockAdjustmentForm({
   return (
     <form action={formAction} className="grid gap-5" noValidate>
       <div className="grid gap-2">
-        <label
-          className="text-sm font-semibold text-[var(--brand-foreground)]"
-          htmlFor="productId"
-        >
-          Produto
-        </label>
-
-        <select
-          aria-describedby={errors?.productId ? "productId-error" : undefined}
-          aria-invalid={errors?.productId ? true : undefined}
-          className="h-12 w-full min-w-0 rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15 disabled:cursor-not-allowed disabled:bg-[var(--surface-muted)] disabled:text-[var(--brand-muted)]"
-          disabled={!hasProducts}
-          id="productId"
-          name="productId"
-        >
-          <option value="">
-            {hasProducts ? "Selecione um produto" : "Nenhum produto ativo"}
-          </option>
-
-          {products.map((product) => (
-            <option key={product.id} value={product.id}>
-              {product.label}
-            </option>
-          ))}
-        </select>
+        <StockProductCombobox
+          errorId={errors?.productId ? "productId-error" : undefined}
+          invalid={Boolean(errors?.productId)}
+          onSelectionChange={setSelectedProductId}
+          products={products}
+        />
 
         {errors?.productId ? (
           <FieldError id="productId-error">{errors.productId}</FieldError>
@@ -154,7 +137,7 @@ export function StockAdjustmentForm({
 
       <button
         className="inline-flex h-12 items-center justify-center rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-5 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
-        disabled={isPending || !hasProducts}
+        disabled={isPending || !hasProducts || !selectedProductId}
         type="submit"
       >
         {isPending ? "Ajustando..." : "Registrar ajuste"}

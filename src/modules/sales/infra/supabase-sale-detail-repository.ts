@@ -63,13 +63,13 @@ export class SupabaseSaleDetailRepository implements SaleDetailRepository {
           productId: item.product_id,
           productName: item.product_name,
           quantity: item.quantity,
-          totalInReais: item.total_in_cents / 100,
-          unitPriceInReais: item.unit_price_in_cents / 100,
+          totalInCents: item.total_in_cents,
+          unitPriceInCents: item.unit_price_in_cents,
         })),
         payment: {
           method: payment.method,
-          amountInReais: payment.amount_in_cents / 100,
-          changeInReais: payment.change_in_cents / 100,
+          amountInCents: payment.amount_in_cents,
+          changeInCents: payment.change_in_cents,
         },
       },
     };

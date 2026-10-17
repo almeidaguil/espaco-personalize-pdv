@@ -28,8 +28,11 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
             Venda #{sale.id.slice(0, 8)}
           </p>
 
-          <h2 className="mt-2 text-2xl font-bold text-[var(--brand-foreground)]">
-            {moneyFormatter.format(sale.totalInReais)}
+          <p className="mt-2 text-sm font-semibold text-[var(--brand-muted)]">
+            Total líquido
+          </p>
+          <h2 className="mt-1 text-2xl font-bold text-[var(--brand-foreground)]">
+            {moneyFormatter.format(sale.totalInCents / 100)}
           </h2>
 
           <p className="mt-1 text-sm text-[var(--brand-muted)]">
@@ -41,6 +44,23 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
           {sale.status === "completed" ? "Concluída" : "Cancelada"}
         </StatusBadge>
       </div>
+
+      <dl className="grid gap-3 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4 sm:grid-cols-2">
+        <PaymentItem
+          label="Subtotal"
+          value={moneyFormatter.format(sale.subtotalInCents / 100)}
+        />
+        <PaymentItem
+          label="Desconto"
+          value={moneyFormatter.format(sale.discountInCents / 100)}
+        />
+      </dl>
+
+      {sale.discountInCents > 0 ? (
+        <p className="rounded-xl border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/10 px-4 py-3 text-sm font-semibold text-[var(--brand-accent-foreground)]">
+          Desconto concedido por {sale.operatorName}
+        </p>
+      ) : null}
 
       <dl className="grid gap-4 rounded-xl border border-[var(--border)] p-4 sm:grid-cols-2">
         <PaymentItem label="Operador" value={sale.operatorName} />
@@ -89,12 +109,12 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
 
                 <p className="mt-1 text-sm text-[var(--brand-muted)]">
                   {item.quantity} ×{" "}
-                  {moneyFormatter.format(item.unitPriceInReais)}
+                  {moneyFormatter.format(item.unitPriceInCents / 100)}
                 </p>
               </div>
 
               <strong className="text-base font-bold text-[var(--brand-foreground)]">
-                {moneyFormatter.format(item.totalInReais)}
+                {moneyFormatter.format(item.totalInCents / 100)}
               </strong>
             </li>
           ))}
@@ -115,12 +135,12 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
 
           <PaymentItem
             label="Valor recebido"
-            value={moneyFormatter.format(sale.payment.amountInReais)}
+            value={moneyFormatter.format(sale.payment.amountInCents / 100)}
           />
 
           <PaymentItem
             label="Troco"
-            value={moneyFormatter.format(sale.payment.changeInReais)}
+            value={moneyFormatter.format(sale.payment.changeInCents / 100)}
           />
         </dl>
       </section>

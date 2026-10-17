@@ -35,7 +35,7 @@ export function createProduct(input: CreateProductInput): CreateProductResult {
   const errors: ProductValidationError[] = [];
   const id = input.id.trim();
   const name = input.name.trim();
-  const sku = normalizeSku(input.sku);
+  const sku = normalizeProductSku(input.sku);
 
   if (!id) {
     errors.push({
@@ -115,8 +115,10 @@ export function activateProduct(product: Product): Product {
   };
 }
 
-function normalizeSku(sku: string | null | undefined): string | undefined {
-  const normalizedSku = sku?.trim();
+export function normalizeProductSku(
+  sku: string | null | undefined,
+): string | undefined {
+  const normalizedSku = sku?.trim().toUpperCase();
 
   return normalizedSku ? normalizedSku : undefined;
 }

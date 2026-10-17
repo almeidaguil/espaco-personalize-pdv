@@ -4,6 +4,10 @@ import { useActionState, useCallback, useMemo, useState } from "react";
 
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
+import {
+  formatBrlCentsForInput,
+  parseBrlCurrencyToCents,
+} from "@/shared/utils/brl-currency";
 
 import type { PaymentMethod } from "../domain/sale";
 import { CartItems } from "./cart-items";
@@ -13,7 +17,7 @@ import type { SaleActionState } from "./sale-action-state";
 export type PdvCartProduct = {
   id: string;
   name: string;
-  priceInReais: number;
+  priceInCents: number;
   quantityOnHand: number;
   sku?: string;
 };
@@ -49,6 +53,7 @@ export function PdvCart({ action, products }: PdvCartProps) {
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
 
+  const [discountInput, setDiscountInput] = useState("");
   const [receivedAmountInput, setReceivedAmountInput] = useState("");
 
   const submitSale = useCallback(
@@ -60,6 +65,7 @@ export function PdvCart({ action, products }: PdvCartProps) {
         setProductSearchTerm("");
         setProductPage(1);
         setPaymentMethod("cash");
+        setDiscountInput("");
         setReceivedAmountInput("");
       }
 
@@ -70,14 +76,25 @@ export function PdvCart({ action, products }: PdvCartProps) {
 
   const [state, formAction, isPending] = useActionState(submitSale, {});
 
-  const totalInReais = useMemo(
+  const subtotalInCents = useMemo(
     () =>
       items.reduce(
-        (total, item) => total + item.priceInReais * item.quantity,
+        (total, item) => total + item.priceInCents * item.quantity,
         0,
       ),
     [items],
   );
+
+  const parsedDiscountInCents = discountInput.trim()
+    ? parseBrlCurrencyToCents(discountInput)
+    : 0;
+  const discountError = getDiscountError(
+    discountInput,
+    parsedDiscountInCents,
+    subtotalInCents,
+  );
+  const discountInCents = discountError ? 0 : parsedDiscountInCents;
+  const totalInCents = subtotalInCents - discountInCents;
 
   const cartQuantitiesByProductId = useMemo(
     () => new Map(items.map((item) => [item.id, item.quantity])),
@@ -93,23 +110,26 @@ export function PdvCart({ action, products }: PdvCartProps) {
   const effectiveReceivedAmountInput =
     paymentMethod === "cash"
       ? receivedAmountInput
-      : totalInReais > 0
-        ? formatBrlAmount(totalInReais)
+      : totalInCents > 0
+        ? formatBrlCentsForInput(totalInCents)
         : "";
 
-  const receivedAmountInReais = parseBrlAmount(effectiveReceivedAmountInput);
+  const receivedAmountInCents = parseBrlCurrencyToCents(
+    effectiveReceivedAmountInput,
+  );
 
-  const paymentDifferenceInReais = receivedAmountInReais - totalInReais;
+  const paymentDifferenceInCents = receivedAmountInCents - totalInCents;
 
-  const hasValidReceivedAmount = Number.isFinite(receivedAmountInReais);
+  const hasValidReceivedAmount = Number.isSafeInteger(receivedAmountInCents);
 
   const canSubmit =
     hasCartItems &&
+    !discountError &&
     hasValidReceivedAmount &&
     hasAvailableStockForItems &&
     (paymentMethod === "cash"
-      ? paymentDifferenceInReais >= 0
-      : paymentDifferenceInReais === 0) &&
+      ? paymentDifferenceInCents >= 0
+      : paymentDifferenceInCents === 0) &&
     !isPending;
 
   return (
@@ -151,11 +171,46 @@ export function PdvCart({ action, products }: PdvCartProps) {
           items={items}
           onAddProduct={addProduct}
           onDecrementProduct={decrementProduct}
-          totalInReais={totalInReais}
+          subtotalInCents={subtotalInCents}
         />
       </div>
 
       <section className="sticky bottom-0 z-10 -mx-5 grid gap-5 border-t border-[var(--border)] bg-white/95 p-5 shadow-[0_-12px_35px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:static sm:mx-0 sm:rounded-2xl sm:border sm:bg-[var(--surface-muted)] sm:shadow-none">
+        <div className="grid gap-2">
+          <label
+            className="text-sm font-semibold text-[var(--brand-foreground)]"
+            htmlFor="discount"
+          >
+            Desconto (R$)
+          </label>
+
+          <input
+            aria-describedby={discountError ? "discountError" : undefined}
+            aria-invalid={Boolean(discountError)}
+            className="h-12 rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition placeholder:text-neutral-400 focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15 aria-invalid:border-red-500"
+            id="discount"
+            inputMode="decimal"
+            name="discountInReais"
+            onChange={(event) => setDiscountInput(event.target.value)}
+            placeholder="0,00"
+            type="text"
+            value={discountInput}
+          />
+
+          {discountError ? (
+            <p
+              className="text-sm font-semibold text-red-700"
+              id="discountError"
+            >
+              {discountError}
+            </p>
+          ) : state.fieldErrors?.discountInCents ? (
+            <p className="text-sm font-semibold text-red-700">
+              {state.fieldErrors.discountInCents}
+            </p>
+          ) : null}
+        </div>
+
         <div className="grid gap-2">
           <p
             className="text-sm font-semibold text-[var(--brand-foreground)]"
@@ -223,23 +278,25 @@ export function PdvCart({ action, products }: PdvCartProps) {
               <button
                 className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
                 onClick={() =>
-                  setReceivedAmountInput(formatBrlAmount(totalInReais))
+                  setReceivedAmountInput(formatBrlCentsForInput(totalInCents))
                 }
                 type="button"
               >
                 Valor exato
               </button>
 
-              {[50, 100].map((amountInReais) => (
+              {[5_000, 10_000].map((amountInCents) => (
                 <button
                   className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
-                  key={amountInReais}
+                  key={amountInCents}
                   onClick={() =>
-                    setReceivedAmountInput(formatBrlAmount(amountInReais))
+                    setReceivedAmountInput(
+                      formatBrlCentsForInput(amountInCents),
+                    )
                   }
                   type="button"
                 >
-                  {moneyFormatter.format(amountInReais)}
+                  {moneyFormatter.format(amountInCents / 100)}
                 </button>
               ))}
             </div>
@@ -258,19 +315,20 @@ export function PdvCart({ action, products }: PdvCartProps) {
           ) : paymentMethod !== "cash" ? (
             <p className="text-sm font-semibold text-[var(--brand-foreground)]">
               {paymentMethodLabels[paymentMethod]} no valor de{" "}
-              {moneyFormatter.format(totalInReais)}
+              {moneyFormatter.format(totalInCents / 100)}
             </p>
           ) : !hasValidReceivedAmount ? (
             <p className="text-sm text-[var(--brand-muted)]">
               Informe o valor recebido para calcular o troco.
             </p>
-          ) : paymentDifferenceInReais < 0 ? (
+          ) : paymentDifferenceInCents < 0 ? (
             <p className="text-sm font-semibold text-red-700">
-              Falta {moneyFormatter.format(Math.abs(paymentDifferenceInReais))}
+              Falta{" "}
+              {moneyFormatter.format(Math.abs(paymentDifferenceInCents) / 100)}
             </p>
           ) : (
             <p className="text-sm font-semibold text-emerald-700">
-              Troco {moneyFormatter.format(paymentDifferenceInReais)}
+              Troco {moneyFormatter.format(paymentDifferenceInCents / 100)}
             </p>
           )}
         </div>
@@ -287,16 +345,22 @@ export function PdvCart({ action, products }: PdvCartProps) {
           </InlineFeedback>
         ) : null}
 
-        <div className="flex flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--brand-muted)]">
-              Total da venda
-            </p>
-
-            <strong className="mt-1 block text-2xl font-bold text-[var(--brand-foreground)]">
-              {moneyFormatter.format(totalInReais)}
-            </strong>
-          </div>
+        <div className="grid gap-4 border-t border-[var(--border)] pt-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+          <dl className="grid gap-2">
+            <SaleTotalRow
+              label="Subtotal"
+              value={moneyFormatter.format(subtotalInCents / 100)}
+            />
+            <SaleTotalRow
+              label="Desconto"
+              value={`− ${moneyFormatter.format(discountInCents / 100)}`}
+            />
+            <SaleTotalRow
+              emphasized
+              label="Total da venda"
+              value={moneyFormatter.format(totalInCents / 100)}
+            />
+          </dl>
 
           <button
             className="min-h-12 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-6 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition hover:brightness-105 disabled:cursor-not-allowed disabled:border-neutral-300 disabled:bg-neutral-300 disabled:text-neutral-500"
@@ -377,20 +441,55 @@ function toSaleItems(items: PdvCartItem[]) {
   }));
 }
 
-function parseBrlAmount(value: string): number {
-  const normalizedValue = value
-    .trim()
-    .replace(/^R\$\s?/, "")
-    .replace(/\./g, "")
-    .replace(",", ".");
-
-  if (!normalizedValue) {
-    return Number.NaN;
+function getDiscountError(
+  input: string,
+  discountInCents: number,
+  subtotalInCents: number,
+): string | undefined {
+  if (input.trim() && !Number.isSafeInteger(discountInCents)) {
+    return "Informe um desconto válido em reais, com no máximo 2 casas decimais.";
   }
 
-  return Number(normalizedValue);
+  if (discountInCents > 0 && subtotalInCents === 0) {
+    return "Adicione itens antes de aplicar desconto.";
+  }
+
+  if (subtotalInCents > 0 && discountInCents >= subtotalInCents) {
+    return "O desconto deve ser menor que o subtotal.";
+  }
+
+  return undefined;
 }
 
-function formatBrlAmount(value: number): string {
-  return value.toFixed(2).replace(".", ",");
+function SaleTotalRow({
+  emphasized = false,
+  label,
+  value,
+}: {
+  emphasized?: boolean;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt
+        className={
+          emphasized
+            ? "text-sm font-bold text-[var(--brand-foreground)]"
+            : "text-sm font-semibold text-[var(--brand-muted)]"
+        }
+      >
+        {label}
+      </dt>
+      <dd
+        className={
+          emphasized
+            ? "text-2xl font-bold text-[var(--brand-foreground)]"
+            : "text-base font-bold text-[var(--brand-foreground)]"
+        }
+      >
+        {value}
+      </dd>
+    </div>
+  );
 }

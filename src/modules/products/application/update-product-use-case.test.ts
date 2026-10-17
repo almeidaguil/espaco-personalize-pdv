@@ -59,7 +59,7 @@ describe("updateProductUseCase", () => {
         isActive: false,
         name: " Caneca premium ",
         priceInReais: 42.5,
-        sku: " CANECA-002 ",
+        sku: " caneca-002 ",
       },
       {
         productRepository,

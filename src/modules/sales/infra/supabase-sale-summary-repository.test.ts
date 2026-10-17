@@ -6,7 +6,7 @@ describe("SupabaseSaleSummaryRepository", () => {
   it("reads sales linked to operator cash sessions and resolves operator names", async () => {
     const client = createSalesReadClient({
       sales: [
-        saleRow(),
+        saleRow({ subtotal_in_cents: 3500, discount_in_cents: 500 }),
         saleRow({ id: "sale-2", cash_session_id: "cash-session-2" }),
       ],
     });
@@ -20,7 +20,9 @@ describe("SupabaseSaleSummaryRepository", () => {
           operatorName: "Ana",
           cashSessionId: "cash-session-1",
           businessDate: "2026-07-10",
-          totalInReais: 30,
+          subtotalInCents: 3500,
+          discountInCents: 500,
+          totalInCents: 3000,
         },
         { id: "sale-2", operatorName: "Ana", cashSessionId: "cash-session-2" },
       ],

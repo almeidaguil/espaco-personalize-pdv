@@ -12,7 +12,7 @@ describe("parseCreateProductFormData", () => {
     const formData = new FormData();
     formData.set("name", " Caneca personalizada ");
     formData.set("priceInReais", "R$ 35,99");
-    formData.set("sku", " CANECA-001 ");
+    formData.set("sku", " caneca-001 ");
     formData.set("isActive", "true");
 
     expect(parseCreateProductFormData(formData)).toEqual({
@@ -83,7 +83,7 @@ describe("getProductFormValues", () => {
     const formData = new FormData();
     formData.set("name", " Caneca premium ");
     formData.set("priceInReais", " 42,50 ");
-    formData.set("sku", " CANECA-002 ");
+    formData.set("sku", " caneca-002 ");
     formData.append("isActive", "false");
     formData.append("isActive", "true");
 

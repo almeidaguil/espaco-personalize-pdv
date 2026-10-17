@@ -263,7 +263,7 @@ try {
       is_active: true,
       name: `Database gate product ${testRunId}`,
       price_in_cents: 1_000,
-      sku: `DB-${testRunId}`,
+      sku: `DB-${testRunId}`.toUpperCase(),
     })
     .select("id")
     .single();
@@ -286,7 +286,7 @@ try {
         is_active: true,
         name: `Concurrent database gate product ${testRunId}`,
         price_in_cents: 1_000,
-        sku: `DB-CONCURRENT-${testRunId}`,
+        sku: `DB-CONCURRENT-${testRunId}`.toUpperCase(),
       })
       .select("id")
       .single();

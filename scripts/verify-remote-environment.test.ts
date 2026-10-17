@@ -39,6 +39,7 @@ test("preserves the complete staging database verification contract", async () =
       "migrations",
       "database-lint",
       "schema",
+      "sale-discount-contract",
       "auth",
       "rls-policies",
       "admin-profile",
@@ -114,6 +115,27 @@ test("rejects a divergent policy contract even when every table has a policy", a
       vercel: {},
     }),
   ).rejects.toThrow(/policy contract/i);
+});
+
+test("rejects a divergent sale discount schema or execution grant", async () => {
+  const manifest = productionManifest();
+
+  await expect(
+    verifyRemoteEnvironment({
+      environment: "production",
+      manifest,
+      runCommand: commandRunner(),
+      supabase: supabaseFixture({
+        saleDiscountContract: {
+          anon_finalize_v4_execute: true,
+          authenticated_finalize_v3_execute: true,
+          authenticated_finalize_v4_execute: true,
+          sales_financial_column_count: 3,
+        },
+      }),
+      vercel: {},
+    }),
+  ).rejects.toThrow(/sale discount contract/i);
 });
 
 test("rejects a policy with the expected identity but a weakened predicate", async () => {
@@ -218,12 +240,19 @@ function supabaseFixture({
   extensionCount = 2,
   operationalRowCount = 0,
   policies = expectedPolicyRows(),
+  saleDiscountContract = {
+    anon_finalize_v4_execute: false,
+    authenticated_finalize_v3_execute: true,
+    authenticated_finalize_v4_execute: true,
+    sales_financial_column_count: 3,
+  },
   siteUrl = "https://roberto-multimarcas-pdv.vercel.app",
 }: {
   authConfig?: Record<string, unknown>;
   extensionCount?: number;
   operationalRowCount?: number;
   policies?: PolicyRow[];
+  saleDiscountContract?: Record<string, boolean | number>;
   siteUrl?: string;
 } = {}) {
   const requiredTables = [
@@ -240,6 +269,7 @@ function supabaseFixture({
     "open_cash_session_v3",
     "close_cash_session",
     "finalize_sale_v3",
+    "finalize_sale_v4",
     "cancel_sale",
     "get_store_sales_report_v2",
   ];
@@ -285,6 +315,8 @@ function supabaseFixture({
           ];
         }
         if (query.includes("policy_contract_row")) return policies;
+        if (query.includes("sale_discount_contract_row"))
+          return [saleDiscountContract];
         if (query.includes("auth.users")) {
           return [
             {
