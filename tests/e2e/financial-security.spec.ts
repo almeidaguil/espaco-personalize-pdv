@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 
 import {
+  createAnonymousSupabaseClient,
   createAuthenticatedSupabaseClient,
   hasAuthenticatedE2EConfig,
 } from "./support/auth";
@@ -30,6 +31,8 @@ test("authenticated users cannot write financial records directly", async () => 
         id: saleId,
         operator_id: user?.id ?? crypto.randomUUID(),
         status: "completed",
+        discount_in_cents: 0,
+        subtotal_in_cents: 1500,
         total_in_cents: 1500,
       }),
     },
@@ -72,4 +75,25 @@ test("authenticated users cannot write financial records directly", async () => 
       attempt.name,
     ).toMatch(/permission denied|row-level security/i);
   }
+});
+
+test("anonymous users cannot execute discounted sale finalization", async () => {
+  const supabase = createAnonymousSupabaseClient();
+  const result = await supabase.rpc("finalize_sale_v4", {
+    p_cash_session_id: crypto.randomUUID(),
+    p_discount_in_cents: 100,
+    p_items: [{ product_id: crypto.randomUUID(), quantity: 1 }],
+    p_payment: {
+      amount_in_cents: 1400,
+      change_in_cents: 0,
+      method: "pix",
+    },
+    p_sale_id: crypto.randomUUID(),
+  });
+
+  expect(result.data).toBeNull();
+  expect(result.error).not.toBeNull();
+  expect(`${result.error?.code ?? ""} ${result.error?.message ?? ""}`).toMatch(
+    /42501|permission denied/i,
+  );
 });

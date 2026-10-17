@@ -9,7 +9,7 @@ describe("createProduct", () => {
       id: " product-1 ",
       name: " Caneca personalizada ",
       priceInReais: 35,
-      sku: " CANECA-001 ",
+      sku: " rm-camisa-01 ",
     });
 
     expect(result.success).toBe(true);
@@ -19,12 +19,46 @@ describe("createProduct", () => {
         id: "product-1",
         isActive: true,
         name: "Caneca personalizada",
-        sku: "CANECA-001",
+        sku: "RM-CAMISA-01",
       });
       expect(result.product.price.currency).toBe("BRL");
       expect(result.product.price.toReais()).toBe(35);
       expect(result.product.price.toCents()).toBe(3500);
     }
+  });
+
+  it("omits an SKU containing only whitespace", () => {
+    const result = createProduct({
+      id: "product-1",
+      name: "Caneca personalizada",
+      priceInReais: 35,
+      sku: "   ",
+    });
+
+    expect(result.success).toBe(true);
+
+    if (result.success) {
+      expect(result.product).not.toHaveProperty("sku");
+    }
+  });
+
+  it("rejects an SKU exceeding 64 characters after uppercase expansion", () => {
+    const result = createProduct({
+      id: "product-1",
+      name: "Caneca personalizada",
+      priceInReais: 35,
+      sku: "ß".repeat(33),
+    });
+
+    expect(result).toEqual({
+      errors: [
+        {
+          field: "sku",
+          message: "Product SKU cannot exceed 64 characters.",
+        },
+      ],
+      success: false,
+    });
   });
 
   it("does not expose stock as product state", () => {

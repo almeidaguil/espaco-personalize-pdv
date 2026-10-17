@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { normalizeProductSku } from "../domain/product";
+
 export const createProductSchema = z.object({
   isActive: z.boolean().optional(),
   name: z.string().trim().min(1, "Informe o nome do produto."),
@@ -14,10 +16,12 @@ export const createProductSchema = z.object({
     ),
   sku: z
     .string()
-    .trim()
-    .max(64, "O SKU deve ter no maximo 64 caracteres.")
     .optional()
-    .nullable(),
+    .nullable()
+    .transform(normalizeProductSku)
+    .refine((sku) => !sku || sku.length <= 64, {
+      message: "O SKU deve ter no maximo 64 caracteres.",
+    }),
 });
 
-export type CreateProductUseCaseInput = z.infer<typeof createProductSchema>;
+export type CreateProductUseCaseInput = z.input<typeof createProductSchema>;

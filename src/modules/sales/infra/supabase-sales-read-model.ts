@@ -26,7 +26,9 @@ export const saleSummaryRowSchema = z.object({
   operator_id: z.string(),
   completed_at: z.iso.datetime({ offset: true }),
   status: z.enum(["completed", "canceled"]),
-  total_in_cents: z.number().int().nonnegative(),
+  subtotal_in_cents: z.number().int().positive(),
+  discount_in_cents: z.number().int().nonnegative(),
+  total_in_cents: z.number().int().positive(),
   cash_sessions: z
     .object({
       business_date: z.iso.date(),
@@ -36,7 +38,7 @@ export const saleSummaryRowSchema = z.object({
 });
 
 export function saleSummaryColumns(inner = false): string {
-  return `id,cash_session_id,operator_id,status,total_in_cents,completed_at,cash_sessions${inner ? "!inner" : ""}(business_date,opened_at)`;
+  return `id,cash_session_id,operator_id,status,subtotal_in_cents,discount_in_cents,total_in_cents,completed_at,cash_sessions${inner ? "!inner" : ""}(business_date,opened_at)`;
 }
 
 export async function loadOperatorNames(
@@ -83,6 +85,8 @@ export function mapSaleSummary(
       : null,
     completedAt: new Date(row.completed_at),
     status: row.status,
-    totalInReais: row.total_in_cents / 100,
+    subtotalInCents: row.subtotal_in_cents,
+    discountInCents: row.discount_in_cents,
+    totalInCents: row.total_in_cents,
   };
 }

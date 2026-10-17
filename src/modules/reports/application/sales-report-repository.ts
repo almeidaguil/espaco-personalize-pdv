@@ -43,7 +43,9 @@ export type SalesReportCashSession = SalesReportCashSessionOption & {
   canceledSalesCount: number;
   canceledTotalInCents: number;
   closedAt: string | null;
+  completedDiscountInCents: number;
   completedSalesCount: number;
+  completedSubtotalInCents: number;
   completedTotalInCents: number;
   countedAmountInCents: number | null;
   differenceAmountInCents: number | null;
@@ -58,7 +60,9 @@ export type SalesReport = {
   cashShortageTotalInCents: number;
   cashSessionOptions: SalesReportCashSessionOption[];
   cashSurplusTotalInCents: number;
+  completedDiscountInCents: number;
   completedSalesCount: number;
+  completedSubtotalInCents: number;
   completedTotalInCents: number;
   endDate: string;
   items: SalesReportProductItem[];

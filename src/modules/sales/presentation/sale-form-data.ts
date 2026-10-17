@@ -1,4 +1,5 @@
 import type { PaymentMethod } from "../domain/sale";
+import { parseBrlCurrencyToCents } from "@/shared/utils/brl-currency";
 
 type SaleItemFormInput = {
   productId: string;
@@ -7,9 +8,12 @@ type SaleItemFormInput = {
 
 export function parseCreateSaleFormData(formData: FormData) {
   return {
+    discountInCents: parseDiscountInCents(
+      formData.get("discountInReais")?.toString() ?? "",
+    ),
     items: parseSaleItems(formData.get("itemsJson")?.toString() ?? "[]"),
     payment: {
-      amountInReais: parseBrlAmount(
+      amountInCents: parseBrlCurrencyToCents(
         formData.get("amountReceivedInReais")?.toString() ?? "",
       ),
       method: parsePaymentMethod(formData.get("paymentMethod")?.toString()),
@@ -34,14 +38,8 @@ function parseSaleItems(value: string): SaleItemFormInput[] {
   }
 }
 
-function parseBrlAmount(value: string): number {
-  const normalizedValue = value.trim().replace(/\./g, "").replace(",", ".");
-
-  if (!normalizedValue) {
-    return Number.NaN;
-  }
-
-  return Number(normalizedValue);
+function parseDiscountInCents(value: string): number {
+  return value.trim() ? parseBrlCurrencyToCents(value) : 0;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
