@@ -152,7 +152,8 @@ export default async function Home() {
                 </p>
               </div>
               <StatusBadge
-                tone={module.status === "Admin" ? "warning" : "neutral"}
+                showDot={module.status !== "Admin"}
+                tone={module.status === "Admin" ? "warning" : "success"}
               >
                 {module.status}
               </StatusBadge>

@@ -27,25 +27,25 @@ export function PaginationControls({
   return (
     <nav
       aria-label={`Paginacao de ${itemLabel}`}
-      className="mt-4 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between"
+      className="mt-4 flex flex-col gap-3 border-t border-[var(--border)] pt-4 sm:flex-row sm:items-center sm:justify-between"
     >
-      <p className="text-sm text-slate-600">
+      <p className="text-sm text-[var(--brand-foreground)]">
         Mostrando {firstItem}-{lastItem} de {totalItems} {itemLabel}
       </p>
       <div className="flex gap-2">
         <button
-          className="min-h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275] disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-10 rounded-md border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-accent-foreground)] transition enabled:hover:border-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={currentPage === 1}
           onClick={() => onPageChange(currentPage - 1)}
           type="button"
         >
           Anterior
         </button>
-        <span className="inline-flex min-h-10 items-center rounded-md bg-slate-100 px-3 text-sm font-semibold text-slate-700">
+        <span className="inline-flex min-h-10 items-center rounded-md bg-[var(--brand-accent)]/10 px-3 text-sm font-semibold text-[var(--brand-foreground)]">
           {currentPage}/{totalPages}
         </span>
         <button
-          className="min-h-10 rounded-md border border-slate-200 bg-white px-3 text-sm font-semibold text-[#1e3275] transition hover:border-[#1e3275] disabled:cursor-not-allowed disabled:opacity-50"
+          className="min-h-10 rounded-md border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-accent-foreground)] transition enabled:hover:border-[var(--brand-accent)] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={currentPage === totalPages}
           onClick={() => onPageChange(currentPage + 1)}
           type="button"
