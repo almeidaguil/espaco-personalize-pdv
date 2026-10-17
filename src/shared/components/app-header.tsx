@@ -57,7 +57,7 @@ export function AppHeader({
   );
 
   return (
-    <header className="relative rounded-2xl border border-white/10 bg-[var(--brand-primary)] px-4 py-3 text-white shadow-[0_14px_45px_rgba(0,0,0,0.12)] sm:px-5">
+    <header className="relative z-40 rounded-2xl border border-white/10 bg-[var(--brand-primary)] px-4 py-3 text-white shadow-[0_14px_45px_rgba(0,0,0,0.12)] sm:px-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         {/* Marca */}
         <Link
@@ -84,7 +84,7 @@ export function AppHeader({
         {/* Navegação */}
         <nav
           aria-label="Navegação principal"
-          className="flex w-full items-center gap-2 overflow-x-auto pb-1 lg:w-auto lg:overflow-visible lg:pb-0"
+          className="grid w-full grid-cols-3 items-center gap-2 lg:flex lg:w-auto lg:shrink-0"
         >
           {primaryNavigationItems.map((item) => {
             const isActive = isRouteActive(pathname, item.href);
@@ -94,8 +94,8 @@ export function AppHeader({
                 aria-current={isActive ? "page" : undefined}
                 className={
                   isActive
-                    ? "shrink-0 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3.5 py-2.5 text-sm font-bold text-[var(--brand-primary)] shadow-[0_8px_22px_rgba(205,163,79,0.16)] transition"
-                    : "shrink-0 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-[var(--brand-accent)]/50 hover:bg-white/[0.06] hover:text-[var(--brand-accent)]"
+                    ? "shrink-0 rounded-xl text-center border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3.5 py-2.5 text-sm font-bold text-[var(--brand-primary)] shadow-[0_8px_22px_rgba(205,163,79,0.16)] transition"
+                    : "shrink-0 rounded-xl text-center border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-[var(--brand-accent)]/50 hover:bg-white/[0.06] hover:text-[var(--brand-accent)]"
                 }
                 href={item.href}
                 key={item.href}
@@ -106,19 +106,19 @@ export function AppHeader({
           })}
 
           {secondaryNavigationItems.length > 0 ? (
-            <details className="group relative shrink-0">
+            <details className="group relative col-span-3 shrink-0">
               <summary
                 className={
                   hasActiveSecondaryItem
-                    ? "flex cursor-pointer list-none items-center gap-2 rounded-xl border border-[var(--brand-accent)]/60 bg-[var(--brand-accent)]/10 px-3.5 py-2.5 text-sm font-semibold text-[var(--brand-accent)] transition hover:bg-[var(--brand-accent)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 [&::-webkit-details-marker]:hidden"
-                    : "flex cursor-pointer list-none items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-[var(--brand-accent)]/50 hover:bg-white/[0.06] hover:text-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 [&::-webkit-details-marker]:hidden"
+                    ? "flex cursor-pointer list-none items-center justify-center gap-2 lg:justify-start rounded-xl border border-[var(--brand-accent)]/60 bg-[var(--brand-accent)]/10 px-3.5 py-2.5 text-sm font-semibold text-[var(--brand-accent)] transition hover:bg-[var(--brand-accent)]/15 focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 [&::-webkit-details-marker]:hidden"
+                    : "flex cursor-pointer list-none items-center justify-center gap-2 lg:justify-start rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-sm font-semibold text-neutral-300 transition hover:border-[var(--brand-accent)]/50 hover:bg-white/[0.06] hover:text-[var(--brand-accent)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-accent)]/20 [&::-webkit-details-marker]:hidden"
                 }
               >
                 Mais opções
                 <ChevronDownIcon />
               </summary>
 
-              <div className="absolute right-0 top-full z-30 mt-2 grid w-56 gap-1 rounded-2xl border border-white/10 bg-[#111111] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
+              <div className="absolute right-0 top-full z-30 mt-2 grid w-full gap-1 lg:w-56 rounded-2xl border border-white/10 bg-[#111111] p-2 shadow-[0_20px_60px_rgba(0,0,0,0.45)]">
                 {secondaryNavigationItems.map((item) => {
                   const isActive = isRouteActive(pathname, item.href);
 
