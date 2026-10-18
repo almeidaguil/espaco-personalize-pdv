@@ -111,14 +111,14 @@ function CloseCashSessionCard({ action, session }: CloseCashSessionCardProps) {
         />
 
         <SummaryItem
-          label="Vendas"
+          label="Vendas concluídas"
           value={moneyFormatter.format(session.completedSalesTotalInReais)}
           tone="success"
         />
 
         <SummaryItem
           highlight
-          label="Esperado"
+          label="Esperado em dinheiro"
           value={moneyFormatter.format(session.expectedAmountInReais)}
         />
 

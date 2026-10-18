@@ -68,9 +68,15 @@ test("admin records discounted and full-price sales and closes cash with net rec
   const cashCloseForm = cashSessionCloseForm(page, session.id);
 
   await expect(cashCloseForm).toContainText("Concluídas: 3");
-  await expect(cashCloseForm).toContainText("R$ 100,00");
-  await expect(cashCloseForm).toContainText("R$ 10,00");
-  await expect(cashCloseForm).toContainText("R$ 110,00");
+  await expect(
+    cashCloseForm.getByText("Valor inicial").locator(".."),
+  ).toContainText("R$ 100,00");
+  await expect(
+    cashCloseForm.getByText("Vendas concluídas").locator(".."),
+  ).toContainText("R$ 38,00");
+  await expect(
+    cashCloseForm.getByText("Esperado em dinheiro").locator(".."),
+  ).toContainText("R$ 110,00");
   await expect(cashCloseForm.getByLabel("Senha administrativa")).toHaveCount(0);
 
   await closeCashSessionThroughUi(page, session.id, "110,00");
