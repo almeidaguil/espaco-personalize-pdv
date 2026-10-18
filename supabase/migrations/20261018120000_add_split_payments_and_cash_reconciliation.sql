@@ -46,6 +46,7 @@ alter table public.payments
   add constraint payments_installment_matches_method check (
     (
       method = 'credit_card'
+      and installment_count is not null
       and installment_count between 1 and 3
     )
     or (
@@ -898,6 +899,118 @@ revoke execute on function public.close_cash_session_v2(uuid, jsonb, text)
   from anon;
 grant execute on function public.close_cash_session_v2(uuid, jsonb, text)
   to authenticated;
+
+do $report_migration$
+declare
+  v_definition text;
+  v_updated_definition text;
+begin
+  select pg_get_functiondef(
+    'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
+  )
+  into v_definition;
+
+  v_updated_definition := replace(
+    v_definition,
+    $old_reconciliation_totals$    'items_limit', p_items_limit,$old_reconciliation_totals$,
+    $new_reconciliation_totals$    'reconciliation_difference_total_in_cents', coalesce((
+      select sum(reconciliations.difference_amount_in_cents)
+      from public.cash_session_reconciliations as reconciliations
+      join filtered_sessions
+        on filtered_sessions.id = reconciliations.cash_session_id
+      where filtered_sessions.status = 'closed'
+    ), 0),
+    'reconciliation_shortage_total_in_cents', coalesce((
+      select sum(greatest(-reconciliations.difference_amount_in_cents, 0))
+      from public.cash_session_reconciliations as reconciliations
+      join filtered_sessions
+        on filtered_sessions.id = reconciliations.cash_session_id
+      where filtered_sessions.status = 'closed'
+    ), 0),
+    'reconciliation_surplus_total_in_cents', coalesce((
+      select sum(greatest(reconciliations.difference_amount_in_cents, 0))
+      from public.cash_session_reconciliations as reconciliations
+      join filtered_sessions
+        on filtered_sessions.id = reconciliations.cash_session_id
+      where filtered_sessions.status = 'closed'
+    ), 0),
+    'items_limit', p_items_limit,$new_reconciliation_totals$
+  );
+
+  if v_updated_definition = v_definition then
+    raise exception 'Could not extend sale report reconciliation totals.';
+  end if;
+
+  v_definition := v_updated_definition;
+  v_updated_definition := replace(
+    v_definition,
+    $old_adjustment_summary$    'post_close_adjustment_payment_summary', coalesce(($old_adjustment_summary$,
+    $new_adjustment_summary$    'credit_installment_summary', coalesce((
+      select jsonb_agg(
+        jsonb_build_object(
+          'installment_count', installment_totals.installment_count,
+          'sales_count', installment_totals.sales_count,
+          'net_total_in_cents', installment_totals.net_total_in_cents
+        )
+        order by installment_totals.installment_count
+      )
+      from (
+        select
+          installments.installment_count,
+          count(distinct payments.sale_id)::integer as sales_count,
+          coalesce(
+            sum(payments.amount_in_cents - payments.change_in_cents),
+            0
+          )::bigint as net_total_in_cents
+        from (values (1::smallint), (2::smallint), (3::smallint))
+          as installments(installment_count)
+        left join public.payments
+          on payments.method = 'credit_card'
+         and payments.installment_count = installments.installment_count
+         and exists (
+           select 1
+           from recognized_sales
+           where recognized_sales.id = payments.sale_id
+         )
+        group by installments.installment_count
+      ) as installment_totals
+    ), '[]'::jsonb),
+    'post_close_adjustment_payment_summary', coalesce(($new_adjustment_summary$
+  );
+
+  if v_updated_definition = v_definition then
+    raise exception 'Could not extend sale report installment summary.';
+  end if;
+
+  v_definition := v_updated_definition;
+  v_updated_definition := replace(
+    v_definition,
+    $old_session_reconciliation$          'difference_amount_in_cents', session_totals.difference_amount_in_cents,
+          'completed_sales_count', session_totals.completed_sales_count,$old_session_reconciliation$,
+    $new_session_reconciliation$          'difference_amount_in_cents', session_totals.difference_amount_in_cents,
+          'reconciliations', coalesce((
+            select jsonb_agg(
+              jsonb_build_object(
+                'method', reconciliations.method,
+                'expected_amount_in_cents', reconciliations.expected_amount_in_cents,
+                'counted_amount_in_cents', reconciliations.counted_amount_in_cents,
+                'difference_amount_in_cents', reconciliations.difference_amount_in_cents
+              )
+              order by reconciliations.method
+            )
+            from public.cash_session_reconciliations as reconciliations
+            where reconciliations.cash_session_id = session_totals.id
+          ), '[]'::jsonb),
+          'completed_sales_count', session_totals.completed_sales_count,$new_session_reconciliation$
+  );
+
+  if v_updated_definition = v_definition then
+    raise exception 'Could not extend sale report session reconciliations.';
+  end if;
+
+  execute v_updated_definition;
+end;
+$report_migration$;
 
 notify pgrst, 'reload schema';
 commit;

@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(30);
+select extensions.plan(33);
 
 select extensions.ok(
   to_regclass('public.sales_cash_session_status_idx') is not null,
@@ -259,6 +259,27 @@ select extensions.ok(
     'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
   ) like '%completed_discount_in_cents%',
   'the report exposes recognized sale discounts'
+);
+
+select extensions.ok(
+  pg_get_functiondef(
+    'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
+  ) like '%credit_installment_summary%',
+  'the report exposes credit installment totals'
+);
+
+select extensions.ok(
+  pg_get_functiondef(
+    'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
+  ) like '%reconciliation_difference_total_in_cents%',
+  'the report exposes global reconciliation totals'
+);
+
+select extensions.ok(
+  pg_get_functiondef(
+    'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'::regprocedure
+  ) like '%cash_session_reconciliations%',
+  'the report exposes reconciliation rows per session'
 );
 
 select * from extensions.finish();
