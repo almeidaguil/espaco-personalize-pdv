@@ -109,6 +109,42 @@ runExpectedFailure(
   "Sale discount migration requires every existing sale total to be positive",
 );
 
+console.log("Database gate: split payment schema upgrade.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-valid",
+]);
+runRequiredCommand(npxCommand, ["supabase", "migration", "up", "--local"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "verify-valid",
+]);
+
+console.log("Database gate: duplicate payment method guard.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-duplicate",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Split payment migration found duplicate payment methods for a sale",
+);
+
+console.log("Database gate: invalid net payment guard.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-invalid-payment",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Split payment migration requires positive net payment amounts",
+);
+
 console.log("Database gate: fresh reset.");
 resetLocalDatabase([]);
 runDatabaseTests(false);
