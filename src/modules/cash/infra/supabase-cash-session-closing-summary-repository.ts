@@ -7,7 +7,7 @@ import type {
 type SupabasePaymentRow = {
   amount_in_cents: number;
   change_in_cents: number;
-  method: "cash";
+  method: "cash" | "credit_card" | "debit_card" | "pix";
 };
 
 type SupabaseSaleRow = {
@@ -125,10 +125,11 @@ export class SupabaseCashSessionClosingSummaryRepository implements CashSessionC
 
         summary.completedSalesCount += 1;
         summary.completedSalesTotalInReais = roundBrl(
-          summary.completedSalesTotalInReais + centsToReais(cashPaymentTotal),
+          summary.completedSalesTotalInReais +
+            centsToReais(sale.total_in_cents),
         );
         summary.expectedAmountInReais = roundBrl(
-          summary.openingAmountInReais + summary.completedSalesTotalInReais,
+          summary.expectedAmountInReais + centsToReais(cashPaymentTotal),
         );
       }
 

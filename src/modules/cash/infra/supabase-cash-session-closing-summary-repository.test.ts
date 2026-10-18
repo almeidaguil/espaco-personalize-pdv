@@ -6,7 +6,7 @@ import {
 } from "./supabase-cash-session-closing-summary-repository";
 
 describe("SupabaseCashSessionClosingSummaryRepository", () => {
-  it("uses only the net cash payment in the expected closing amount", async () => {
+  it("shows every completed sale while using only cash in the expected closing amount", async () => {
     const cashSessionIn = vi.fn(async () => ({
       data: [{ id: "cash-session-1", opening_amount_in_cents: 5000 }],
       error: null,
@@ -20,6 +20,14 @@ describe("SupabaseCashSessionClosingSummaryRepository", () => {
           ],
           status: "completed",
           total_in_cents: 9000,
+        },
+        {
+          cash_session_id: "cash-session-1",
+          payments: [
+            { amount_in_cents: 11000, change_in_cents: 0, method: "pix" },
+          ],
+          status: "completed",
+          total_in_cents: 11000,
         },
       ],
       error: null,
@@ -43,8 +51,8 @@ describe("SupabaseCashSessionClosingSummaryRepository", () => {
           canceledSalesCount: 0,
           canceledSalesTotalInReais: 0,
           cashSessionId: "cash-session-1",
-          completedSalesCount: 1,
-          completedSalesTotalInReais: 90,
+          completedSalesCount: 2,
+          completedSalesTotalInReais: 200,
           expectedAmountInReais: 140,
           openingAmountInReais: 50,
         },

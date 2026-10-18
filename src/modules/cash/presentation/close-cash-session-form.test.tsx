@@ -46,6 +46,9 @@ describe("CloseCashSessionForm", () => {
       ),
     ).toBeInTheDocument();
 
+    expect(screen.getByText("Vendas concluídas")).toBeInTheDocument();
+    expect(screen.getByText("R$ 100,00")).toBeInTheDocument();
+    expect(screen.getByText("Esperado em dinheiro")).toBeInTheDocument();
     expect(screen.getByText("R$ 250,50")).toBeInTheDocument();
 
     expect(screen.getByLabelText("Valor contado no caixa")).toBeInTheDocument();
