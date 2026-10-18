@@ -218,11 +218,17 @@ async function verifyValidUpgrade() {
   assert.equal(postUpgradeError, null);
   assert.equal(postUpgradePayment.installment_count, 1);
 
-  const { count, error: reconciliationError } = await serviceClient
-    .from("cash_session_reconciliations")
-    .select("cash_session_id", { count: "exact", head: true });
+  const { data: reconciliations, error: reconciliationError } =
+    await serviceClient
+      .from("cash_session_reconciliations")
+      .select("cash_session_id")
+      .limit(1);
   assert.equal(reconciliationError, null);
-  assert.equal(count, 0, "upgrade must not fabricate reconciliation history");
+  assert.deepEqual(
+    reconciliations,
+    [],
+    "upgrade must not fabricate reconciliation history",
+  );
   console.log("Split payment schema upgrade verified locally.");
 }
 
