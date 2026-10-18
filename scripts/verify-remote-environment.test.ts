@@ -40,6 +40,7 @@ test("preserves the complete staging database verification contract", async () =
       "database-lint",
       "schema",
       "sale-discount-contract",
+      "split-payment-contract",
       "auth",
       "rls-policies",
       "admin-profile",
@@ -136,6 +137,34 @@ test("rejects a divergent sale discount schema or execution grant", async () => 
       vercel: {},
     }),
   ).rejects.toThrow(/sale discount contract/i);
+});
+
+test("rejects a divergent split payment schema or execution grant", async () => {
+  const manifest = productionManifest();
+
+  await expect(
+    verifyRemoteEnvironment({
+      environment: "production",
+      manifest,
+      runCommand: commandRunner(),
+      supabase: supabaseFixture({
+        splitPaymentContract: {
+          anon_close_v2_execute: false,
+          anon_finalize_v5_execute: false,
+          authenticated_close_v2_execute: true,
+          authenticated_finalize_v5_execute: true,
+          authenticated_legacy_close_execute: true,
+          authenticated_payment_helper_execute: true,
+          authenticated_reconciliation_select: true,
+          authenticated_reconciliation_writes_blocked: true,
+          close_v2_exists: true,
+          finalize_v5_exists: true,
+          payment_installment_column_count: 1,
+        },
+      }),
+      vercel: {},
+    }),
+  ).rejects.toThrow(/split payment contract/i);
 });
 
 test("rejects a policy with the expected identity but a weakened predicate", async () => {
@@ -246,6 +275,19 @@ function supabaseFixture({
     authenticated_finalize_v4_execute: true,
     sales_financial_column_count: 3,
   },
+  splitPaymentContract = {
+    anon_close_v2_execute: false,
+    anon_finalize_v5_execute: false,
+    authenticated_close_v2_execute: true,
+    authenticated_finalize_v5_execute: true,
+    authenticated_legacy_close_execute: true,
+    authenticated_payment_helper_execute: false,
+    authenticated_reconciliation_select: true,
+    authenticated_reconciliation_writes_blocked: true,
+    close_v2_exists: true,
+    finalize_v5_exists: true,
+    payment_installment_column_count: 1,
+  },
   siteUrl = "https://roberto-multimarcas-pdv.vercel.app",
 }: {
   authConfig?: Record<string, unknown>;
@@ -253,6 +295,7 @@ function supabaseFixture({
   operationalRowCount?: number;
   policies?: PolicyRow[];
   saleDiscountContract?: Record<string, boolean | number>;
+  splitPaymentContract?: Record<string, boolean | number>;
   siteUrl?: string;
 } = {}) {
   const requiredTables = [
@@ -261,6 +304,7 @@ function supabaseFixture({
     "products",
     "stock_movements",
     "cash_sessions",
+    "cash_session_reconciliations",
     "sales",
     "sale_items",
     "payments",
@@ -268,8 +312,10 @@ function supabaseFixture({
   const requiredRpcs = [
     "open_cash_session_v3",
     "close_cash_session",
+    "close_cash_session_v2",
     "finalize_sale_v3",
     "finalize_sale_v4",
+    "finalize_sale_v5",
     "cancel_sale",
     "get_store_sales_report_v2",
   ];
@@ -308,15 +354,17 @@ function supabaseFixture({
         if (query.includes("pg_catalog.pg_class")) {
           return [
             {
-              rls_enabled_table_count: 8,
-              table_count: 8,
-              tables_with_policies_count: 8,
+              rls_enabled_table_count: 9,
+              table_count: 9,
+              tables_with_policies_count: 9,
             },
           ];
         }
         if (query.includes("policy_contract_row")) return policies;
         if (query.includes("sale_discount_contract_row"))
           return [saleDiscountContract];
+        if (query.includes("split_payment_contract_row"))
+          return [splitPaymentContract];
         if (query.includes("auth.users")) {
           return [
             {
@@ -360,6 +408,18 @@ function expectedPolicyRows(): PolicyRow[] {
       (operator_id = (select auth.uid() as uid))
       or (select current_user_is_admin() as current_user_is_admin)
     ))
+  `;
+  const activeAllowedReconciliationPredicate = `
+    ((select current_user_is_active() as current_user_is_active)
+    and (exists (
+      select 1
+      from cash_sessions
+      where ((cash_sessions.id = cash_session_reconciliations.cash_session_id)
+        and (
+          (cash_sessions.operator_id = (select auth.uid() as uid))
+          or (select current_user_is_admin() as current_user_is_admin)
+        ))
+    )))
   `;
 
   return [
@@ -424,6 +484,12 @@ function expectedPolicyRows(): PolicyRow[] {
       "Active users can read allowed cash sessions",
       "SELECT",
       { qual: activeAllowedSalePredicate },
+    ),
+    policy(
+      "cash_session_reconciliations",
+      "Active users can read allowed cash reconciliations",
+      "SELECT",
+      { qual: activeAllowedReconciliationPredicate },
     ),
     policy("sales", "Active users can read allowed sales", "SELECT", {
       qual: activeAllowedSalePredicate,

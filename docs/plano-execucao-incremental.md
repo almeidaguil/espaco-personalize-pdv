@@ -181,6 +181,44 @@ Criterio de pronto:
   registrar credenciais;
 - gates locais financeiros e E2E passam antes da publicacao do PR.
 
+## Evolucao Atual - Pagamentos Divididos E Conferencia Por Metodo
+
+Status: fundacao aditiva do banco em branch de funcionalidade. A interface e o
+corte funcional pertencem a um segundo PR, criado somente depois da integracao
+desta fundacao em `develop`.
+
+Escopo deste primeiro PR:
+
+- `payments.installment_count`, com credito em 1x, 2x ou 3x e compatibilidade
+  de credito historico como 1x;
+- ate dois metodos distintos por venda, com contribuicao liquida minima de um
+  centavo e troco calculado no servidor somente para dinheiro;
+- `finalize_sale_v5` atomica, mantendo v3/v4 executaveis durante a transicao;
+- `close_cash_session_v2` com conferencia independente de dinheiro, Pix,
+  credito e debito, mantendo o fechamento legado executavel neste PR;
+- quatro linhas auditaveis em `cash_session_reconciliations`, enquanto os
+  campos escalares do caixa continuam representando somente dinheiro fisico;
+- relatorio SQL compativel com pagamentos divididos, parcelas e reconciliacoes;
+- verificacao remota dos objetos, assinaturas, RLS e grants da fase aditiva.
+
+Fora do runtime deste primeiro PR:
+
+- o PDV ainda nao envia `payments[]` nem exibe parcelamento;
+- o formulario de fechamento ainda nao envia as quatro conferencias;
+- a aplicacao ainda nao consome os novos campos do relatorio;
+- o fechamento legado somente sera revogado no PR de corte, depois da migracao
+  integral da aplicacao e do gate E2E correspondente.
+
+Criterio de pronto da fundacao:
+
+- migrations de upgrade e reset limpo produzem o mesmo contrato;
+- V3, V4 e fechamento legado continuam funcionais;
+- V5 e fechamento V2 passam validacao, RLS, concorrencia, rollback e
+  idempotencia;
+- o verificador remoto exige tabela, coluna, RPCs e grants novos sem registrar
+  credenciais;
+- todos os gates locais e checks do PR para `develop` estao aprovados.
+
 ## Entrega 7 - QA Multioperador
 
 Status: implementacao entregue no PR07; revisao, checks do PR e integracao

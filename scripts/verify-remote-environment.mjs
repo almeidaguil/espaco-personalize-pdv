@@ -13,6 +13,7 @@ const requiredTables = [
   "products",
   "stock_movements",
   "cash_sessions",
+  "cash_session_reconciliations",
   "sales",
   "sale_items",
   "payments",
@@ -20,8 +21,10 @@ const requiredTables = [
 const requiredRpcs = [
   "open_cash_session_v3",
   "close_cash_session",
+  "close_cash_session_v2",
   "finalize_sale_v3",
   "finalize_sale_v4",
+  "finalize_sale_v5",
   "cancel_sale",
   "get_store_sales_report_v2",
 ];
@@ -41,6 +44,18 @@ const activeAllowedSalePredicate = `
     (operator_id = (select auth.uid() as uid))
     or (select current_user_is_admin() as current_user_is_admin)
   ))
+`;
+const activeAllowedReconciliationPredicate = `
+  ((select current_user_is_active() as current_user_is_active)
+  and (exists (
+    select 1
+    from cash_sessions
+    where ((cash_sessions.id = cash_session_reconciliations.cash_session_id)
+      and (
+        (cash_sessions.operator_id = (select auth.uid() as uid))
+        or (select current_user_is_admin() as current_user_is_admin)
+      ))
+  )))
 `;
 
 export const requiredPolicyContract = Object.freeze([
@@ -105,6 +120,12 @@ export const requiredPolicyContract = Object.freeze([
     "Active users can read allowed cash sessions",
     "SELECT",
     { qual: activeAllowedSalePredicate },
+  ),
+  policy(
+    "cash_session_reconciliations",
+    "Active users can read allowed cash reconciliations",
+    "SELECT",
+    { qual: activeAllowedReconciliationPredicate },
   ),
   policy("sales", "Active users can read allowed sales", "SELECT", {
     qual: activeAllowedSalePredicate,
@@ -220,7 +241,8 @@ export async function verifyRemoteEnvironment({
         where schemaname = 'public'
           and tablename in (
             'profiles', 'categories', 'products', 'stock_movements',
-            'cash_sessions', 'sales', 'sale_items', 'payments'
+            'cash_sessions', 'cash_session_reconciliations',
+            'sales', 'sale_items', 'payments'
           )
         order by tablename, policyname
       `,
@@ -285,6 +307,86 @@ export async function verifyRemoteEnvironment({
     );
   }
 
+  const splitPaymentContract = firstQueryRow(
+    await supabase.managementClient.runReadOnlyQuery(target.projectRef, {
+      query: `
+        select
+          count(*) filter (
+            where columns.column_name = 'installment_count'
+          )::integer as payment_installment_column_count,
+          to_regprocedure(
+            'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)'
+          ) is not null as finalize_v5_exists,
+          to_regprocedure(
+            'public.close_cash_session_v2(uuid,jsonb,text)'
+          ) is not null as close_v2_exists,
+          has_function_privilege(
+            'authenticated',
+            'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)',
+            'execute'
+          ) as authenticated_finalize_v5_execute,
+          has_function_privilege(
+            'anon',
+            'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)',
+            'execute'
+          ) as anon_finalize_v5_execute,
+          has_function_privilege(
+            'authenticated',
+            'public.close_cash_session_v2(uuid,jsonb,text)',
+            'execute'
+          ) as authenticated_close_v2_execute,
+          has_function_privilege(
+            'anon',
+            'public.close_cash_session_v2(uuid,jsonb,text)',
+            'execute'
+          ) as anon_close_v2_execute,
+          has_function_privilege(
+            'authenticated',
+            'public.close_cash_session(uuid,integer,timestamp with time zone,text)',
+            'execute'
+          ) as authenticated_legacy_close_execute,
+          has_function_privilege(
+            'authenticated',
+            'public.finalize_sale_payments_transaction(uuid,uuid,jsonb,jsonb,integer,text)',
+            'execute'
+          ) as authenticated_payment_helper_execute,
+          has_table_privilege(
+            'authenticated',
+            'public.cash_session_reconciliations',
+            'select'
+          ) as authenticated_reconciliation_select,
+          not has_table_privilege(
+            'authenticated', 'public.cash_session_reconciliations', 'insert'
+          ) and not has_table_privilege(
+            'authenticated', 'public.cash_session_reconciliations', 'update'
+          ) and not has_table_privilege(
+            'authenticated', 'public.cash_session_reconciliations', 'delete'
+          ) as authenticated_reconciliation_writes_blocked,
+          true as split_payment_contract_row
+        from information_schema.columns
+        where columns.table_schema = 'public'
+          and columns.table_name = 'payments'
+      `,
+    }),
+  );
+  if (
+    splitPaymentContract?.payment_installment_column_count !== 1 ||
+    splitPaymentContract.finalize_v5_exists !== true ||
+    splitPaymentContract.close_v2_exists !== true ||
+    splitPaymentContract.authenticated_finalize_v5_execute !== true ||
+    splitPaymentContract.anon_finalize_v5_execute !== false ||
+    splitPaymentContract.authenticated_close_v2_execute !== true ||
+    splitPaymentContract.anon_close_v2_execute !== false ||
+    splitPaymentContract.authenticated_legacy_close_execute !== true ||
+    splitPaymentContract.authenticated_payment_helper_execute !== false ||
+    splitPaymentContract.authenticated_reconciliation_select !== true ||
+    splitPaymentContract.authenticated_reconciliation_writes_blocked !== true
+  ) {
+    throw new Error(
+      `${capitalize(environment)} split payment contract is divergent.`,
+    );
+  }
+
   const authConfig = await supabase.managementClient.getAuthConfig(
     target.projectRef,
   );
@@ -321,6 +423,7 @@ export async function verifyRemoteEnvironment({
     "database-lint",
     "schema",
     "sale-discount-contract",
+    "split-payment-contract",
   ];
   if (
     environment === "production" &&
@@ -360,7 +463,8 @@ export async function verifyRemoteEnvironment({
           and tables.relkind in ('r', 'p')
           and tables.relname in (
             'profiles', 'categories', 'products', 'stock_movements',
-            'cash_sessions', 'sales', 'sale_items', 'payments'
+            'cash_sessions', 'cash_session_reconciliations',
+            'sales', 'sale_items', 'payments'
           )
       `,
     }),
@@ -418,6 +522,7 @@ export async function verifyRemoteEnvironment({
           (select count(*) from public.products) +
           (select count(*) from public.stock_movements) +
           (select count(*) from public.cash_sessions) +
+          (select count(*) from public.cash_session_reconciliations) +
           (select count(*) from public.sales) +
           (select count(*) from public.sale_items) +
           (select count(*) from public.payments)

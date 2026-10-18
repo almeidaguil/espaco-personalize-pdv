@@ -136,14 +136,14 @@ create policy "Active users can read allowed cash reconciliations"
   for select
   to authenticated
   using (
-    public.current_user_is_active()
+    (select public.current_user_is_active())
     and exists (
       select 1
       from public.cash_sessions
       where cash_sessions.id = cash_session_reconciliations.cash_session_id
         and (
           cash_sessions.operator_id = (select auth.uid())
-          or public.current_user_is_admin()
+          or (select public.current_user_is_admin())
         )
     )
   );

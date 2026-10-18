@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(50);
+select extensions.plan(51);
 
 select extensions.has_column(
   'public', 'payments', 'installment_count',
@@ -175,6 +175,16 @@ select extensions.ok(
       and policyname = 'Active users can read allowed cash reconciliations'
   ),
   'reconciliation reads use the operator and admin policy'
+);
+select extensions.ok(
+  (
+    select qual::text like '%( SELECT current_user_is_active() AS current_user_is_active)%'
+    from pg_catalog.pg_policies
+    where schemaname = 'public'
+      and tablename = 'cash_session_reconciliations'
+      and policyname = 'Active users can read allowed cash reconciliations'
+  ),
+  'reconciliation policy caches the active-user authorization helper'
 );
 
 select extensions.ok(
