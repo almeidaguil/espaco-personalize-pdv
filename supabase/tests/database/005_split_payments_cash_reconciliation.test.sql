@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(40);
+select extensions.plan(50);
 
 select extensions.has_column(
   'public', 'payments', 'installment_count',
@@ -270,6 +270,86 @@ select extensions.ok(
     'EXECUTE'
   ),
   'authenticated users retain V4 compatibility'
+);
+
+select extensions.ok(
+  to_regprocedure('public.close_cash_session_v2(uuid,jsonb,text)') is not null,
+  'the payment reconciliation close RPC exists'
+);
+select extensions.is(
+  pg_get_function_result(
+    'public.close_cash_session_v2(uuid,jsonb,text)'::regprocedure
+  ),
+  'uuid',
+  'the payment reconciliation close RPC returns the cash session identifier'
+);
+select extensions.is(
+  pg_get_function_arguments(
+    'public.close_cash_session_v2(uuid,jsonb,text)'::regprocedure
+  ),
+  'p_cash_session_id uuid, p_reconciliations jsonb, p_admin_password text DEFAULT NULL::text',
+  'the close RPC accepts only counted values and optional admin password'
+);
+select extensions.is(
+  (
+    select procedures.prosecdef
+    from pg_catalog.pg_proc as procedures
+    where procedures.oid =
+      'public.close_cash_session_v2(uuid,jsonb,text)'::regprocedure
+  ),
+  true,
+  'close_cash_session_v2 is security definer'
+);
+select extensions.is(
+  (
+    select array_to_string(procedures.proconfig, ',')
+    from pg_catalog.pg_proc as procedures
+    where procedures.oid =
+      'public.close_cash_session_v2(uuid,jsonb,text)'::regprocedure
+  ),
+  'search_path=pg_catalog, public, pg_temp',
+  'close_cash_session_v2 has a controlled search_path'
+);
+select extensions.ok(
+  has_function_privilege(
+    'authenticated',
+    'public.close_cash_session_v2(uuid,jsonb,text)',
+    'EXECUTE'
+  ),
+  'authenticated users can close with payment reconciliation'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.close_cash_session_v2(uuid,jsonb,text)',
+    'EXECUTE'
+  ),
+  'anonymous users cannot close with payment reconciliation'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'public',
+    'public.close_cash_session_v2(uuid,jsonb,text)',
+    'EXECUTE'
+  ),
+  'PUBLIC cannot close with payment reconciliation'
+);
+select extensions.ok(
+  has_function_privilege(
+    'authenticated',
+    'public.close_cash_session(uuid,integer,timestamp with time zone,text)',
+    'EXECUTE'
+  ),
+  'authenticated users retain the legacy close contract during PR 1'
+);
+select extensions.ok(
+  pg_get_functiondef(
+    'public.close_cash_session_v2(uuid,jsonb,text)'::regprocedure
+  ) ilike '%clock_timestamp()%'
+  and pg_get_functiondef(
+    'public.close_cash_session_v2(uuid,jsonb,text)'::regprocedure
+  ) ilike '%for update%',
+  'the close RPC uses the server clock and locks the cash session'
 );
 
 select * from extensions.finish();

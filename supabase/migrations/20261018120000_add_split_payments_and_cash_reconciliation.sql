@@ -691,5 +691,213 @@ grant execute on function public.finalize_sale_v5(
   uuid, uuid, jsonb, jsonb, integer
 ) to authenticated;
 
+create or replace function public.close_cash_session_v2(
+  p_cash_session_id uuid,
+  p_reconciliations jsonb,
+  p_admin_password text default null
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = pg_catalog, public, pg_temp
+as $$
+declare
+  v_cash_counted integer;
+  v_cash_expected bigint;
+  v_cash_session record;
+  v_closed_at timestamptz;
+  v_credit_expected bigint;
+  v_debit_expected bigint;
+  v_expected bigint;
+  v_has_difference boolean := false;
+  v_pix_expected bigint;
+  v_reconciliation record;
+  v_user_id uuid := auth.uid();
+begin
+  if v_user_id is null then
+    raise exception 'Authentication is required to close a cash session.';
+  end if;
+
+  if not public.current_user_is_active() then
+    raise exception 'An active user is required to close a cash session.';
+  end if;
+
+  if p_cash_session_id is null then
+    raise exception 'Cash session is required.';
+  end if;
+
+  if p_reconciliations is null
+    or jsonb_typeof(p_reconciliations) <> 'array'
+    or jsonb_array_length(p_reconciliations) <> 4
+  then
+    raise exception 'All payment methods must be reconciled exactly once.';
+  end if;
+
+  if exists (
+    select 1
+    from jsonb_to_recordset(p_reconciliations) as reconciliation(
+      method text,
+      counted_amount_in_cents integer
+    )
+    where reconciliation.method is null
+      or reconciliation.method not in (
+        'cash', 'pix', 'credit_card', 'debit_card'
+      )
+      or reconciliation.counted_amount_in_cents is null
+      or reconciliation.counted_amount_in_cents < 0
+  ) or (
+    select count(distinct reconciliation.method)
+    from jsonb_to_recordset(p_reconciliations) as reconciliation(
+      method text,
+      counted_amount_in_cents integer
+    )
+  ) <> 4 then
+    raise exception 'All payment methods must be reconciled exactly once.';
+  end if;
+
+  select id, operator_id, opening_amount_in_cents, opened_at, status
+  into v_cash_session
+  from public.cash_sessions
+  where id = p_cash_session_id
+  for update;
+
+  if not found then
+    raise exception 'Cash session not found.';
+  end if;
+
+  if v_cash_session.status <> 'open' then
+    raise exception 'Cash session is already closed.';
+  end if;
+
+  if v_cash_session.operator_id <> v_user_id
+    and not public.current_user_is_admin()
+  then
+    raise exception 'User is not allowed to close this cash session.';
+  end if;
+
+  select
+    v_cash_session.opening_amount_in_cents + coalesce(sum(
+      payments.amount_in_cents - payments.change_in_cents
+    ) filter (where payments.method = 'cash'), 0),
+    coalesce(sum(
+      payments.amount_in_cents - payments.change_in_cents
+    ) filter (where payments.method = 'pix'), 0),
+    coalesce(sum(
+      payments.amount_in_cents - payments.change_in_cents
+    ) filter (where payments.method = 'credit_card'), 0),
+    coalesce(sum(
+      payments.amount_in_cents - payments.change_in_cents
+    ) filter (where payments.method = 'debit_card'), 0)
+  into
+    v_cash_expected,
+    v_pix_expected,
+    v_credit_expected,
+    v_debit_expected
+  from public.sales
+  left join public.payments
+    on payments.sale_id = sales.id
+  where sales.cash_session_id = p_cash_session_id
+    and sales.status = 'completed';
+
+  if greatest(
+    v_cash_expected,
+    v_pix_expected,
+    v_credit_expected,
+    v_debit_expected
+  ) > 2147483647 then
+    raise exception 'Expected amount is outside the supported range.';
+  end if;
+
+  for v_reconciliation in
+    select reconciliation.method, reconciliation.counted_amount_in_cents
+    from jsonb_to_recordset(p_reconciliations) as reconciliation(
+      method text,
+      counted_amount_in_cents integer
+    )
+  loop
+    v_expected := case v_reconciliation.method
+      when 'cash' then v_cash_expected
+      when 'pix' then v_pix_expected
+      when 'credit_card' then v_credit_expected
+      when 'debit_card' then v_debit_expected
+    end;
+
+    if v_reconciliation.counted_amount_in_cents <> v_expected then
+      v_has_difference := true;
+    end if;
+  end loop;
+
+  if v_has_difference and not public.verify_admin_password(p_admin_password) then
+    raise exception 'Admin password is required to close a cash session with differences.';
+  end if;
+
+  v_closed_at := clock_timestamp();
+  if v_closed_at <= v_cash_session.opened_at then
+    raise exception 'Cash session close date must be after open date.';
+  end if;
+
+  for v_reconciliation in
+    select reconciliation.method, reconciliation.counted_amount_in_cents
+    from jsonb_to_recordset(p_reconciliations) as reconciliation(
+      method text,
+      counted_amount_in_cents integer
+    )
+    order by reconciliation.method
+  loop
+    v_expected := case v_reconciliation.method
+      when 'cash' then v_cash_expected
+      when 'pix' then v_pix_expected
+      when 'credit_card' then v_credit_expected
+      when 'debit_card' then v_debit_expected
+    end;
+
+    insert into public.cash_session_reconciliations (
+      cash_session_id,
+      method,
+      expected_amount_in_cents,
+      counted_amount_in_cents,
+      difference_amount_in_cents,
+      created_at
+    )
+    values (
+      p_cash_session_id,
+      v_reconciliation.method::public.payment_method,
+      v_expected::integer,
+      v_reconciliation.counted_amount_in_cents,
+      v_reconciliation.counted_amount_in_cents - v_expected::integer,
+      v_closed_at
+    );
+
+    if v_reconciliation.method = 'cash' then
+      v_cash_counted := v_reconciliation.counted_amount_in_cents;
+    end if;
+  end loop;
+
+  update public.cash_sessions
+  set
+    closed_at = v_closed_at,
+    closed_by = v_user_id,
+    counted_amount_in_cents = v_cash_counted,
+    difference_amount_in_cents = v_cash_counted - v_cash_expected::integer,
+    expected_amount_in_cents = v_cash_expected::integer,
+    status = 'closed'
+  where id = p_cash_session_id
+    and status = 'open';
+
+  if not found then
+    raise exception 'Cash session is already closed.';
+  end if;
+
+  return p_cash_session_id;
+end;
+$$;
+
+revoke all on function public.close_cash_session_v2(uuid, jsonb, text)
+  from public;
+revoke execute on function public.close_cash_session_v2(uuid, jsonb, text)
+  from anon;
+grant execute on function public.close_cash_session_v2(uuid, jsonb, text)
+  to authenticated;
+
 notify pgrst, 'reload schema';
 commit;
