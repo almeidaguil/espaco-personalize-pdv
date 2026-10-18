@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(28);
+select extensions.plan(40);
 
 select extensions.has_column(
   'public', 'payments', 'installment_count',
@@ -175,6 +175,101 @@ select extensions.ok(
       and policyname = 'Active users can read allowed cash reconciliations'
   ),
   'reconciliation reads use the operator and admin policy'
+);
+
+select extensions.ok(
+  to_regprocedure(
+    'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)'
+  ) is not null,
+  'the split payment sale RPC exists'
+);
+select extensions.is(
+  pg_get_function_result(
+    'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)'::regprocedure
+  ),
+  'uuid',
+  'the split payment sale RPC returns the sale identifier'
+);
+select extensions.is(
+  pg_get_function_arguments(
+    'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)'::regprocedure
+  ),
+  'p_sale_id uuid, p_cash_session_id uuid, p_items jsonb, p_payments jsonb, p_discount_in_cents integer',
+  'the split payment RPC accepts only trusted sale intent'
+);
+select extensions.is(
+  (
+    select procedures.prosecdef
+    from pg_catalog.pg_proc as procedures
+    where procedures.oid =
+      'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)'::regprocedure
+  ),
+  true,
+  'finalize_sale_v5 is security definer'
+);
+select extensions.is(
+  (
+    select array_to_string(procedures.proconfig, ',')
+    from pg_catalog.pg_proc as procedures
+    where procedures.oid =
+      'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)'::regprocedure
+  ),
+  'search_path=pg_catalog, public, pg_temp',
+  'finalize_sale_v5 has a controlled search_path'
+);
+select extensions.ok(
+  has_function_privilege(
+    'authenticated',
+    'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)',
+    'EXECUTE'
+  ),
+  'authenticated users can finalize split payment sales'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'anon',
+    'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)',
+    'EXECUTE'
+  ),
+  'anonymous users cannot finalize split payment sales'
+);
+select extensions.ok(
+  to_regprocedure(
+    'public.finalize_sale_payments_transaction(uuid,uuid,jsonb,jsonb,integer,text)'
+  ) is not null,
+  'the split payment transaction helper exists'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'authenticated',
+    'public.finalize_sale_payments_transaction(uuid,uuid,jsonb,jsonb,integer,text)',
+    'EXECUTE'
+  ),
+  'authenticated users cannot execute the split payment helper directly'
+);
+select extensions.ok(
+  not has_function_privilege(
+    'public',
+    'public.finalize_sale_payments_transaction(uuid,uuid,jsonb,jsonb,integer,text)',
+    'EXECUTE'
+  ),
+  'PUBLIC cannot execute the split payment helper directly'
+);
+select extensions.ok(
+  has_function_privilege(
+    'authenticated',
+    'public.finalize_sale_v3(uuid,uuid,jsonb,jsonb)',
+    'EXECUTE'
+  ),
+  'authenticated users retain V3 compatibility'
+);
+select extensions.ok(
+  has_function_privilege(
+    'authenticated',
+    'public.finalize_sale_v4(uuid,uuid,jsonb,jsonb,integer)',
+    'EXECUTE'
+  ),
+  'authenticated users retain V4 compatibility'
 );
 
 select * from extensions.finish();

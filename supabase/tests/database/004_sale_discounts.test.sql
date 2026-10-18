@@ -1,7 +1,7 @@
 begin;
 
 create extension if not exists pgtap with schema extensions;
-select extensions.plan(22);
+select extensions.plan(23);
 
 select extensions.has_column(
   'public', 'sales', 'subtotal_in_cents',
@@ -148,9 +148,15 @@ select extensions.ok(
 );
 select extensions.ok(
   pg_get_functiondef(
-    'public.finalize_sale_transaction(uuid,uuid,jsonb,jsonb,integer,text)'::regprocedure
+    'public.finalize_sale_payments_transaction(uuid,uuid,jsonb,jsonb,integer,text)'::regprocedure
   ) ilike '%for update of products%',
-  'the transaction helper locks the product price snapshot'
+  'the split payment transaction helper locks the product price snapshot'
+);
+select extensions.ok(
+  pg_get_functiondef(
+    'public.finalize_sale_transaction(uuid,uuid,jsonb,jsonb,integer,text)'::regprocedure
+  ) ilike '%finalize_sale_payments_transaction%',
+  'the legacy transaction helper delegates to the split payment transaction'
 );
 
 select extensions.ok(

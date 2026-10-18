@@ -213,6 +213,9 @@ function runDatabaseTests(verifyUpgrade) {
     "scripts/test-sale-discount-database.mjs",
   ]);
   runRequiredCommand(process.execPath, [
+    "scripts/test-split-payments-database.mjs",
+  ]);
+  runRequiredCommand(process.execPath, [
     "scripts/test-sales-report-database.mjs",
   ]);
 }
