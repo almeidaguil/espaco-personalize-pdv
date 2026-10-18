@@ -24,6 +24,42 @@ begin
       message = 'Split payment migration requires positive net payment amounts.',
       hint = 'Audit zero-value, zero-net and non-cash change rows before retrying.';
   end if;
+
+  if exists (
+    select 1
+    from public.sales
+    left join public.payments on payments.sale_id = sales.id
+    group by sales.id
+    having count(payments.id) = 0
+  ) then
+    raise exception using
+      message = 'Split payment migration found a sale without payments.',
+      hint = 'Restore the audited payment for every historical sale before retrying.';
+  end if;
+
+  if exists (
+    select 1
+    from public.payments
+    group by sale_id
+    having count(distinct method) > 2
+  ) then
+    raise exception using
+      message = 'Split payment migration found a sale with more than two payment methods.',
+      hint = 'Consolidate historical payments to at most two audited methods before retrying.';
+  end if;
+
+  if exists (
+    select 1
+    from public.sales
+    join public.payments on payments.sale_id = sales.id
+    group by sales.id, sales.total_in_cents
+    having sum(payments.amount_in_cents - payments.change_in_cents)
+      <> sales.total_in_cents
+  ) then
+    raise exception using
+      message = 'Split payment migration found a sale whose payments do not match its total.',
+      hint = 'Reconcile every historical payment total with its audited sale before retrying.';
+  end if;
 end;
 $$;
 

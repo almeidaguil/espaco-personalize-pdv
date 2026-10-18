@@ -167,6 +167,40 @@ test("rejects a divergent split payment schema or execution grant", async () => 
   ).rejects.toThrow(/split payment contract/i);
 });
 
+test.each([
+  ["payment_installment_type_matches", false],
+  ["payment_constraint_count", 4],
+  ["payment_constraints_validated", false],
+  ["payment_constraint_definitions_match", false],
+  ["reconciliation_constraint_count", 4],
+  ["reconciliation_constraints_validated", false],
+  ["reconciliation_constraint_definitions_match", false],
+  ["finalize_v5_contract_matches", false],
+  ["payment_helper_contract_matches", false],
+  ["close_v2_contract_matches", false],
+  ["report_v2_contract_matches", false],
+] as const)(
+  "rejects split payment structural drift in %s",
+  async (property, divergentValue) => {
+    const manifest = productionManifest();
+
+    await expect(
+      verifyRemoteEnvironment({
+        environment: "production",
+        manifest,
+        runCommand: commandRunner(),
+        supabase: supabaseFixture({
+          splitPaymentContract: {
+            ...expectedSplitPaymentContract(),
+            [property]: divergentValue,
+          },
+        }),
+        vercel: {},
+      }),
+    ).rejects.toThrow(/split payment contract/i);
+  },
+);
+
 test("rejects a policy with the expected identity but a weakened predicate", async () => {
   const manifest = productionManifest();
   const policies = expectedPolicyRows().map((policy) =>
@@ -275,19 +309,7 @@ function supabaseFixture({
     authenticated_finalize_v4_execute: true,
     sales_financial_column_count: 3,
   },
-  splitPaymentContract = {
-    anon_close_v2_execute: false,
-    anon_finalize_v5_execute: false,
-    authenticated_close_v2_execute: true,
-    authenticated_finalize_v5_execute: true,
-    authenticated_legacy_close_execute: true,
-    authenticated_payment_helper_execute: false,
-    authenticated_reconciliation_select: true,
-    authenticated_reconciliation_writes_blocked: true,
-    close_v2_exists: true,
-    finalize_v5_exists: true,
-    payment_installment_column_count: 1,
-  },
+  splitPaymentContract = expectedSplitPaymentContract(),
   siteUrl = "https://roberto-multimarcas-pdv.vercel.app",
 }: {
   authConfig?: Record<string, unknown>;
@@ -388,6 +410,33 @@ function supabaseFixture({
         ];
       }),
     },
+  };
+}
+
+function expectedSplitPaymentContract() {
+  return {
+    anon_close_v2_execute: false,
+    anon_finalize_v5_execute: false,
+    authenticated_close_v2_execute: true,
+    authenticated_finalize_v5_execute: true,
+    authenticated_legacy_close_execute: true,
+    authenticated_payment_helper_execute: false,
+    authenticated_reconciliation_select: true,
+    authenticated_reconciliation_writes_blocked: true,
+    close_v2_contract_matches: true,
+    close_v2_exists: true,
+    finalize_v5_contract_matches: true,
+    finalize_v5_exists: true,
+    payment_constraint_count: 5,
+    payment_constraint_definitions_match: true,
+    payment_constraints_validated: true,
+    payment_helper_contract_matches: true,
+    payment_installment_column_count: 1,
+    payment_installment_type_matches: true,
+    reconciliation_constraint_count: 5,
+    reconciliation_constraint_definitions_match: true,
+    reconciliation_constraints_validated: true,
+    report_v2_contract_matches: true,
   };
 }
 

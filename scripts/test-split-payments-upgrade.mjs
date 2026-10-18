@@ -10,8 +10,11 @@ assert.ok(
     "verify-valid",
     "seed-duplicate",
     "seed-invalid-payment",
+    "seed-missing-payment",
+    "seed-too-many-methods",
+    "seed-mismatched-total",
   ].includes(mode),
-  "Expected seed-valid, verify-valid, seed-duplicate or seed-invalid-payment mode",
+  "Expected a supported split payment upgrade fixture mode",
 );
 
 const ids = {
@@ -110,6 +113,46 @@ async function seedPreMigrationFixture() {
     });
     assert.equal(error, null, "could not seed duplicate payment method");
     console.log("Duplicate payment fixture seeded locally.");
+    return;
+  }
+
+  if (mode === "seed-missing-payment") {
+    const { error } = await serviceClient
+      .from("payments")
+      .delete()
+      .eq("sale_id", ids.creditSale);
+    assert.equal(error, null, "could not remove the historical payment");
+    console.log("Missing payment fixture seeded locally.");
+    return;
+  }
+
+  if (mode === "seed-too-many-methods") {
+    const { error } = await serviceClient.from("payments").insert([
+      {
+        amount_in_cents: 1,
+        change_in_cents: 0,
+        method: "pix",
+        sale_id: ids.creditSale,
+      },
+      {
+        amount_in_cents: 1,
+        change_in_cents: 0,
+        method: "debit_card",
+        sale_id: ids.creditSale,
+      },
+    ]);
+    assert.equal(error, null, "could not seed more than two payment methods");
+    console.log("Too many payment methods fixture seeded locally.");
+    return;
+  }
+
+  if (mode === "seed-mismatched-total") {
+    const { error } = await serviceClient
+      .from("payments")
+      .update({ amount_in_cents: 999 })
+      .eq("sale_id", ids.creditSale);
+    assert.equal(error, null, "could not seed a mismatched payment total");
+    console.log("Mismatched payment total fixture seeded locally.");
     return;
   }
 
