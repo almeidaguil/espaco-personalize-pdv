@@ -165,10 +165,12 @@ describe("createSaleActionService", () => {
           unitPriceInCents: 1500,
         },
       ],
-      payment: {
-        amountInCents: 5000,
-        changeInCents: 2000,
-      },
+      payments: [
+        {
+          amountInCents: 5000,
+          changeInCents: 2000,
+        },
+      ],
     });
   });
 
@@ -191,11 +193,13 @@ describe("createSaleActionService", () => {
     expect(result).toEqual({
       successMessage: "Venda finalizada com sucesso.",
     });
-    expect(saleRepository.savedSale?.payment).toEqual({
-      amountInCents: 3000,
-      changeInCents: 0,
-      method: "pix",
-    });
+    expect(saleRepository.savedSale?.payments).toEqual([
+      {
+        amountInCents: 3000,
+        changeInCents: 0,
+        method: "pix",
+      },
+    ]);
   });
 
   it("creates a discounted sale from BRL form fields", async () => {
@@ -218,7 +222,7 @@ describe("createSaleActionService", () => {
       discountInCents: 500,
       subtotalInCents: 3000,
       totalInCents: 2500,
-      payment: { amountInCents: 5000, changeInCents: 2500 },
+      payments: [{ amountInCents: 5000, changeInCents: 2500 }],
     });
   });
 
@@ -236,7 +240,7 @@ describe("createSaleActionService", () => {
     expect(result).toEqual({
       fieldErrors: {
         items: "Adicione pelo menos um item.",
-        payment: "Invalid input: expected number, received NaN",
+        payments: "Invalid input: expected number, received NaN",
       },
       formError: undefined,
     });
