@@ -5,6 +5,10 @@ on:
     branches:
       - develop
       - main
+  push:
+    branches:
+      - develop
+      - main
   workflow_dispatch:
 
 permissions:
@@ -15,10 +19,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  e2e:
-    name: Playwright E2E
+  local-gates:
+    name: Database and Playwright gates
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     env:
       SUPABASE_TELEMETRY_DISABLED: "1"
@@ -41,9 +45,12 @@ jobs:
 
       - name: Start local Supabase
         # Keep ephemeral CLI keys in memory inside the gate, out of CI logs.
-        # The application tests only need Database, Auth, REST and the gateway;
-        # auxiliary services would add registry downloads without extra coverage.
+        # Database, Auth, REST and the gateway support both required suites;
+        # one shared stack avoids duplicate registry downloads on fresh runners.
         run: npx supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector >/dev/null
+
+      - name: Run database gate
+        run: npm run test:db
 
       - name: Run required E2E suite
         id: e2e
@@ -63,3 +70,27 @@ jobs:
       - name: Stop local Supabase
         if: always()
         run: npx supabase stop --no-backup
+
+  database:
+    name: Database contract
+    needs: local-gates
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Report required local gates
+        env:
+          LOCAL_GATES_RESULT: ${{ needs.local-gates.result }}
+        run: test "$LOCAL_GATES_RESULT" = "success"
+
+  e2e:
+    name: Playwright E2E
+    needs: local-gates
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Report required local gates
+        env:
+          LOCAL_GATES_RESULT: ${{ needs.local-gates.result }}
+        run: test "$LOCAL_GATES_RESULT" = "success"

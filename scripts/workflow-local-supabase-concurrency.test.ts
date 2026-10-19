@@ -7,30 +7,45 @@ const sharedConcurrencyGroup =
 const minimalSupabaseStart =
   "npx supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector >/dev/null";
 
-test("serializes database and E2E jobs that bind the local Supabase ports", async () => {
+test("runs database and E2E gates in one serialized Supabase job", async () => {
   const [qualityWorkflow, e2eWorkflow] = await Promise.all([
     readFile(".github/workflows/quality.yml", "utf8"),
     readFile(".github/workflows/e2e-release.yml", "utf8"),
   ]);
 
-  expect(jobBlock(qualityWorkflow, "database")).toContain(
-    `group: ${sharedConcurrencyGroup}`,
-  );
-  expect(jobBlock(qualityWorkflow, "database")).toContain(
-    "cancel-in-progress: false",
-  );
   expect(e2eWorkflow).toContain(`group: ${sharedConcurrencyGroup}`);
   expect(e2eWorkflow).toContain("cancel-in-progress: false");
+  expect(e2eWorkflow).toMatch(
+    /  push:\r?\n    branches:\r?\n      - develop\r?\n      - main/,
+  );
+  expect(qualityWorkflow).not.toContain("supabase start");
+
+  const localGates = jobBlock(e2eWorkflow, "local-gates");
+  expect(localGates).toContain(minimalSupabaseStart);
+  expect(localGates).toContain("run: npm run test:db");
+  expect(localGates).toContain("run: npm run test:e2e:local-reset");
+  expect(
+    `${qualityWorkflow}\n${e2eWorkflow}`.split(minimalSupabaseStart).length - 1,
+  ).toBe(1);
 });
 
-test("starts only the Supabase services required by database and E2E gates", async () => {
-  const [qualityWorkflow, e2eWorkflow] = await Promise.all([
-    readFile(".github/workflows/quality.yml", "utf8"),
-    readFile(".github/workflows/e2e-release.yml", "utf8"),
-  ]);
+test("preserves required database and Playwright check names", async () => {
+  const e2eWorkflow = await readFile(
+    ".github/workflows/e2e-release.yml",
+    "utf8",
+  );
 
-  expect(jobBlock(qualityWorkflow, "database")).toContain(minimalSupabaseStart);
-  expect(e2eWorkflow).toContain(minimalSupabaseStart);
+  const databaseReporter = jobBlock(e2eWorkflow, "database");
+  const e2eReporter = jobBlock(e2eWorkflow, "e2e");
+  for (const reporter of [databaseReporter, e2eReporter]) {
+    expect(reporter).toContain("needs: local-gates");
+    expect(reporter).toContain("if: always()");
+    expect(reporter).toContain(
+      "LOCAL_GATES_RESULT: ${{ needs.local-gates.result }}",
+    );
+  }
+  expect(databaseReporter).toContain("name: Database contract");
+  expect(e2eReporter).toContain("name: Playwright E2E");
 });
 
 function jobBlock(workflow: string, jobName: string) {
