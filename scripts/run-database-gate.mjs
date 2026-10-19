@@ -109,6 +109,78 @@ runExpectedFailure(
   "Sale discount migration requires every existing sale total to be positive",
 );
 
+console.log("Database gate: split payment schema upgrade.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-valid",
+]);
+runRequiredCommand(npxCommand, ["supabase", "migration", "up", "--local"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "verify-valid",
+]);
+
+console.log("Database gate: duplicate payment method guard.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-duplicate",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Split payment migration found duplicate payment methods for a sale",
+);
+
+console.log("Database gate: invalid net payment guard.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-invalid-payment",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Split payment migration requires positive net payment amounts",
+);
+
+console.log("Database gate: missing historical payment guard.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-missing-payment",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Split payment migration found a sale without payments",
+);
+
+console.log("Database gate: historical payment method limit guard.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-too-many-methods",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Split payment migration found a sale with more than two payment methods",
+);
+
+console.log("Database gate: historical payment total guard.");
+resetLocalDatabase(["--version", "20261014120000"]);
+runRequiredCommand(process.execPath, [
+  "scripts/test-split-payments-upgrade.mjs",
+  "seed-mismatched-total",
+]);
+runExpectedFailure(
+  npxCommand,
+  ["supabase", "migration", "up", "--local"],
+  "Split payment migration found a sale whose payments do not match its total",
+);
+
 console.log("Database gate: fresh reset.");
 resetLocalDatabase([]);
 runDatabaseTests(false);
@@ -175,6 +247,9 @@ function runDatabaseTests(verifyUpgrade) {
   runRequiredCommand(process.execPath, ["scripts/test-store-database.mjs"]);
   runRequiredCommand(process.execPath, [
     "scripts/test-sale-discount-database.mjs",
+  ]);
+  runRequiredCommand(process.execPath, [
+    "scripts/test-split-payments-database.mjs",
   ]);
   runRequiredCommand(process.execPath, [
     "scripts/test-sales-report-database.mjs",

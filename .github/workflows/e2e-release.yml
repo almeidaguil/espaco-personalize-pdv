@@ -5,6 +5,10 @@ on:
     branches:
       - develop
       - main
+  push:
+    branches:
+      - develop
+      - main
   workflow_dispatch:
 
 permissions:
@@ -15,10 +19,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  e2e:
-    name: Playwright E2E
+  local-gates:
+    name: Database and Playwright gates
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     env:
       SUPABASE_TELEMETRY_DISABLED: "1"
@@ -39,9 +43,32 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Prime required Supabase images
+        # Supabase CLI v2.105.0 expects these exact public ECR tags. Pull the
+        # byte-identical official Docker Hub images first to avoid the public
+        # ECR transfer quota intermittently blocking required checks.
+        run: |
+          docker pull supabase/postgres:17.6.1.132
+          docker tag supabase/postgres:17.6.1.132 public.ecr.aws/supabase/postgres:17.6.1.132
+          docker pull supabase/gotrue:v2.189.0
+          docker tag supabase/gotrue:v2.189.0 public.ecr.aws/supabase/gotrue:v2.189.0
+          docker pull postgrest/postgrest:v14.12
+          docker tag postgrest/postgrest:v14.12 public.ecr.aws/supabase/postgrest:v14.12
+          docker pull kong:2.8.1
+          docker tag kong:2.8.1 public.ecr.aws/supabase/kong:2.8.1
+          docker pull supabase/realtime:v2.103.2
+          docker tag supabase/realtime:v2.103.2 public.ecr.aws/supabase/realtime:v2.103.2
+          docker pull supabase/pg_prove:3.36
+          docker tag supabase/pg_prove:3.36 public.ecr.aws/supabase/pg_prove:3.36
+
       - name: Start local Supabase
         # Keep ephemeral CLI keys in memory inside the gate, out of CI logs.
-        run: npx supabase start >/dev/null
+        # Database, Auth, REST and the gateway support both required suites;
+        # one shared stack avoids duplicate registry downloads on fresh runners.
+        run: npx supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector >/dev/null
+
+      - name: Run database gate
+        run: npm run test:db
 
       - name: Run required E2E suite
         id: e2e
@@ -61,3 +88,27 @@ jobs:
       - name: Stop local Supabase
         if: always()
         run: npx supabase stop --no-backup
+
+  database:
+    name: Database contract
+    needs: local-gates
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Report required local gates
+        env:
+          LOCAL_GATES_RESULT: ${{ needs.local-gates.result }}
+        run: test "$LOCAL_GATES_RESULT" = "success"
+
+  e2e:
+    name: Playwright E2E
+    needs: local-gates
+    if: always()
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Report required local gates
+        env:
+          LOCAL_GATES_RESULT: ${{ needs.local-gates.result }}
+        run: test "$LOCAL_GATES_RESULT" = "success"
