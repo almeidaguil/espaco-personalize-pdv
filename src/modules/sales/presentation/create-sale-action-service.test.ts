@@ -177,8 +177,10 @@ describe("createSaleActionService", () => {
   it("creates a pix sale with exact payment and zero change", async () => {
     const saleRepository = new FakeSaleRepository();
     const formData = createFormData();
-    formData.set("paymentMethod", "pix");
-    formData.set("amountReceivedInReais", "30,00");
+    formData.set(
+      "paymentsJson",
+      JSON.stringify([{ amountInReais: "30,00", method: "pix" }]),
+    );
 
     const result = await createSaleActionService({}, formData, {
       cashSessionRepository: new FakeCashSessionRepository(),
@@ -239,8 +241,9 @@ describe("createSaleActionService", () => {
 
     expect(result).toEqual({
       fieldErrors: {
+        discountInCents: undefined,
         items: "Adicione pelo menos um item.",
-        payments: "Invalid input: expected number, received NaN",
+        payments: "Informe ao menos uma forma de pagamento.",
       },
       formError: undefined,
     });
@@ -300,8 +303,10 @@ function createFormData(): FormData {
       },
     ]),
   );
-  formData.set("amountReceivedInReais", "50,00");
-  formData.set("paymentMethod", "cash");
+  formData.set(
+    "paymentsJson",
+    JSON.stringify([{ amountInReais: "50,00", method: "cash" }]),
+  );
 
   return formData;
 }
