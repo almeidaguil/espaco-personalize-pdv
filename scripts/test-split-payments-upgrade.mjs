@@ -219,10 +219,7 @@ async function verifyValidUpgrade() {
   assert.equal(postUpgradePayment.installment_count, 1);
 
   const { data: reconciliations, error: reconciliationError } =
-    await serviceClient
-      .from("cash_session_reconciliations")
-      .select("cash_session_id")
-      .limit(1);
+    await waitForReconciliationSchema();
   assert.equal(reconciliationError, null);
   assert.deepEqual(
     reconciliations,
@@ -230,6 +227,28 @@ async function verifyValidUpgrade() {
     "upgrade must not fabricate reconciliation history",
   );
   console.log("Split payment schema upgrade verified locally.");
+}
+
+async function waitForReconciliationSchema() {
+  const deadline = Date.now() + 10_000;
+  let result;
+
+  do {
+    result = await serviceClient
+      .from("cash_session_reconciliations")
+      .select("cash_session_id")
+      .limit(1);
+    if (result.error?.code !== "PGRST205") return result;
+
+    const remaining = deadline - Date.now();
+    if (remaining > 0) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, Math.min(200, remaining)),
+      );
+    }
+  } while (Date.now() < deadline);
+
+  return result;
 }
 
 async function assertLegacySchema() {
