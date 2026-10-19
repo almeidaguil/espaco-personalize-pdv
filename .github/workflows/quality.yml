@@ -89,7 +89,9 @@ jobs:
       - name: Start local Supabase
         # The command normally prints ephemeral local keys. They are not needed
         # by later steps because the database gate reads them in memory.
-        run: npx supabase start >/dev/null
+        # Database, Auth, REST and the gateway are sufficient for this gate;
+        # excluding auxiliary services avoids unnecessary registry downloads.
+        run: npx supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector >/dev/null
         env:
           SUPABASE_TELEMETRY_DISABLED: "1"
 

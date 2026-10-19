@@ -41,7 +41,9 @@ jobs:
 
       - name: Start local Supabase
         # Keep ephemeral CLI keys in memory inside the gate, out of CI logs.
-        run: npx supabase start >/dev/null
+        # The application tests only need Database, Auth, REST and the gateway;
+        # auxiliary services would add registry downloads without extra coverage.
+        run: npx supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector >/dev/null
 
       - name: Run required E2E suite
         id: e2e
