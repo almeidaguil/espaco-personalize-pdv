@@ -175,7 +175,7 @@ export function PdvCart({ action, products }: PdvCartProps) {
         />
       </div>
 
-      <section className="sticky bottom-0 z-10 -mx-5 grid gap-5 border-t border-[var(--border)] bg-white/95 p-5 shadow-[0_-12px_35px_rgba(0,0,0,0.08)] backdrop-blur-xl sm:static sm:mx-0 sm:rounded-2xl sm:border sm:bg-[var(--surface-muted)] sm:shadow-none">
+      <section className="-mx-5 grid gap-5 border-t border-[var(--border)] bg-white/95 p-5 sm:static sm:bottom-0 sm:z-10 sm:mx-0 sm:rounded-2xl sm:border sm:bg-[var(--surface-muted)] sm:shadow-none sm:backdrop-blur-xl">
         <div className="grid gap-2">
           <label
             className="text-sm font-semibold text-[var(--brand-foreground)]"
