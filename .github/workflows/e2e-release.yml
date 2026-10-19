@@ -58,6 +58,8 @@ jobs:
           docker tag kong:2.8.1 public.ecr.aws/supabase/kong:2.8.1
           docker pull supabase/realtime:v2.103.2
           docker tag supabase/realtime:v2.103.2 public.ecr.aws/supabase/realtime:v2.103.2
+          docker pull supabase/storage-api:v1.60.4
+          docker tag supabase/storage-api:v1.60.4 public.ecr.aws/supabase/storage-api:v1.60.4
           docker pull supabase/pg_prove:3.36
           docker tag supabase/pg_prove:3.36 public.ecr.aws/supabase/pg_prove:3.36
 

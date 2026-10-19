@@ -15,6 +15,10 @@ const requiredSupabaseImages = [
   ["postgrest/postgrest:v14.12", "public.ecr.aws/supabase/postgrest:v14.12"],
   ["kong:2.8.1", "public.ecr.aws/supabase/kong:2.8.1"],
   ["supabase/realtime:v2.103.2", "public.ecr.aws/supabase/realtime:v2.103.2"],
+  [
+    "supabase/storage-api:v1.60.4",
+    "public.ecr.aws/supabase/storage-api:v1.60.4",
+  ],
   ["supabase/pg_prove:3.36", "public.ecr.aws/supabase/pg_prove:3.36"],
 ] as const;
 
