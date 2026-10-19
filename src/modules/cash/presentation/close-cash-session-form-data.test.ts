@@ -3,34 +3,48 @@ import { describe, expect, it } from "vitest";
 import { parseCloseCashSessionFormData } from "./close-cash-session-form-data";
 
 describe("parseCloseCashSessionFormData", () => {
-  it("parses and trims the selected cash session", () => {
-    const formData = new FormData();
+  it("parses all counted payment methods in cents", () => {
+    const formData = createFormData();
     formData.set("cashSessionId", " cash-session-1 ");
-    formData.set("countedAmountInReais", "R$ 250,75");
 
     expect(parseCloseCashSessionFormData(formData)).toEqual({
       cashSessionId: "cash-session-1",
-      countedAmountInReais: 250.75,
+      reconciliations: [
+        { countedAmountInCents: 25075, method: "cash" },
+        { countedAmountInCents: 0, method: "pix" },
+        { countedAmountInCents: 20000, method: "credit_card" },
+        { countedAmountInCents: 5000, method: "debit_card" },
+      ],
     });
   });
 
-  it("parses the admin password when cash is short", () => {
-    const formData = new FormData();
+  it("parses and trims the admin password", () => {
+    const formData = createFormData();
     formData.set("cashSessionId", "cash-session-1");
-    formData.set("countedAmountInReais", "200,00");
     formData.set("adminPassword", " admin-password-test ");
 
-    expect(parseCloseCashSessionFormData(formData)).toEqual({
+    expect(parseCloseCashSessionFormData(formData)).toMatchObject({
       adminPassword: "admin-password-test",
-      cashSessionId: "cash-session-1",
-      countedAmountInReais: 200,
     });
   });
 
-  it("returns an empty cash session id when the field is missing", () => {
-    expect(parseCloseCashSessionFormData(new FormData())).toEqual({
-      cashSessionId: "",
-      countedAmountInReais: Number.NaN,
-    });
+  it("keeps missing counted values invalid", () => {
+    const parsed = parseCloseCashSessionFormData(new FormData());
+
+    expect(parsed.cashSessionId).toBe("");
+    expect(
+      parsed.reconciliations.every((item) =>
+        Number.isNaN(item.countedAmountInCents),
+      ),
+    ).toBe(true);
   });
 });
+
+function createFormData(): FormData {
+  const formData = new FormData();
+  formData.set("countedAmount_cash", "R$ 250,75");
+  formData.set("countedAmount_pix", "0,00");
+  formData.set("countedAmount_credit_card", "200,00");
+  formData.set("countedAmount_debit_card", "50,00");
+  return formData;
+}

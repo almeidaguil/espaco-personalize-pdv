@@ -76,9 +76,9 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async update(session: CashSession): Promise<SaveCashSessionResult> {
+  async close(): Promise<SaveCashSessionResult> {
     return {
-      session,
+      session: createCashSession(),
       success: true,
     };
   }
