@@ -14,6 +14,8 @@ const requiredSupabaseImages = [
   ["supabase/gotrue:v2.189.0", "public.ecr.aws/supabase/gotrue:v2.189.0"],
   ["postgrest/postgrest:v14.12", "public.ecr.aws/supabase/postgrest:v14.12"],
   ["kong:2.8.1", "public.ecr.aws/supabase/kong:2.8.1"],
+  ["supabase/realtime:v2.103.2", "public.ecr.aws/supabase/realtime:v2.103.2"],
+  ["supabase/pg_prove:3.36", "public.ecr.aws/supabase/pg_prove:3.36"],
 ] as const;
 
 test("runs database and E2E gates in one serialized Supabase job", async () => {
