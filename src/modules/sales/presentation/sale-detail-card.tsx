@@ -2,6 +2,7 @@ import { Panel } from "@/shared/components/panel";
 import { StatusBadge } from "@/shared/components/status-badge";
 
 import type { SaleDetail } from "../application/sale-detail-repository";
+import type { Payment } from "../domain/sale";
 
 type SaleDetailCardProps = {
   sale: SaleDetail;
@@ -121,28 +122,48 @@ export function SaleDetailCard({ sale }: SaleDetailCardProps) {
         </ul>
       </section>
 
-      {/* Pagamento */}
+      {/* Pagamentos */}
       <section className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4">
         <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
-          Pagamento
+          Pagamentos
         </p>
 
-        <dl className="mt-4 grid gap-3 sm:grid-cols-3">
-          <PaymentItem
-            label="Método"
-            value={formatPaymentMethod(sale.payment.method)}
-          />
-
-          <PaymentItem
-            label="Valor recebido"
-            value={moneyFormatter.format(sale.payment.amountInCents / 100)}
-          />
-
-          <PaymentItem
-            label="Troco"
-            value={moneyFormatter.format(sale.payment.changeInCents / 100)}
-          />
-        </dl>
+        <ul className="mt-4 grid gap-3">
+          {sale.payments.map((payment) => (
+            <li
+              className="rounded-xl border border-[var(--border)] bg-white p-4"
+              key={payment.method}
+            >
+              <h3 className="text-base font-bold text-[var(--brand-foreground)]">
+                {formatPaymentMethod(payment.method)}
+              </h3>
+              <dl className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <PaymentItem
+                  label="Valor recebido"
+                  value={moneyFormatter.format(payment.amountInCents / 100)}
+                />
+                <PaymentItem
+                  label="Contribuição líquida"
+                  value={moneyFormatter.format(
+                    (payment.amountInCents - payment.changeInCents) / 100,
+                  )}
+                />
+                {payment.method === "cash" ? (
+                  <PaymentItem
+                    label="Troco"
+                    value={moneyFormatter.format(payment.changeInCents / 100)}
+                  />
+                ) : null}
+                {payment.method === "credit_card" ? (
+                  <PaymentItem
+                    label="Parcelamento"
+                    value={formatInstallmentCount(payment.installmentCount)}
+                  />
+                ) : null}
+              </dl>
+            </li>
+          ))}
+        </ul>
       </section>
     </Panel>
   );
@@ -162,7 +183,7 @@ function PaymentItem({ label, value }: { label: string; value: string }) {
   );
 }
 
-function formatPaymentMethod(method: SaleDetail["payment"]["method"]): string {
+function formatPaymentMethod(method: Payment["method"]): string {
   const labels = {
     cash: "Dinheiro",
     credit_card: "Cartão de crédito",
@@ -171,4 +192,13 @@ function formatPaymentMethod(method: SaleDetail["payment"]["method"]): string {
   } as const;
 
   return labels[method];
+}
+
+function formatInstallmentCount(
+  installmentCount: Extract<
+    Payment,
+    { method: "credit_card" }
+  >["installmentCount"],
+): string {
+  return installmentCount === 1 ? "À vista" : `${installmentCount}x`;
 }

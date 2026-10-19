@@ -1,17 +1,8 @@
-import type { PaymentMethod } from "@/shared/types/payment-method";
-
 import type { SaleItem } from "../domain/sale";
 import type { SaleSummary } from "./sale-summary-repository";
 
-type LegacySaleDetailPayment = {
-  amountInCents: number;
-  changeInCents: number;
-  method: PaymentMethod;
-};
-
 export type SaleDetail = SaleSummary & {
   items: SaleItem[];
-  payment: LegacySaleDetailPayment;
 };
 
 export type GetSaleDetailResult =

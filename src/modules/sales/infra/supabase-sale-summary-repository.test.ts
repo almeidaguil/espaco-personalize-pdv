@@ -6,7 +6,24 @@ describe("SupabaseSaleSummaryRepository", () => {
   it("reads sales linked to operator cash sessions and resolves operator names", async () => {
     const client = createSalesReadClient({
       sales: [
-        saleRow({ subtotal_in_cents: 3500, discount_in_cents: 500 }),
+        saleRow({
+          subtotal_in_cents: 3500,
+          discount_in_cents: 500,
+          payments: [
+            {
+              amount_in_cents: 1000,
+              change_in_cents: 0,
+              installment_count: null,
+              method: "pix",
+            },
+            {
+              amount_in_cents: 2500,
+              change_in_cents: 500,
+              installment_count: null,
+              method: "cash",
+            },
+          ],
+        }),
         saleRow({ id: "sale-2", cash_session_id: "cash-session-2" }),
       ],
     });
@@ -23,10 +40,23 @@ describe("SupabaseSaleSummaryRepository", () => {
           subtotalInCents: 3500,
           discountInCents: 500,
           totalInCents: 3000,
+          payments: [
+            { amountInCents: 1000, changeInCents: 0, method: "pix" },
+            { amountInCents: 2500, changeInCents: 500, method: "cash" },
+          ],
         },
         { id: "sale-2", operatorName: "Ana", cashSessionId: "cash-session-2" },
       ],
     });
+    expect(
+      client.calls.some(
+        ([method, value]) =>
+          method === "select" &&
+          String(value).includes(
+            "payments(method,amount_in_cents,change_in_cents,installment_count)",
+          ),
+      ),
+    ).toBe(true);
   });
   it("keeps dashboard totals complete beyond one database page", async () => {
     const client = createSalesReadClient({

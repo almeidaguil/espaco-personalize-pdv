@@ -73,6 +73,26 @@ describe("SalesList", () => {
     );
     expect(screen.getByText("Desconto concedido por Ana")).toBeInTheDocument();
   });
+  it("shows every payment method for a canceled split sale", () => {
+    render(
+      <SalesList
+        sales={[
+          saleSummaryFixture({
+            payments: [
+              { amountInCents: 1000, changeInCents: 0, method: "pix" },
+              { amountInCents: 2500, changeInCents: 500, method: "cash" },
+            ],
+            status: "canceled",
+          }),
+        ]}
+        totalCount={1}
+        filters={{ page: 1, pageSize: 8 }}
+      />,
+    );
+
+    expect(screen.getByText("Cancelada")).toBeInTheDocument();
+    expect(screen.getByText("Pix + Dinheiro")).toBeInTheDocument();
+  });
   it("renders empty search results and a way back from an out-of-range page", () => {
     render(
       <SalesList
