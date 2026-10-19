@@ -6,12 +6,25 @@ const sharedConcurrencyGroup =
   "local-supabase-${{ github.event.pull_request.number || github.ref }}";
 const minimalSupabaseStart =
   "npx supabase start --exclude edge-runtime,imgproxy,logflare,mailpit,postgres-meta,realtime,storage-api,studio,supavisor,vector >/dev/null";
+const requiredSupabaseImages = [
+  [
+    "supabase/postgres:17.6.1.132",
+    "public.ecr.aws/supabase/postgres:17.6.1.132",
+  ],
+  ["supabase/gotrue:v2.189.0", "public.ecr.aws/supabase/gotrue:v2.189.0"],
+  ["postgrest/postgrest:v14.12", "public.ecr.aws/supabase/postgrest:v14.12"],
+  ["kong:2.8.1", "public.ecr.aws/supabase/kong:2.8.1"],
+] as const;
 
 test("runs database and E2E gates in one serialized Supabase job", async () => {
-  const [qualityWorkflow, e2eWorkflow] = await Promise.all([
+  const [qualityWorkflow, e2eWorkflow, packageJsonSource] = await Promise.all([
     readFile(".github/workflows/quality.yml", "utf8"),
     readFile(".github/workflows/e2e-release.yml", "utf8"),
+    readFile("package.json", "utf8"),
   ]);
+  const packageJson = JSON.parse(packageJsonSource) as {
+    devDependencies?: Record<string, string>;
+  };
 
   expect(e2eWorkflow).toContain(`group: ${sharedConcurrencyGroup}`);
   expect(e2eWorkflow).toContain("cancel-in-progress: false");
@@ -19,8 +32,13 @@ test("runs database and E2E gates in one serialized Supabase job", async () => {
     /  push:\r?\n    branches:\r?\n      - develop\r?\n      - main/,
   );
   expect(qualityWorkflow).not.toContain("supabase start");
+  expect(packageJson.devDependencies?.supabase).toBe("2.105.0");
 
   const localGates = jobBlock(e2eWorkflow, "local-gates");
+  for (const [source, target] of requiredSupabaseImages) {
+    expect(localGates).toContain(`docker pull ${source}`);
+    expect(localGates).toContain(`docker tag ${source} ${target}`);
+  }
   expect(localGates).toContain(minimalSupabaseStart);
   expect(localGates).toContain("run: npm run test:db");
   expect(localGates).toContain("run: npm run test:e2e:local-reset");

@@ -43,6 +43,20 @@ jobs:
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
+      - name: Prime required Supabase images
+        # Supabase CLI v2.105.0 expects these exact public ECR tags. Pull the
+        # byte-identical official Docker Hub images first to avoid the public
+        # ECR transfer quota intermittently blocking required checks.
+        run: |
+          docker pull supabase/postgres:17.6.1.132
+          docker tag supabase/postgres:17.6.1.132 public.ecr.aws/supabase/postgres:17.6.1.132
+          docker pull supabase/gotrue:v2.189.0
+          docker tag supabase/gotrue:v2.189.0 public.ecr.aws/supabase/gotrue:v2.189.0
+          docker pull postgrest/postgrest:v14.12
+          docker tag postgrest/postgrest:v14.12 public.ecr.aws/supabase/postgrest:v14.12
+          docker pull kong:2.8.1
+          docker tag kong:2.8.1 public.ecr.aws/supabase/kong:2.8.1
+
       - name: Start local Supabase
         # Keep ephemeral CLI keys in memory inside the gate, out of CI logs.
         # Database, Auth, REST and the gateway support both required suites;
