@@ -181,6 +181,44 @@ Criterio de pronto:
   registrar credenciais;
 - gates locais financeiros e E2E passam antes da publicacao do PR.
 
+## Evolucao Atual - Pagamentos Divididos E Conferencia Por Metodo
+
+Status: aplicacao e corte funcional implementados na segunda branch de
+funcionalidade; promocao remota depende dos gates completos e do pull request
+para `develop`.
+
+Runtime desta entrega:
+
+- `payments.installment_count`, com credito em 1x, 2x ou 3x e compatibilidade
+  de credito historico como 1x;
+- ate dois metodos distintos por venda, com contribuicao liquida minima de um
+  centavo e troco calculado no servidor somente para dinheiro;
+- `finalize_sale_v5` atomica usada pela aplicacao, mantendo v3/v4 somente para
+  compatibilidade de vendas;
+- `close_cash_session_v2` com conferencia independente de dinheiro, Pix,
+  credito e debito;
+- quatro linhas auditaveis em `cash_session_reconciliations`, enquanto os
+  campos escalares do caixa continuam representando somente dinheiro fisico;
+- relatorio SQL compativel com pagamentos divididos, parcelas e reconciliacoes;
+- PDV com `payments[]`, divisao em dois metodos e credito em ate 3x;
+- detalhes e historico com todos os pagamentos;
+- fechamento com quatro valores inicialmente vazios e autorizacao para qualquer
+  divergencia;
+- relatorio e CSV com contagem distinta por metodo, parcelas e reconciliacoes;
+- fechamento legado preservado no schema para historico, mas sem `execute` para
+  `public`, `anon` ou `authenticated`;
+- verificacao remota dos objetos, assinaturas, RLS e grants apos o corte.
+
+Criterio de pronto da fundacao:
+
+- migrations de upgrade e reset limpo produzem o mesmo contrato;
+- V3 e V4 permanecem compativeis; o fechamento legado fica bloqueado;
+- V5 e fechamento V2 passam validacao, RLS, concorrencia, rollback e
+  idempotencia;
+- o verificador remoto exige tabela, coluna, RPCs e grants novos sem registrar
+  credenciais;
+- todos os gates locais e checks do PR para `develop` estao aprovados.
+
 ## Entrega 7 - QA Multioperador
 
 Status: implementacao entregue no PR07; revisao, checks do PR e integracao
@@ -216,7 +254,8 @@ Escopo:
 - Supabase somente de staging; producao nova pertence ao PR09;
 - Vercel `roberto-multimarcas-pdv-staging` dedicado, usando seu ambiente
   Production exclusivamente como staging no PR08;
-- `roberto-multimarcas-pdv` reservado sem variaveis ou deployments para o PR09;
+- `roberto-multimarcas-pdv` reservado exclusivamente para o PR09; recursos
+  existentes devem ser inventariados e preservados, sem uso no staging;
 - URL estavel de staging validada para homologacao;
 - variaveis por ambiente;
 - bootstrap de admin e vendedores;
@@ -227,8 +266,9 @@ Criterio de pronto:
 
 - quota e eventual custo aprovados;
 - staging novo passa migrations, smoke e E2E;
-- projeto dedicado tem somente as tres variaveis de staging e um deployment
-  READY; o projeto reservado para producao permanece vazio;
+- projeto dedicado tem tres variaveis `Production`, duas variaveis publicas
+  `Preview`, Git desconectado e deployment promovido validado por SHA/alias; o
+  projeto reservado e validado por identidade e permanece fora do rollout;
 - nenhuma credencial aparece no repositorio ou em logs.
 
 ## Entrega 9 - Release

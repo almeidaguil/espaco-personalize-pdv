@@ -6,7 +6,7 @@ import {
 } from "./supabase-cash-session-closing-summary-repository";
 
 describe("SupabaseCashSessionClosingSummaryRepository", () => {
-  it("uses only the net cash payment in the expected closing amount", async () => {
+  it("calculates every expected method from completed split payments", async () => {
     const cashSessionIn = vi.fn(async () => ({
       data: [{ id: "cash-session-1", opening_amount_in_cents: 5000 }],
       error: null,
@@ -20,6 +20,28 @@ describe("SupabaseCashSessionClosingSummaryRepository", () => {
           ],
           status: "completed",
           total_in_cents: 9000,
+        },
+        {
+          cash_session_id: "cash-session-1",
+          payments: [
+            { amount_in_cents: 11000, change_in_cents: 0, method: "pix" },
+            {
+              amount_in_cents: 2000,
+              change_in_cents: 0,
+              method: "credit_card",
+            },
+            { amount_in_cents: 3000, change_in_cents: 0, method: "debit_card" },
+          ],
+          status: "completed",
+          total_in_cents: 16000,
+        },
+        {
+          cash_session_id: "cash-session-1",
+          payments: [
+            { amount_in_cents: 99999, change_in_cents: 0, method: "cash" },
+          ],
+          status: "canceled",
+          total_in_cents: 99999,
         },
       ],
       error: null,
@@ -40,13 +62,18 @@ describe("SupabaseCashSessionClosingSummaryRepository", () => {
       success: true,
       summaries: [
         {
-          canceledSalesCount: 0,
-          canceledSalesTotalInReais: 0,
+          canceledSalesCount: 1,
+          canceledSalesTotalInCents: 99999,
           cashSessionId: "cash-session-1",
-          completedSalesCount: 1,
-          completedSalesTotalInReais: 90,
-          expectedAmountInReais: 140,
-          openingAmountInReais: 50,
+          completedSalesCount: 2,
+          completedSalesTotalInCents: 25000,
+          expectedByMethodInCents: {
+            cash: 14000,
+            credit_card: 2000,
+            debit_card: 3000,
+            pix: 11000,
+          },
+          openingAmountInCents: 5000,
         },
       ],
     });

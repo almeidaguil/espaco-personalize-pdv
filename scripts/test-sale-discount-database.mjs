@@ -230,11 +230,14 @@ try {
     "database constraints must reject inconsistent sale totals",
   );
 
-  const closeResult = await operatorClient.rpc("close_cash_session", {
+  const closeResult = await operatorClient.rpc("close_cash_session_v2", {
     p_admin_password: null,
     p_cash_session_id: cashSession.id,
-    p_closed_at: new Date().toISOString(),
-    p_counted_amount_in_cents: 1_900,
+    p_reconciliations: countedReconciliations({
+      cash: 1_900,
+      debit_card: 1_000,
+      pix: 999,
+    }),
   });
   assert.equal(
     closeResult.error,
@@ -298,6 +301,20 @@ try {
   if (userId) {
     await serviceClient.auth.admin.deleteUser(userId);
   }
+}
+
+function countedReconciliations({
+  cash = 0,
+  credit_card = 0,
+  debit_card = 0,
+  pix = 0,
+} = {}) {
+  return [
+    { counted_amount_in_cents: cash, method: "cash" },
+    { counted_amount_in_cents: pix, method: "pix" },
+    { counted_amount_in_cents: credit_card, method: "credit_card" },
+    { counted_amount_in_cents: debit_card, method: "debit_card" },
+  ];
 }
 
 function clientOptions() {

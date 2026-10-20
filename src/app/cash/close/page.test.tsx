@@ -85,12 +85,17 @@ describe("CloseCashPage", () => {
       summaries: [
         {
           canceledSalesCount: 1,
-          canceledSalesTotalInReais: 15,
+          canceledSalesTotalInCents: 1500,
           cashSessionId: "cash-session-1",
           completedSalesCount: 2,
-          completedSalesTotalInReais: 100,
-          expectedAmountInReais: 250.5,
-          openingAmountInReais: 150.5,
+          completedSalesTotalInCents: 10000,
+          expectedByMethodInCents: {
+            cash: 25050,
+            credit_card: 0,
+            debit_card: 0,
+            pix: 0,
+          },
+          openingAmountInCents: 15050,
         },
       ],
       success: true,

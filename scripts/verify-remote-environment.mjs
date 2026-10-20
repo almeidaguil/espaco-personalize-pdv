@@ -13,6 +13,7 @@ const requiredTables = [
   "products",
   "stock_movements",
   "cash_sessions",
+  "cash_session_reconciliations",
   "sales",
   "sale_items",
   "payments",
@@ -20,8 +21,10 @@ const requiredTables = [
 const requiredRpcs = [
   "open_cash_session_v3",
   "close_cash_session",
+  "close_cash_session_v2",
   "finalize_sale_v3",
   "finalize_sale_v4",
+  "finalize_sale_v5",
   "cancel_sale",
   "get_store_sales_report_v2",
 ];
@@ -41,6 +44,18 @@ const activeAllowedSalePredicate = `
     (operator_id = (select auth.uid() as uid))
     or (select current_user_is_admin() as current_user_is_admin)
   ))
+`;
+const activeAllowedReconciliationPredicate = `
+  ((select current_user_is_active() as current_user_is_active)
+  and (exists (
+    select 1
+    from cash_sessions
+    where ((cash_sessions.id = cash_session_reconciliations.cash_session_id)
+      and (
+        (cash_sessions.operator_id = (select auth.uid() as uid))
+        or (select current_user_is_admin() as current_user_is_admin)
+      ))
+  )))
 `;
 
 export const requiredPolicyContract = Object.freeze([
@@ -105,6 +120,12 @@ export const requiredPolicyContract = Object.freeze([
     "Active users can read allowed cash sessions",
     "SELECT",
     { qual: activeAllowedSalePredicate },
+  ),
+  policy(
+    "cash_session_reconciliations",
+    "Active users can read allowed cash reconciliations",
+    "SELECT",
+    { qual: activeAllowedReconciliationPredicate },
   ),
   policy("sales", "Active users can read allowed sales", "SELECT", {
     qual: activeAllowedSalePredicate,
@@ -220,7 +241,8 @@ export async function verifyRemoteEnvironment({
         where schemaname = 'public'
           and tablename in (
             'profiles', 'categories', 'products', 'stock_movements',
-            'cash_sessions', 'sales', 'sale_items', 'payments'
+            'cash_sessions', 'cash_session_reconciliations',
+            'sales', 'sale_items', 'payments'
           )
         order by tablename, policyname
       `,
@@ -285,6 +307,295 @@ export async function verifyRemoteEnvironment({
     );
   }
 
+  const splitPaymentContract = firstQueryRow(
+    await supabase.managementClient.runReadOnlyQuery(target.projectRef, {
+      query: `
+        select
+          (
+            select count(*)::integer
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'payments'
+              and column_name = 'installment_count'
+          ) as payment_installment_column_count,
+          exists (
+            select 1
+            from information_schema.columns
+            where table_schema = 'public'
+              and table_name = 'payments'
+              and column_name = 'installment_count'
+              and data_type = 'smallint'
+              and is_nullable = 'YES'
+          ) as payment_installment_type_matches,
+          (
+            select count(*)::integer
+            from pg_catalog.pg_constraint
+            where conrelid = 'public.payments'::regclass
+              and conname in (
+                'payments_sale_method_unique',
+                'payments_amount_positive_v2',
+                'payments_change_only_cash',
+                'payments_net_amount_positive',
+                'payments_installment_matches_method'
+              )
+          ) as payment_constraint_count,
+          coalesce((
+            select bool_and(convalidated)
+            from pg_catalog.pg_constraint
+            where conrelid = 'public.payments'::regclass
+              and conname in (
+                'payments_sale_method_unique',
+                'payments_amount_positive_v2',
+                'payments_change_only_cash',
+                'payments_net_amount_positive',
+                'payments_installment_matches_method'
+              )
+          ), false) as payment_constraints_validated,
+          coalesce((
+            select count(*) = 5 and bool_and(
+              case conname
+                when 'payments_sale_method_unique' then
+                  contype = 'u' and pg_get_constraintdef(oid) =
+                    'UNIQUE (sale_id, method)'
+                when 'payments_amount_positive_v2' then
+                  contype = 'c' and pg_get_constraintdef(oid) =
+                    'CHECK ((amount_in_cents > 0))'
+                when 'payments_change_only_cash' then
+                  contype = 'c' and pg_get_constraintdef(oid) =
+                    'CHECK (((method = ''cash''::payment_method) OR (change_in_cents = 0)))'
+                when 'payments_net_amount_positive' then
+                  contype = 'c' and pg_get_constraintdef(oid) =
+                    'CHECK (((amount_in_cents - change_in_cents) >= 1))'
+                when 'payments_installment_matches_method' then
+                  contype = 'c' and pg_get_constraintdef(oid) =
+                    'CHECK ((((method = ''credit_card''::payment_method) AND (installment_count IS NOT NULL) AND ((installment_count >= 1) AND (installment_count <= 3))) OR ((method <> ''credit_card''::payment_method) AND (installment_count IS NULL))))'
+                else false
+              end
+            )
+            from pg_catalog.pg_constraint
+            where conrelid = 'public.payments'::regclass
+              and conname in (
+                'payments_sale_method_unique',
+                'payments_amount_positive_v2',
+                'payments_change_only_cash',
+                'payments_net_amount_positive',
+                'payments_installment_matches_method'
+              )
+          ), false) as payment_constraint_definitions_match,
+          (
+            select count(*)::integer
+            from pg_catalog.pg_constraint
+            where conrelid = 'public.cash_session_reconciliations'::regclass
+              and conname in (
+                'cash_session_reconciliations_pkey',
+                'cash_session_reconciliations_cash_session_id_fkey',
+                'cash_session_reconciliations_expected_nonnegative',
+                'cash_session_reconciliations_counted_nonnegative',
+                'cash_session_reconciliations_difference_matches'
+              )
+          ) as reconciliation_constraint_count,
+          coalesce((
+            select bool_and(convalidated)
+            from pg_catalog.pg_constraint
+            where conrelid = 'public.cash_session_reconciliations'::regclass
+              and conname in (
+                'cash_session_reconciliations_pkey',
+                'cash_session_reconciliations_cash_session_id_fkey',
+                'cash_session_reconciliations_expected_nonnegative',
+                'cash_session_reconciliations_counted_nonnegative',
+                'cash_session_reconciliations_difference_matches'
+              )
+          ), false) as reconciliation_constraints_validated,
+          coalesce((
+            select count(*) = 5 and bool_and(
+              case conname
+                when 'cash_session_reconciliations_pkey' then
+                  contype = 'p' and pg_get_constraintdef(oid) =
+                    'PRIMARY KEY (cash_session_id, method)'
+                when 'cash_session_reconciliations_cash_session_id_fkey' then
+                  contype = 'f' and pg_get_constraintdef(oid) =
+                    'FOREIGN KEY (cash_session_id) REFERENCES cash_sessions(id) ON DELETE RESTRICT'
+                when 'cash_session_reconciliations_expected_nonnegative' then
+                  contype = 'c' and pg_get_constraintdef(oid) =
+                    'CHECK ((expected_amount_in_cents >= 0))'
+                when 'cash_session_reconciliations_counted_nonnegative' then
+                  contype = 'c' and pg_get_constraintdef(oid) =
+                    'CHECK ((counted_amount_in_cents >= 0))'
+                when 'cash_session_reconciliations_difference_matches' then
+                  contype = 'c' and pg_get_constraintdef(oid) =
+                    'CHECK ((difference_amount_in_cents = (counted_amount_in_cents - expected_amount_in_cents)))'
+                else false
+              end
+            )
+            from pg_catalog.pg_constraint
+            where conrelid = 'public.cash_session_reconciliations'::regclass
+              and conname in (
+                'cash_session_reconciliations_pkey',
+                'cash_session_reconciliations_cash_session_id_fkey',
+                'cash_session_reconciliations_expected_nonnegative',
+                'cash_session_reconciliations_counted_nonnegative',
+                'cash_session_reconciliations_difference_matches'
+              )
+          ), false) as reconciliation_constraint_definitions_match,
+          to_regprocedure(
+            'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)'
+          ) is not null as finalize_v5_exists,
+          to_regprocedure(
+            'public.close_cash_session_v2(uuid,jsonb,text)'
+          ) is not null as close_v2_exists,
+          has_function_privilege(
+            'authenticated',
+            'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)',
+            'execute'
+          ) as authenticated_finalize_v5_execute,
+          has_function_privilege(
+            'anon',
+            'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)',
+            'execute'
+          ) as anon_finalize_v5_execute,
+          has_function_privilege(
+            'authenticated',
+            'public.close_cash_session_v2(uuid,jsonb,text)',
+            'execute'
+          ) as authenticated_close_v2_execute,
+          has_function_privilege(
+            'anon',
+            'public.close_cash_session_v2(uuid,jsonb,text)',
+            'execute'
+          ) as anon_close_v2_execute,
+          has_function_privilege(
+            'authenticated',
+            'public.close_cash_session(uuid,integer,timestamp with time zone,text)',
+            'execute'
+          ) as authenticated_legacy_close_execute,
+          has_function_privilege(
+            'authenticated',
+            'public.finalize_sale_payments_transaction(uuid,uuid,jsonb,jsonb,integer,text)',
+            'execute'
+          ) as authenticated_payment_helper_execute,
+          has_table_privilege(
+            'authenticated',
+            'public.cash_session_reconciliations',
+            'select'
+          ) as authenticated_reconciliation_select,
+          not has_table_privilege(
+            'authenticated', 'public.cash_session_reconciliations', 'insert'
+          ) and not has_table_privilege(
+            'authenticated', 'public.cash_session_reconciliations', 'update'
+          ) and not has_table_privilege(
+            'authenticated', 'public.cash_session_reconciliations', 'delete'
+          ) as authenticated_reconciliation_writes_blocked,
+          coalesce((
+            select
+              pg_get_function_result(procedures.oid) = 'uuid'
+              and procedures.prosecdef
+              and procedures.proconfig = array[
+                'search_path=pg_catalog, public, pg_temp'
+              ]
+              and position(
+                'finalize_sale_payments_transaction' in
+                  pg_get_functiondef(procedures.oid)
+              ) > 0
+            from pg_catalog.pg_proc as procedures
+            where procedures.oid = to_regprocedure(
+              'public.finalize_sale_v5(uuid,uuid,jsonb,jsonb,integer)'
+            )
+          ), false) as finalize_v5_contract_matches,
+          coalesce((
+            select
+              pg_get_function_result(procedures.oid) = 'uuid'
+              and procedures.prosecdef
+              and procedures.proconfig = array[
+                'search_path=pg_catalog, public, pg_temp'
+              ]
+              and position(
+                'Sale must have one or two payment methods.' in
+                  pg_get_functiondef(procedures.oid)
+              ) > 0
+              and position(
+                'Only cash payments can exceed the sale total.' in
+                  pg_get_functiondef(procedures.oid)
+              ) > 0
+              and position(
+                'insert into public.payments' in
+                  lower(pg_get_functiondef(procedures.oid))
+              ) > 0
+            from pg_catalog.pg_proc as procedures
+            where procedures.oid = to_regprocedure(
+              'public.finalize_sale_payments_transaction(uuid,uuid,jsonb,jsonb,integer,text)'
+            )
+          ), false) as payment_helper_contract_matches,
+          coalesce((
+            select
+              pg_get_function_result(procedures.oid) = 'uuid'
+              and procedures.prosecdef
+              and procedures.proconfig = array[
+                'search_path=pg_catalog, public, pg_temp'
+              ]
+              and position(
+                'verify_admin_password' in pg_get_functiondef(procedures.oid)
+              ) > 0
+              and position(
+                'insert into public.cash_session_reconciliations' in
+                  lower(pg_get_functiondef(procedures.oid))
+              ) > 0
+            from pg_catalog.pg_proc as procedures
+            where procedures.oid = to_regprocedure(
+              'public.close_cash_session_v2(uuid,jsonb,text)'
+            )
+          ), false) as close_v2_contract_matches,
+          coalesce((
+            select
+              pg_get_function_result(procedures.oid) = 'jsonb'
+              and not procedures.prosecdef
+              and procedures.proconfig = array[
+                'search_path=pg_catalog, public, pg_temp'
+              ]
+              and position(
+                'credit_installment_summary' in
+                  pg_get_functiondef(procedures.oid)
+              ) > 0
+              and position(
+                '''reconciliations''' in pg_get_functiondef(procedures.oid)
+              ) > 0
+            from pg_catalog.pg_proc as procedures
+            where procedures.oid = to_regprocedure(
+              'public.get_store_sales_report_v2(date,date,uuid,uuid,integer,integer,integer,integer,boolean)'
+            )
+          ), false) as report_v2_contract_matches,
+          true as split_payment_contract_row
+      `,
+    }),
+  );
+  if (
+    splitPaymentContract?.payment_installment_column_count !== 1 ||
+    splitPaymentContract.finalize_v5_exists !== true ||
+    splitPaymentContract.close_v2_exists !== true ||
+    splitPaymentContract.authenticated_finalize_v5_execute !== true ||
+    splitPaymentContract.anon_finalize_v5_execute !== false ||
+    splitPaymentContract.authenticated_close_v2_execute !== true ||
+    splitPaymentContract.anon_close_v2_execute !== false ||
+    splitPaymentContract.authenticated_legacy_close_execute !== false ||
+    splitPaymentContract.authenticated_payment_helper_execute !== false ||
+    splitPaymentContract.authenticated_reconciliation_select !== true ||
+    splitPaymentContract.authenticated_reconciliation_writes_blocked !== true ||
+    splitPaymentContract.payment_installment_type_matches !== true ||
+    splitPaymentContract.payment_constraint_count !== 5 ||
+    splitPaymentContract.payment_constraints_validated !== true ||
+    splitPaymentContract.payment_constraint_definitions_match !== true ||
+    splitPaymentContract.reconciliation_constraint_count !== 5 ||
+    splitPaymentContract.reconciliation_constraints_validated !== true ||
+    splitPaymentContract.reconciliation_constraint_definitions_match !== true ||
+    splitPaymentContract.finalize_v5_contract_matches !== true ||
+    splitPaymentContract.payment_helper_contract_matches !== true ||
+    splitPaymentContract.close_v2_contract_matches !== true ||
+    splitPaymentContract.report_v2_contract_matches !== true
+  ) {
+    throw new Error(
+      `${capitalize(environment)} split payment contract is divergent.`,
+    );
+  }
+
   const authConfig = await supabase.managementClient.getAuthConfig(
     target.projectRef,
   );
@@ -321,6 +632,7 @@ export async function verifyRemoteEnvironment({
     "database-lint",
     "schema",
     "sale-discount-contract",
+    "split-payment-contract",
   ];
   if (
     environment === "production" &&
@@ -360,7 +672,8 @@ export async function verifyRemoteEnvironment({
           and tables.relkind in ('r', 'p')
           and tables.relname in (
             'profiles', 'categories', 'products', 'stock_movements',
-            'cash_sessions', 'sales', 'sale_items', 'payments'
+            'cash_sessions', 'cash_session_reconciliations',
+            'sales', 'sale_items', 'payments'
           )
       `,
     }),
@@ -418,6 +731,7 @@ export async function verifyRemoteEnvironment({
           (select count(*) from public.products) +
           (select count(*) from public.stock_movements) +
           (select count(*) from public.cash_sessions) +
+          (select count(*) from public.cash_session_reconciliations) +
           (select count(*) from public.sales) +
           (select count(*) from public.sale_items) +
           (select count(*) from public.payments)

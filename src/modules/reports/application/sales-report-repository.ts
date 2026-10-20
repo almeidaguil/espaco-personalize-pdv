@@ -1,5 +1,8 @@
 import type { CashSessionStatus } from "@/modules/cash/domain/cash-session";
-import type { PaymentMethod } from "@/modules/sales/domain/sale";
+import type {
+  InstallmentCount,
+  PaymentMethod,
+} from "@/shared/types/payment-method";
 
 export type SalesReportFilters = {
   cashSessionId?: string;
@@ -16,6 +19,19 @@ export type SalesReportPaymentSummaryItem = {
   method: PaymentMethod;
   netTotalInCents: number;
   salesCount: number;
+};
+
+export type SalesReportCreditInstallmentSummaryItem = {
+  installmentCount: InstallmentCount;
+  netTotalInCents: number;
+  salesCount: number;
+};
+
+export type SalesReportCashSessionReconciliation = {
+  countedAmountInCents: number;
+  differenceAmountInCents: number;
+  expectedAmountInCents: number;
+  method: PaymentMethod;
 };
 
 export type SalesReportProductItem = {
@@ -51,6 +67,7 @@ export type SalesReportCashSession = SalesReportCashSessionOption & {
   differenceAmountInCents: number | null;
   expectedAmountInCents: number | null;
   openingAmountInCents: number;
+  reconciliations: SalesReportCashSessionReconciliation[];
 };
 
 export type SalesReport = {
@@ -64,6 +81,7 @@ export type SalesReport = {
   completedSalesCount: number;
   completedSubtotalInCents: number;
   completedTotalInCents: number;
+  creditInstallmentSummary: SalesReportCreditInstallmentSummaryItem[];
   endDate: string;
   items: SalesReportProductItem[];
   itemsPage: number;
@@ -75,6 +93,9 @@ export type SalesReport = {
   postCloseAdjustmentPaymentSummary: SalesReportPaymentSummaryItem[];
   postCloseAdjustmentsCount: number;
   postCloseAdjustmentsTotalInCents: number;
+  reconciliationDifferenceTotalInCents: number;
+  reconciliationShortageTotalInCents: number;
+  reconciliationSurplusTotalInCents: number;
   selectedCashSessionId: string | null;
   selectedOperatorId: string | null;
   sessions: SalesReportCashSession[];

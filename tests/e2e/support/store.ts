@@ -49,36 +49,25 @@ export function finalizeSale(
   saleId: string,
   options: {
     discountInCents?: number;
-    payment?: {
+    payments?: Array<{
       amount_in_cents: number;
-      change_in_cents: number;
+      installment_count?: 1 | 2 | 3;
       method: "cash" | "credit_card" | "debit_card" | "pix";
-    };
-    version?: 3 | 4;
+    }>;
   } = {},
 ) {
-  const payment = options.payment ?? {
-    amount_in_cents: 1500,
-    change_in_cents: 0,
-    method: "cash" as const,
-  };
-  const parameters = {
+  const payments = options.payments ?? [
+    {
+      amount_in_cents: 1500,
+      method: "cash" as const,
+    },
+  ];
+
+  return client.rpc("finalize_sale_v5", {
     p_sale_id: saleId,
     p_cash_session_id: cashSessionId,
-    p_items: [{ product_id: productId, quantity: 1 }],
-    p_payment: payment,
-  };
-
-  if (options.version === 3) {
-    if ((options.discountInCents ?? 0) !== 0) {
-      throw new Error("The legacy V3 sale helper cannot apply discounts.");
-    }
-
-    return client.rpc("finalize_sale_v3", parameters);
-  }
-
-  return client.rpc("finalize_sale_v4", {
-    ...parameters,
     p_discount_in_cents: options.discountInCents ?? 0,
+    p_items: [{ product_id: productId, quantity: 1 }],
+    p_payments: payments,
   });
 }

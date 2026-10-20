@@ -8,6 +8,7 @@ import {
   getE2EUserCredentials,
 } from "./support/auth";
 import {
+  closeCashSessionV2,
   closeOwnOpenCashSession,
   openCashSessionThroughUi,
 } from "./support/cash";
@@ -64,11 +65,12 @@ test("relatorio diario consolida vendas reais e preserva filtros e totais no CSV
           randomUUID(),
           {
             discountInCents: 500,
-            payment: {
-              amount_in_cents: 1000,
-              change_in_cents: 0,
-              method: "cash",
-            },
+            payments: [
+              {
+                amount_in_cents: 1000,
+                method: "cash",
+              },
+            ],
           },
         )
       ).error,
@@ -80,7 +82,7 @@ test("relatorio diario consolida vendas reais e preserva filtros e totais no CSV
           sessionB.id,
           productB.productId,
           randomUUID(),
-          { version: 3 },
+          {},
         )
       ).error,
     ).toBeNull();
@@ -189,11 +191,12 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
           completedSaleId,
           {
             discountInCents: 500,
-            payment: {
-              amount_in_cents: 1200,
-              change_in_cents: 200,
-              method: "cash",
-            },
+            payments: [
+              {
+                amount_in_cents: 1200,
+                method: "cash",
+              },
+            ],
           },
         )
       ).error,
@@ -205,7 +208,7 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
           session.id,
           product.productId,
           canceledSaleId,
-          { version: 3 },
+          {},
         )
       ).error,
     ).toBeNull();
@@ -219,12 +222,12 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
     });
     expect(cancellation.error).toBeNull();
     // Cancel while open: it must leave revenue and cash reconciliation, not create a post-close adjustment.
-    const close = await seller.rpc("close_cash_session", {
-      p_cash_session_id: session.id,
-      p_counted_amount_in_cents: 10900,
-      p_closed_at: new Date().toISOString(),
-      p_admin_password: adminPassword,
-    });
+    const close = await closeCashSessionV2(
+      seller,
+      session.id,
+      { cash: 10900, credit_card: 0, debit_card: 0, pix: 0 },
+      adminPassword,
+    );
     expect(close.error).toBeNull();
     const { data: sales, error: saleError } = await adminClient
       .from("sales")
@@ -292,9 +295,11 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
       has: admin.page.locator("dt", { hasText: /^Receita líquida$/ }),
     });
     await expect(revenueCard.locator("dd")).toHaveText("R$ 10,00");
-    const shortageCard = admin.page
-      .locator("dl > div")
-      .filter({ has: admin.page.locator("dt", { hasText: /^Faltas$/ }) });
+    const shortageCard = admin.page.locator("dl > div").filter({
+      has: admin.page.locator("dt", {
+        hasText: /^Faltas em todos os métodos$/,
+      }),
+    });
     await expect(shortageCard.locator("dd")).toHaveText("R$ 1,00");
     const differenceCard = admin.page.locator("dl > div").filter({
       has: admin.page.locator("dt", { hasText: /^Diferença líquida$/ }),
@@ -330,6 +335,153 @@ test("relatorio exclui venda cancelada da receita e exporta a divergencia do cai
   }
 });
 
+test("relatorio preserva total unico, pagamentos divididos, parcelas e reconciliacoes", async ({
+  browser,
+}) => {
+  test.setTimeout(120000);
+  const admin = await createAuthenticatedPage(browser, "admin");
+  const operator = await createAuthenticatedPage(browser, "operatorA");
+  try {
+    const seller = await createAuthenticatedSupabaseClient("operatorA");
+    const adminClient = await createAuthenticatedSupabaseClient("admin");
+    const product = await createTestProductWithStock(admin.page, 3);
+    const session = await openCashSessionThroughUi(operator.page, "operatorA");
+    const splitSaleId = randomUUID();
+    const installmentSaleId = randomUUID();
+    const canceledSaleId = randomUUID();
+
+    expect(
+      (
+        await finalizeSale(seller, session.id, product.productId, splitSaleId, {
+          payments: [
+            { amount_in_cents: 1000, method: "cash" },
+            { amount_in_cents: 500, method: "pix" },
+          ],
+        })
+      ).error,
+    ).toBeNull();
+    expect(
+      (
+        await finalizeSale(
+          seller,
+          session.id,
+          product.productId,
+          installmentSaleId,
+          {
+            payments: [
+              {
+                amount_in_cents: 1500,
+                installment_count: 3,
+                method: "credit_card",
+              },
+            ],
+          },
+        )
+      ).error,
+    ).toBeNull();
+    expect(
+      (
+        await finalizeSale(
+          seller,
+          session.id,
+          product.productId,
+          canceledSaleId,
+          { payments: [{ amount_in_cents: 1500, method: "debit_card" }] },
+        )
+      ).error,
+    ).toBeNull();
+
+    expect(
+      (
+        await closeCashSessionV2(seller, session.id, {
+          cash: 11000,
+          credit_card: 1500,
+          debit_card: 1500,
+          pix: 500,
+        })
+      ).error,
+    ).toBeNull();
+    expect(
+      (
+        await adminClient.rpc("cancel_sale", {
+          p_admin_password: getE2EUserCredentials("admin").password,
+          p_canceled_at: new Date().toISOString(),
+          p_sale_id: canceledSaleId,
+        })
+      ).error,
+    ).toBeNull();
+
+    const date = new Intl.DateTimeFormat("sv-SE", {
+      timeZone: "America/Sao_Paulo",
+    }).format(new Date(session.opened_at));
+    const query = `startDate=${date}&endDate=${date}&cashSessionId=${session.id}`;
+    const summary = await readAndAssertReport(admin.page, query);
+    expect(summary).toEqual({
+      count: 3,
+      discount: 0,
+      subtotal: 4500,
+      total: 4500,
+    });
+
+    await expect(
+      admin.page.getByText(
+        "Uma venda dividida aparece em cada método utilizado; por isso, estas contagens não devem ser somadas.",
+      ),
+    ).toBeVisible();
+    await expect(
+      reportCard(admin.page, "Resumo por pagamento", "Dinheiro").locator("dd"),
+    ).toHaveText("R$ 10,00 · 1 venda");
+    await expect(
+      reportCard(admin.page, "Resumo por pagamento", "Pix").locator("dd"),
+    ).toHaveText("R$ 5,00 · 1 venda");
+    await expect(
+      reportCard(
+        admin.page,
+        "Resumo por pagamento",
+        "Cartão de crédito",
+      ).locator("dd"),
+    ).toHaveText("R$ 15,00 · 1 venda");
+    await expect(
+      reportCard(
+        admin.page,
+        "Resumo por pagamento",
+        "Cartão de débito",
+      ).locator("dd"),
+    ).toHaveText("R$ 15,00 · 1 venda");
+    await expect(
+      reportCard(admin.page, "Crédito por parcelas", "3x").locator("dd"),
+    ).toHaveText("R$ 15,00 · 1 venda");
+    await expect(admin.page.getByText("Conferência por método")).toBeVisible();
+    await expect(admin.page.getByText("4 métodos conferidos")).toBeVisible();
+    await expect(admin.page.getByText("Esperado: R$ 110,00")).toBeVisible();
+    await expect(admin.page.getByText("Esperado: R$ 5,00")).toBeVisible();
+    await expect(admin.page.getByText("Esperado: R$ 15,00")).toHaveCount(2);
+    await expect(
+      admin.page.getByText("Cancelamentos após fechamento"),
+    ).toBeVisible();
+    await expect(
+      reportCard(
+        admin.page,
+        "Cancelamentos após fechamento",
+        "Cartão de débito",
+      ).locator("dd"),
+    ).toHaveText("R$ 15,00 · 1 ajuste");
+
+    const csv = await exportCsv(admin.page);
+    expect(csv).toContain("Resumo;vendas_liquidas;Vendas líquidas;3;45,00");
+    expect(csv).toContain("Pagamento;cash;Dinheiro;1;10,00");
+    expect(csv).toContain("Pagamento;pix;Pix;1;5,00");
+    expect(csv).toContain("Parcela de crédito;3;Crédito 3x;1;15,00");
+    expect(csv.match(/Reconciliação;/g)).toHaveLength(4);
+    expect(csv).toContain(
+      "Ajuste pós-fechamento;debit_card;Cartão de débito;1;15,00",
+    );
+  } finally {
+    await admin.context.close();
+    await operator.context.close();
+  }
+});
+
 async function exportCsv(page: Page) {
   const href = await page
     .getByRole("link", { name: "Exportar CSV" })
@@ -339,6 +491,15 @@ async function exportCsv(page: Page) {
   expect(response.status()).toBe(200);
   expect(response.headers()["cache-control"]).toBe("private, no-store");
   return response.text();
+}
+
+function reportCard(page: Page, heading: string, label: string) {
+  const panel = page
+    .getByRole("heading", { name: heading, exact: true })
+    .locator("xpath=ancestor::section[1]");
+  return panel.locator("dl > div").filter({
+    has: page.locator("dt", { hasText: new RegExp(`^${label}$`) }),
+  });
 }
 
 async function readAndAssertReport(page: Page, query: string) {

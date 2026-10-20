@@ -4,6 +4,7 @@ import type { CurrentUserProfileRepository } from "@/modules/auth/application/cu
 
 import type {
   CashSessionRepository,
+  CloseCashSessionPersistenceInput,
   FindOpenCashSessionResult,
   SaveCashSessionResult,
 } from "../application/cash-session-repository";
@@ -11,8 +12,7 @@ import type { CashSession } from "../domain/cash-session";
 import { closeCashSessionActionService } from "./close-cash-session-action-service";
 
 class FakeCashSessionRepository implements CashSessionRepository {
-  public updatedSession?: CashSession;
-  public updateOptions?: { adminPassword?: string };
+  public closeInput?: CloseCashSessionPersistenceInput;
 
   constructor(
     private readonly findResult: FindOpenCashSessionResult = {
@@ -48,15 +48,17 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async update(
-    session: CashSession,
-    options?: { adminPassword?: string },
+  async close(
+    input: CloseCashSessionPersistenceInput,
   ): Promise<SaveCashSessionResult> {
-    this.updateOptions = options;
-    this.updatedSession = session;
+    this.closeInput = input;
 
     return {
-      session,
+      session: {
+        ...createCashSession(),
+        closedAt: new Date("2026-07-10T18:00:00.000Z"),
+        status: "closed",
+      },
       success: true,
     };
   }
@@ -70,7 +72,7 @@ describe("closeCashSessionActionService", () => {
       {},
       createFormData({
         cashSessionId: "cash-session-1",
-        countedAmountInReais: "260,75",
+        countedAmounts: ["260,75", "100,00", "200,00", "50,00"],
         adminPassword: "admin-password-test",
       }),
       {
@@ -83,15 +85,15 @@ describe("closeCashSessionActionService", () => {
     expect(result).toEqual({
       successMessage: "Caixa fechado com sucesso.",
     });
-    expect(cashSessionRepository.updatedSession).toMatchObject({
-      closedAt: new Date("2026-07-10T18:00:00.000Z"),
-      id: "cash-session-1",
-      countedAmountInReais: 260.75,
-      operatorId: "operator-1",
-      status: "closed",
-    });
-    expect(cashSessionRepository.updateOptions).toEqual({
+    expect(cashSessionRepository.closeInput).toEqual({
       adminPassword: "admin-password-test",
+      cashSessionId: "cash-session-1",
+      reconciliations: [
+        { countedAmountInCents: 26075, method: "cash" },
+        { countedAmountInCents: 10000, method: "pix" },
+        { countedAmountInCents: 20000, method: "credit_card" },
+        { countedAmountInCents: 5000, method: "debit_card" },
+      ],
     });
   });
 
@@ -100,7 +102,7 @@ describe("closeCashSessionActionService", () => {
       {},
       createFormData({
         cashSessionId: "",
-        countedAmountInReais: "",
+        countedAmounts: ["", "", "", ""],
       }),
       {
         cashSessionRepository: new FakeCashSessionRepository(),
@@ -112,7 +114,8 @@ describe("closeCashSessionActionService", () => {
     expect(result).toEqual({
       fieldErrors: {
         cashSessionId: "Informe o caixa aberto.",
-        countedAmountInReais: "Informe o valor contado em Reais.",
+        reconciliations:
+          "Informe a conferencia dos quatro metodos de pagamento.",
       },
       formError: undefined,
     });
@@ -123,7 +126,7 @@ describe("closeCashSessionActionService", () => {
       {},
       createFormData({
         cashSessionId: "cash-session-1",
-        countedAmountInReais: "260,75",
+        countedAmounts: ["260,75", "100,00", "200,00", "50,00"],
       }),
       {
         cashSessionRepository: new FakeCashSessionRepository({
@@ -157,14 +160,17 @@ function createCurrentUserProfileRepository(): CurrentUserProfileRepository {
 function createFormData(input: {
   adminPassword?: string;
   cashSessionId: string;
-  countedAmountInReais: string;
+  countedAmounts: [string, string, string, string];
 }): FormData {
   const formData = new FormData();
   if (input.adminPassword) {
     formData.set("adminPassword", input.adminPassword);
   }
   formData.set("cashSessionId", input.cashSessionId);
-  formData.set("countedAmountInReais", input.countedAmountInReais);
+  formData.set("countedAmount_cash", input.countedAmounts[0]);
+  formData.set("countedAmount_pix", input.countedAmounts[1]);
+  formData.set("countedAmount_credit_card", input.countedAmounts[2]);
+  formData.set("countedAmount_debit_card", input.countedAmounts[3]);
 
   return formData;
 }

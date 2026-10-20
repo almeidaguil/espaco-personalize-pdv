@@ -26,6 +26,13 @@ describe("listSalesUseCase", () => {
           businessDate: "2026-07-10",
           cashSessionOpenedAt: new Date("2026-07-10T11:00:00Z"),
           id: "sale-1",
+          payments: [
+            {
+              amountInCents: 3000,
+              changeInCents: 0,
+              method: "cash" as const,
+            },
+          ],
           status: "completed" as const,
           subtotalInCents: 3000,
           discountInCents: 0,

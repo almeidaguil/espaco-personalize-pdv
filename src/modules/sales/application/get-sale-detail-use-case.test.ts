@@ -30,11 +30,13 @@ describe("getSaleDetailUseCase", () => {
         cashSessionOpenedAt: new Date("2026-07-10T11:00:00Z"),
         id: "sale-1",
         items: [],
-        payment: {
-          amountInCents: 5000,
-          changeInCents: 2000,
-          method: "cash",
-        },
+        payments: [
+          {
+            amountInCents: 5000,
+            changeInCents: 2000,
+            method: "cash",
+          },
+        ],
         status: "completed",
         subtotalInCents: 3000,
         discountInCents: 0,

@@ -4,13 +4,15 @@ import { useActionState, useCallback, useMemo, useState } from "react";
 
 import { InlineFeedback } from "@/shared/components/inline-feedback";
 import { Panel } from "@/shared/components/panel";
-import {
-  formatBrlCentsForInput,
-  parseBrlCurrencyToCents,
-} from "@/shared/utils/brl-currency";
+import { parseBrlCurrencyToCents } from "@/shared/utils/brl-currency";
 
-import type { PaymentMethod } from "../domain/sale";
 import { CartItems } from "./cart-items";
+import {
+  normalizePaymentDraftsForTotal,
+  type PaymentDraft,
+  summarizePaymentDrafts,
+} from "./pdv-payment";
+import { PdvPaymentSection } from "./pdv-payment-section";
 import { ProductPicker } from "./product-picker";
 import type { SaleActionState } from "./sale-action-state";
 
@@ -39,22 +41,15 @@ const moneyFormatter = new Intl.NumberFormat("pt-BR", {
   style: "currency",
 });
 
-const paymentMethodLabels: Record<PaymentMethod, string> = {
-  cash: "Dinheiro",
-  credit_card: "Cartão de crédito",
-  debit_card: "Cartão de débito",
-  pix: "Pix",
-};
-
 export function PdvCart({ action, products }: PdvCartProps) {
   const [items, setItems] = useState<PdvCartItem[]>([]);
   const [productSearchTerm, setProductSearchTerm] = useState("");
   const [productPage, setProductPage] = useState(1);
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("cash");
-
   const [discountInput, setDiscountInput] = useState("");
-  const [receivedAmountInput, setReceivedAmountInput] = useState("");
+  const [paymentDrafts, setPaymentDrafts] = useState<PaymentDraft[]>([
+    createInitialPaymentDraft(),
+  ]);
 
   const submitSale = useCallback(
     async (previousState: SaleActionState, formData: FormData) => {
@@ -64,9 +59,8 @@ export function PdvCart({ action, products }: PdvCartProps) {
         setItems([]);
         setProductSearchTerm("");
         setProductPage(1);
-        setPaymentMethod("cash");
         setDiscountInput("");
-        setReceivedAmountInput("");
+        setPaymentDrafts([createInitialPaymentDraft()]);
       }
 
       return nextState;
@@ -107,29 +101,20 @@ export function PdvCart({ action, products }: PdvCartProps) {
     (item) => item.quantityOnHand > 0 && item.quantity <= item.quantityOnHand,
   );
 
-  const effectiveReceivedAmountInput =
-    paymentMethod === "cash"
-      ? receivedAmountInput
-      : totalInCents > 0
-        ? formatBrlCentsForInput(totalInCents)
-        : "";
-
-  const receivedAmountInCents = parseBrlCurrencyToCents(
-    effectiveReceivedAmountInput,
+  const normalizedPaymentDrafts = normalizePaymentDraftsForTotal(
+    paymentDrafts,
+    totalInCents,
   );
-
-  const paymentDifferenceInCents = receivedAmountInCents - totalInCents;
-
-  const hasValidReceivedAmount = Number.isSafeInteger(receivedAmountInCents);
+  const paymentSummary = summarizePaymentDrafts(
+    normalizedPaymentDrafts,
+    totalInCents,
+  );
 
   const canSubmit =
     hasCartItems &&
     !discountError &&
-    hasValidReceivedAmount &&
     hasAvailableStockForItems &&
-    (paymentMethod === "cash"
-      ? paymentDifferenceInCents >= 0
-      : paymentDifferenceInCents === 0) &&
+    paymentSummary.isValid &&
     !isPending;
 
   return (
@@ -140,7 +125,11 @@ export function PdvCart({ action, products }: PdvCartProps) {
         value={JSON.stringify(toSaleItems(items))}
       />
 
-      <input name="paymentMethod" type="hidden" value={paymentMethod} />
+      <input
+        name="paymentsJson"
+        type="hidden"
+        value={JSON.stringify(toSalePayments(normalizedPaymentDrafts))}
+      />
 
       <div>
         <p className="text-xs font-bold uppercase tracking-[0.16em] text-[var(--brand-accent-foreground)]">
@@ -211,127 +200,12 @@ export function PdvCart({ action, products }: PdvCartProps) {
           ) : null}
         </div>
 
-        <div className="grid gap-2">
-          <p
-            className="text-sm font-semibold text-[var(--brand-foreground)]"
-            id="paymentMethod"
-          >
-            Forma de pagamento
-          </p>
-
-          <div
-            aria-labelledby="paymentMethod"
-            className="grid grid-cols-2 gap-2"
-            role="group"
-          >
-            {(
-              Object.entries(paymentMethodLabels) as Array<
-                [PaymentMethod, string]
-              >
-            ).map(([value, label]) => (
-              <button
-                aria-pressed={paymentMethod === value}
-                className={
-                  paymentMethod === value
-                    ? "min-h-11 rounded-xl border border-[var(--brand-accent)] bg-[var(--brand-accent)] px-3 text-sm font-bold text-[var(--brand-primary)] shadow-sm transition"
-                    : "min-h-11 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
-                }
-                key={value}
-                onClick={() => setPaymentMethod(value)}
-                type="button"
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid gap-2">
-          <label
-            className="text-sm font-semibold text-[var(--brand-foreground)]"
-            htmlFor="receivedAmount"
-          >
-            {paymentMethod === "cash" ? "Valor recebido" : "Valor do pagamento"}
-          </label>
-
-          <input
-            className="h-12 rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition placeholder:text-neutral-400 focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15 read-only:bg-neutral-100"
-            id="receivedAmount"
-            inputMode="decimal"
-            name="amountReceivedInReais"
-            onChange={(event) => setReceivedAmountInput(event.target.value)}
-            placeholder={paymentMethod === "cash" ? "50,00" : "Total da venda"}
-            readOnly={paymentMethod !== "cash"}
-            type="text"
-            value={effectiveReceivedAmountInput}
-          />
-
-          {paymentMethod !== "cash" ? (
-            <p className="text-xs leading-5 text-[var(--brand-muted)]">
-              Para {paymentMethodLabels[paymentMethod].toLowerCase()}, o sistema
-              registra o valor exato da venda.
-            </p>
-          ) : null}
-
-          {paymentMethod === "cash" && hasCartItems ? (
-            <div className="flex flex-wrap gap-2">
-              <button
-                className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
-                onClick={() =>
-                  setReceivedAmountInput(formatBrlCentsForInput(totalInCents))
-                }
-                type="button"
-              >
-                Valor exato
-              </button>
-
-              {[5_000, 10_000].map((amountInCents) => (
-                <button
-                  className="min-h-10 rounded-xl border border-[var(--border)] bg-white px-3 text-sm font-semibold text-[var(--brand-foreground)] transition hover:border-[var(--brand-accent)] hover:text-[var(--brand-accent-foreground)]"
-                  key={amountInCents}
-                  onClick={() =>
-                    setReceivedAmountInput(
-                      formatBrlCentsForInput(amountInCents),
-                    )
-                  }
-                  type="button"
-                >
-                  {moneyFormatter.format(amountInCents / 100)}
-                </button>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="rounded-xl border border-[var(--border)] bg-white px-4 py-3">
-          {!hasCartItems ? (
-            <p className="text-sm text-[var(--brand-muted)]">
-              Adicione itens para calcular o pagamento.
-            </p>
-          ) : !hasAvailableStockForItems ? (
-            <p className="text-sm font-semibold text-red-700">
-              Ajuste o carrinho para respeitar o estoque disponível.
-            </p>
-          ) : paymentMethod !== "cash" ? (
-            <p className="text-sm font-semibold text-[var(--brand-foreground)]">
-              {paymentMethodLabels[paymentMethod]} no valor de{" "}
-              {moneyFormatter.format(totalInCents / 100)}
-            </p>
-          ) : !hasValidReceivedAmount ? (
-            <p className="text-sm text-[var(--brand-muted)]">
-              Informe o valor recebido para calcular o troco.
-            </p>
-          ) : paymentDifferenceInCents < 0 ? (
-            <p className="text-sm font-semibold text-red-700">
-              Falta{" "}
-              {moneyFormatter.format(Math.abs(paymentDifferenceInCents) / 100)}
-            </p>
-          ) : (
-            <p className="text-sm font-semibold text-emerald-700">
-              Troco {moneyFormatter.format(paymentDifferenceInCents / 100)}
-            </p>
-          )}
-        </div>
+        <PdvPaymentSection
+          drafts={normalizedPaymentDrafts}
+          errorMessage={state.fieldErrors?.payments}
+          onChange={setPaymentDrafts}
+          totalInCents={totalInCents}
+        />
 
         {state.successMessage ? (
           <InlineFeedback className="py-3 font-semibold" tone="success">
@@ -439,6 +313,25 @@ function toSaleItems(items: PdvCartItem[]) {
     productId: item.id,
     quantity: item.quantity,
   }));
+}
+
+function createInitialPaymentDraft(): PaymentDraft {
+  return { amountInput: "", method: "cash" };
+}
+
+function toSalePayments(drafts: PaymentDraft[]) {
+  return drafts.map((draft) =>
+    draft.method === "credit_card"
+      ? {
+          amountInReais: draft.amountInput,
+          installmentCount: draft.installmentCount,
+          method: draft.method,
+        }
+      : {
+          amountInReais: draft.amountInput,
+          method: draft.method,
+        },
+  );
 }
 
 function getDiscountError(

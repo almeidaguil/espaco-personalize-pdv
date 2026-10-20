@@ -71,9 +71,9 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async update(session: CashSession): Promise<SaveCashSessionResult> {
+  async close(): Promise<SaveCashSessionResult> {
     return {
-      session,
+      session: createCashSession(),
       success: true,
     };
   }
@@ -165,18 +165,22 @@ describe("createSaleActionService", () => {
           unitPriceInCents: 1500,
         },
       ],
-      payment: {
-        amountInCents: 5000,
-        changeInCents: 2000,
-      },
+      payments: [
+        {
+          amountInCents: 5000,
+          changeInCents: 2000,
+        },
+      ],
     });
   });
 
   it("creates a pix sale with exact payment and zero change", async () => {
     const saleRepository = new FakeSaleRepository();
     const formData = createFormData();
-    formData.set("paymentMethod", "pix");
-    formData.set("amountReceivedInReais", "30,00");
+    formData.set(
+      "paymentsJson",
+      JSON.stringify([{ amountInReais: "30,00", method: "pix" }]),
+    );
 
     const result = await createSaleActionService({}, formData, {
       cashSessionRepository: new FakeCashSessionRepository(),
@@ -191,11 +195,13 @@ describe("createSaleActionService", () => {
     expect(result).toEqual({
       successMessage: "Venda finalizada com sucesso.",
     });
-    expect(saleRepository.savedSale?.payment).toEqual({
-      amountInCents: 3000,
-      changeInCents: 0,
-      method: "pix",
-    });
+    expect(saleRepository.savedSale?.payments).toEqual([
+      {
+        amountInCents: 3000,
+        changeInCents: 0,
+        method: "pix",
+      },
+    ]);
   });
 
   it("creates a discounted sale from BRL form fields", async () => {
@@ -218,7 +224,7 @@ describe("createSaleActionService", () => {
       discountInCents: 500,
       subtotalInCents: 3000,
       totalInCents: 2500,
-      payment: { amountInCents: 5000, changeInCents: 2500 },
+      payments: [{ amountInCents: 5000, changeInCents: 2500 }],
     });
   });
 
@@ -235,8 +241,9 @@ describe("createSaleActionService", () => {
 
     expect(result).toEqual({
       fieldErrors: {
+        discountInCents: undefined,
         items: "Adicione pelo menos um item.",
-        payment: "Invalid input: expected number, received NaN",
+        payments: "Informe ao menos uma forma de pagamento.",
       },
       formError: undefined,
     });
@@ -296,8 +303,10 @@ function createFormData(): FormData {
       },
     ]),
   );
-  formData.set("amountReceivedInReais", "50,00");
-  formData.set("paymentMethod", "cash");
+  formData.set(
+    "paymentsJson",
+    JSON.stringify([{ amountInReais: "50,00", method: "cash" }]),
+  );
 
   return formData;
 }

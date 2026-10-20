@@ -9,9 +9,25 @@ export function parseCloseCashSessionFormData(
   return {
     ...(adminPassword ? { adminPassword } : {}),
     cashSessionId: getTrimmedString(formData, "cashSessionId"),
-    countedAmountInReais: parseBrlCurrencyInput(
-      getTrimmedString(formData, "countedAmountInReais"),
-    ),
+    reconciliations: [
+      reconciliation(formData, "cash"),
+      reconciliation(formData, "pix"),
+      reconciliation(formData, "credit_card"),
+      reconciliation(formData, "debit_card"),
+    ],
+  };
+}
+
+function reconciliation(
+  formData: FormData,
+  method: "cash" | "credit_card" | "debit_card" | "pix",
+) {
+  return {
+    countedAmountInCents:
+      parseBrlCurrencyInput(
+        getTrimmedString(formData, `countedAmount_${method}`),
+      ) * 100,
+    method,
   };
 }
 

@@ -1,11 +1,13 @@
+import type { PaymentMethod } from "@/shared/types/payment-method";
+
 export type CashSessionClosingSummary = {
   canceledSalesCount: number;
-  canceledSalesTotalInReais: number;
+  canceledSalesTotalInCents: number;
   cashSessionId: string;
   completedSalesCount: number;
-  completedSalesTotalInReais: number;
-  expectedAmountInReais: number;
-  openingAmountInReais: number;
+  completedSalesTotalInCents: number;
+  expectedByMethodInCents: Record<PaymentMethod, number>;
+  openingAmountInCents: number;
 };
 
 export type ListCashSessionClosingSummariesResult =

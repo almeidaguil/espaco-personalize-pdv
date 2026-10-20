@@ -1,4 +1,21 @@
+import {
+  paymentMethods,
+  type PaymentMethod,
+} from "@/shared/types/payment-method";
+
 export type CashSessionStatus = "closed" | "open";
+
+export type CashSessionReconciliation = {
+  countedAmountInCents: number;
+  differenceAmountInCents: number;
+  expectedAmountInCents: number;
+  method: PaymentMethod;
+};
+
+export type CashSessionReconciliationInput = Pick<
+  CashSessionReconciliation,
+  "countedAmountInCents" | "method"
+>;
 
 export type CashSession = {
   closedAt?: Date;
@@ -10,6 +27,7 @@ export type CashSession = {
   openedAt: Date;
   openingAmountInReais: number;
   operatorId: string;
+  reconciliations?: CashSessionReconciliation[];
   status: CashSessionStatus;
 };
 
@@ -20,21 +38,13 @@ export type OpenCashSessionInput = {
   operatorId: string;
 };
 
-export type CloseCashSessionInput = {
-  closedAt: Date;
-  countedAmountInReais: number;
-  session: CashSession;
-};
-
 export type CashSessionValidationError = {
   field:
-    | "closedAt"
-    | "countedAmountInReais"
     | "id"
     | "openedAt"
     | "openingAmountInReais"
     | "operatorId"
-    | "status";
+    | "reconciliations";
   message: string;
 };
 
@@ -48,9 +58,9 @@ export type OpenCashSessionResult =
       success: false;
     };
 
-export type CloseCashSessionResult =
+export type ValidateCashSessionReconciliationsResult =
   | {
-      session: CashSession;
+      reconciliations: CashSessionReconciliationInput[];
       success: true;
     }
   | {
@@ -129,76 +139,36 @@ export function openCashSession(
   };
 }
 
-export function closeCashSession(
-  input: CloseCashSessionInput,
-): CloseCashSessionResult {
-  const errors: CashSessionValidationError[] = [];
+export function validateCashSessionReconciliations(
+  reconciliations: CashSessionReconciliationInput[],
+): ValidateCashSessionReconciliationsResult {
+  const methods = reconciliations.map(
+    (reconciliation) => reconciliation.method,
+  );
+  const hasEveryMethodExactlyOnce =
+    reconciliations.length === paymentMethods.length &&
+    new Set(methods).size === paymentMethods.length &&
+    paymentMethods.every((method) => methods.includes(method));
+  const hasValidAmounts = reconciliations.every(
+    (reconciliation) =>
+      Number.isSafeInteger(reconciliation.countedAmountInCents) &&
+      reconciliation.countedAmountInCents >= 0,
+  );
 
-  if (input.session.status !== "open") {
-    errors.push({
-      field: "status",
-      message: "Only open cash sessions can be closed.",
-    });
-  }
-
-  if (!isValidDate(input.closedAt)) {
-    errors.push({
-      field: "closedAt",
-      message: "Cash session close date must be valid.",
-    });
-  }
-
-  if (!Number.isFinite(input.countedAmountInReais)) {
-    errors.push({
-      field: "countedAmountInReais",
-      message: "Counted amount must be a valid BRL amount.",
-    });
-  }
-
-  if (input.countedAmountInReais < 0) {
-    errors.push({
-      field: "countedAmountInReais",
-      message: "Counted amount cannot be negative.",
-    });
-  }
-
-  if (
-    Number.isFinite(input.countedAmountInReais) &&
-    !hasBrlPrecision(input.countedAmountInReais)
-  ) {
-    errors.push({
-      field: "countedAmountInReais",
-      message: "Counted amount can have at most 2 decimal places.",
-    });
-  }
-
-  if (
-    isValidDate(input.closedAt) &&
-    isValidDate(input.session.openedAt) &&
-    input.closedAt <= input.session.openedAt
-  ) {
-    errors.push({
-      field: "closedAt",
-      message: "Cash session close date must be after open date.",
-    });
-  }
-
-  if (errors.length > 0) {
+  if (!hasEveryMethodExactlyOnce || !hasValidAmounts) {
     return {
-      errors,
+      errors: [
+        {
+          field: "reconciliations",
+          message:
+            "Cash session must reconcile every payment method exactly once with a non-negative safe integer.",
+        },
+      ],
       success: false,
     };
   }
 
-  return {
-    session: {
-      ...input.session,
-      closedAt: input.closedAt,
-      countedAmountInReais: input.countedAmountInReais,
-      status: "closed",
-    },
-    success: true,
-  };
+  return { reconciliations, success: true };
 }
 
 function isValidDate(value: Date): boolean {

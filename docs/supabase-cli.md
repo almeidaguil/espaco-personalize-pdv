@@ -23,10 +23,12 @@ O arquivo `.env.local` nao deve ser versionado.
 
 ## Projetos Remotos
 
-| Ambiente | Project ref            |
-| -------- | ---------------------- |
-| Staging  | `gpywbeoqcovjrfnmbdqx` |
-| Producao | `ciixpfquwmlsvzleattv` |
+| Ambiente                     | Project ref            | Estado                                  |
+| ---------------------------- | ---------------------- | --------------------------------------- |
+| Staging Roberto Multimarcas  | `otsxpchqtfypxgzjzrxs` | ativo; promoções coordenadas            |
+| Staging legado               | `gpywbeoqcovjrfnmbdqx` | pausado; não usar para novas validações |
+| Produção legada              | `ciixpfquwmlsvzleattv` | preservada; não alterar                 |
+| Produção Roberto Multimarcas | `wjuzwjbvctbyfvgmprmd` | reservada; release PR09 pendente        |
 
 Nunca compartilhe banco, usuarios ou chaves entre os dois ambientes.
 
@@ -40,6 +42,11 @@ npx supabase link --project-ref PROJECT_REF_CONFIRMADO
 Nao versionar tokens, senha do banco, service role key ou arquivos locais criados pelo link.
 Confirme o project ref antes de qualquer comando remoto e nunca execute
 `db reset` fora do ambiente local.
+
+Para promover migrations em staging, use o fluxo versionado
+[Promoção para staging](vercel-cli.md#promover-uma-vers%C3%A3o-para-staging).
+Não execute `supabase db push` diretamente contra os ambientes remotos: o fluxo
+limita cada fase ao bundle de migrations aprovado e valida o projeto de destino.
 
 ## Comandos Uteis
 

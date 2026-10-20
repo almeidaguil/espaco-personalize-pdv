@@ -4,6 +4,7 @@ import { StatusBadge } from "@/shared/components/status-badge";
 import { EmptyState } from "@/shared/components/status-state";
 import type { SaleSummary } from "../application/sale-summary-repository";
 import type { SalesHistoryFilters } from "../application/sales-history-repository";
+import type { Payment } from "../domain/sale";
 
 const moneyFormatter = new Intl.NumberFormat("pt-BR", {
   currency: "BRL",
@@ -72,6 +73,14 @@ export function SalesList({
                   <p className="mt-1 text-sm text-[var(--brand-muted)]">
                     Venda em {dateFormatter.format(sale.completedAt)}
                   </p>
+                  <p className="mt-1 text-sm text-[var(--brand-muted)]">
+                    Pagamentos:{" "}
+                    <strong className="text-[var(--brand-foreground)]">
+                      {sale.payments
+                        .map((payment) => formatPaymentMethod(payment.method))
+                        .join(" + ")}
+                    </strong>
+                  </p>
                   <dl className="mt-3 grid max-w-sm gap-1.5">
                     <FinancialRow
                       label="Subtotal"
@@ -126,6 +135,17 @@ export function SalesList({
       </nav>
     </section>
   );
+}
+
+function formatPaymentMethod(method: Payment["method"]): string {
+  const labels = {
+    cash: "Dinheiro",
+    credit_card: "Cartão de crédito",
+    debit_card: "Cartão de débito",
+    pix: "Pix",
+  } as const;
+
+  return labels[method];
 }
 
 function FinancialRow({

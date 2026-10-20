@@ -3,6 +3,10 @@ import type {
   SaleRepository,
 } from "../application/sale-repository";
 import type { Sale } from "../domain/sale";
+import type {
+  InstallmentCount,
+  PaymentMethod,
+} from "@/shared/types/payment-method";
 
 type FinalizeSaleItemPayload = {
   product_id: string;
@@ -11,15 +15,15 @@ type FinalizeSaleItemPayload = {
 
 type FinalizeSalePaymentPayload = {
   amount_in_cents: number;
-  change_in_cents: number;
-  method: Sale["payment"]["method"];
+  installment_count?: InstallmentCount;
+  method: PaymentMethod;
 };
 
-type FinalizeSaleV4Args = {
+type FinalizeSaleV5Args = {
   p_cash_session_id: string;
   p_discount_in_cents: number;
   p_items: FinalizeSaleItemPayload[];
-  p_payment: FinalizeSalePaymentPayload;
+  p_payments: FinalizeSalePaymentPayload[];
   p_sale_id: string;
 };
 
@@ -35,8 +39,8 @@ type SupabaseRpcResult = PromiseLike<{
 
 export type SupabaseSaleClient = {
   rpc(
-    functionName: "finalize_sale_v4",
-    args: FinalizeSaleV4Args,
+    functionName: "finalize_sale_v5",
+    args: FinalizeSaleV5Args,
   ): SupabaseRpcResult;
 };
 
@@ -45,8 +49,8 @@ export class SupabaseSaleRepository implements SaleRepository {
 
   async save(sale: Sale): Promise<SaveSaleResult> {
     const result = await this.supabaseClient.rpc(
-      "finalize_sale_v4",
-      toFinalizeSaleV4Args(sale),
+      "finalize_sale_v5",
+      toFinalizeSaleV5Args(sale),
     );
 
     if (result.error || result.data !== sale.id) {
@@ -65,7 +69,7 @@ export class SupabaseSaleRepository implements SaleRepository {
   }
 }
 
-function toFinalizeSaleV4Args(sale: Sale): FinalizeSaleV4Args {
+function toFinalizeSaleV5Args(sale: Sale): FinalizeSaleV5Args {
   return {
     p_cash_session_id: sale.cashSessionId,
     p_discount_in_cents: sale.discountInCents,
@@ -73,11 +77,18 @@ function toFinalizeSaleV4Args(sale: Sale): FinalizeSaleV4Args {
       product_id: item.productId,
       quantity: item.quantity,
     })),
-    p_payment: {
-      amount_in_cents: sale.payment.amountInCents,
-      change_in_cents: sale.payment.changeInCents,
-      method: sale.payment.method,
-    },
+    p_payments: sale.payments.map((payment) =>
+      payment.method === "credit_card"
+        ? {
+            amount_in_cents: payment.amountInCents,
+            installment_count: payment.installmentCount,
+            method: payment.method,
+          }
+        : {
+            amount_in_cents: payment.amountInCents,
+            method: payment.method,
+          },
+    ),
     p_sale_id: sale.id,
   };
 }

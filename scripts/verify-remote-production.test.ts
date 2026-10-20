@@ -280,6 +280,7 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
     "products",
     "stock_movements",
     "cash_sessions",
+    "cash_session_reconciliations",
     "sales",
     "sale_items",
     "payments",
@@ -287,8 +288,10 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
   const rpcs = [
     "open_cash_session_v3",
     "close_cash_session",
+    "close_cash_session_v2",
     "finalize_sale_v3",
     "finalize_sale_v4",
+    "finalize_sale_v5",
     "cancel_sale",
     "get_store_sales_report_v2",
   ];
@@ -314,9 +317,9 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
       if (query.includes("pg_catalog.pg_class"))
         return [
           {
-            table_count: 8,
-            rls_enabled_table_count: 8,
-            tables_with_policies_count: 8,
+            table_count: 9,
+            rls_enabled_table_count: 9,
+            tables_with_policies_count: 9,
           },
         ];
       if (query.includes("policy_contract_row")) return requiredPolicyContract;
@@ -327,6 +330,33 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
             authenticated_finalize_v3_execute: true,
             authenticated_finalize_v4_execute: true,
             sales_financial_column_count: 3,
+          },
+        ];
+      if (query.includes("split_payment_contract_row"))
+        return [
+          {
+            anon_close_v2_execute: false,
+            anon_finalize_v5_execute: false,
+            authenticated_close_v2_execute: true,
+            authenticated_finalize_v5_execute: true,
+            authenticated_legacy_close_execute: false,
+            authenticated_payment_helper_execute: false,
+            authenticated_reconciliation_select: true,
+            authenticated_reconciliation_writes_blocked: true,
+            close_v2_contract_matches: true,
+            close_v2_exists: true,
+            finalize_v5_contract_matches: true,
+            finalize_v5_exists: true,
+            payment_constraint_count: 5,
+            payment_constraint_definitions_match: true,
+            payment_constraints_validated: true,
+            payment_helper_contract_matches: true,
+            payment_installment_column_count: 1,
+            payment_installment_type_matches: true,
+            reconciliation_constraint_count: 5,
+            reconciliation_constraint_definitions_match: true,
+            reconciliation_constraints_validated: true,
+            report_v2_contract_matches: true,
           },
         ];
       if (query.includes("auth.users"))
