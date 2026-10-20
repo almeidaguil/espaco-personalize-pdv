@@ -35,10 +35,18 @@ describe("SupabaseSalesReportRepository", () => {
         cashDifferenceTotalInCents: -100,
         cashShortageTotalInCents: 200,
         cashSurplusTotalInCents: 100,
+        creditInstallmentSummary: [
+          { installmentCount: 1, netTotalInCents: 0, salesCount: 0 },
+          { installmentCount: 2, netTotalInCents: 6000, salesCount: 1 },
+          { installmentCount: 3, netTotalInCents: 3000, salesCount: 1 },
+        ],
         completedDiscountInCents: 1000,
         completedSalesCount: 2,
         completedSubtotalInCents: 10000,
         completedTotalInCents: 9000,
+        reconciliationDifferenceTotalInCents: -150,
+        reconciliationShortageTotalInCents: 250,
+        reconciliationSurplusTotalInCents: 100,
         items: [
           {
             grossTotalInCents: 4500,
@@ -55,6 +63,63 @@ describe("SupabaseSalesReportRepository", () => {
             differenceAmountInCents: -100,
             id: cashSessionId,
             operatorName: "Ana Vendedora",
+            reconciliations: [
+              {
+                countedAmountInCents: 7400,
+                differenceAmountInCents: -100,
+                expectedAmountInCents: 7500,
+                method: "cash",
+              },
+              {
+                countedAmountInCents: 1500,
+                differenceAmountInCents: 0,
+                expectedAmountInCents: 1500,
+                method: "pix",
+              },
+              {
+                countedAmountInCents: 8900,
+                differenceAmountInCents: -100,
+                expectedAmountInCents: 9000,
+                method: "credit_card",
+              },
+              {
+                countedAmountInCents: 50,
+                differenceAmountInCents: 50,
+                expectedAmountInCents: 0,
+                method: "debit_card",
+              },
+            ],
+          }),
+        ],
+      },
+      success: true,
+    });
+  });
+
+  it("maps a legacy session fallback from cash scalar fields only", async () => {
+    const legacyReport = structuredClone(databaseReport);
+    legacyReport.sessions[0].reconciliations = [];
+    const repository = new SupabaseSalesReportRepository({
+      rpc: vi.fn(async () => ({ data: legacyReport, error: null })),
+    });
+
+    const result = await repository.get({
+      endDate: "2026-10-02",
+      startDate: "2026-10-02",
+    });
+
+    expect(result).toMatchObject({
+      report: {
+        sessions: [
+          expect.objectContaining({
+            reconciliations: [
+              {
+                countedAmountInCents: 7400,
+                differenceAmountInCents: -100,
+                expectedAmountInCents: 7500,
+                method: "cash",
+              },
+            ],
           }),
         ],
       },
@@ -122,6 +187,11 @@ const databaseReport = {
   ],
   cash_shortage_total_in_cents: 200,
   cash_surplus_total_in_cents: 100,
+  credit_installment_summary: [
+    { installment_count: 1, net_total_in_cents: 0, sales_count: 0 },
+    { installment_count: 2, net_total_in_cents: 6000, sales_count: 1 },
+    { installment_count: 3, net_total_in_cents: 3000, sales_count: 1 },
+  ],
   completed_discount_in_cents: 1000,
   completed_sales_count: 2,
   completed_subtotal_in_cents: 10000,
@@ -154,6 +224,9 @@ const databaseReport = {
   ],
   post_close_adjustments_count: 0,
   post_close_adjustments_total_in_cents: 0,
+  reconciliation_difference_total_in_cents: -150,
+  reconciliation_shortage_total_in_cents: 250,
+  reconciliation_surplus_total_in_cents: 100,
   selected_cash_session_id: null,
   selected_operator_id: null,
   sessions_limit: 8,
@@ -177,6 +250,32 @@ const databaseReport = {
       opening_amount_in_cents: 3000,
       operator_id: operatorId,
       operator_name: "Ana Vendedora",
+      reconciliations: [
+        {
+          counted_amount_in_cents: 7400,
+          difference_amount_in_cents: -100,
+          expected_amount_in_cents: 7500,
+          method: "cash",
+        },
+        {
+          counted_amount_in_cents: 1500,
+          difference_amount_in_cents: 0,
+          expected_amount_in_cents: 1500,
+          method: "pix",
+        },
+        {
+          counted_amount_in_cents: 8900,
+          difference_amount_in_cents: -100,
+          expected_amount_in_cents: 9000,
+          method: "credit_card",
+        },
+        {
+          counted_amount_in_cents: 50,
+          difference_amount_in_cents: 50,
+          expected_amount_in_cents: 0,
+          method: "debit_card",
+        },
+      ],
       status: "closed",
     },
   ],
