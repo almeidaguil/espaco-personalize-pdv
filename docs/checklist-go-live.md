@@ -95,7 +95,9 @@ Antes de aplicar migrations remotamente, identificar o ambiente e validar o
 project ref, o backup e a sequência de promoção conforme
 [Ambientes](ambientes.md) e [Supabase CLI](supabase-cli.md).
 
-- Aplicar primeiro em staging e validar o schema e as RPCs.
+- Aplicar primeiro em staging e validar o schema e as RPCs usando as fases coordenadas descritas em
+  [Promoção para staging](vercel-cli.md#promover-uma-vers%C3%A3o-para-staging).
+  Não aplicar o corte legado antes do deploy e do smoke financeiro aprovados.
 - Confirmar banco alinhado às migrations da versão aprovada.
 - Manter RLS nas tabelas operacionais e validar isolamento por operador.
 - Manter migrations históricas imutáveis.
