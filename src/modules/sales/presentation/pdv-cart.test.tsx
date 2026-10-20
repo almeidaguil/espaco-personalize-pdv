@@ -37,7 +37,12 @@ describe("PdvCart", () => {
     );
     expect(screen.getByText("2 × R$ 15,00")).toBeInTheDocument();
 
-    expect(screen.getAllByText("R$ 30,00")).toHaveLength(3);
+    expect(screen.getByText("Subtotal").parentElement).toHaveTextContent(
+      "R$ 30,00",
+    );
+    expect(screen.getByText("Total da venda").parentElement).toHaveTextContent(
+      "R$ 30,00",
+    );
   });
 
   it("removes products from the cart", async () => {
@@ -71,7 +76,12 @@ describe("PdvCart", () => {
 
     expect(screen.getByText("Nenhum item adicionado.")).toBeInTheDocument();
 
-    expect(screen.getAllByText("R$ 0,00")).toHaveLength(3);
+    expect(screen.getByText("Subtotal").parentElement).toHaveTextContent(
+      "R$ 0,00",
+    );
+    expect(screen.getByText("Total da venda").parentElement).toHaveTextContent(
+      "R$ 0,00",
+    );
   });
 
   it("calculates cash change when received amount covers the total", async () => {
@@ -99,7 +109,9 @@ describe("PdvCart", () => {
 
     await user.type(screen.getByLabelText("Valor recebido"), "20,00");
 
-    expect(screen.getByText("Troco R$ 5,00")).toBeInTheDocument();
+    expect(screen.getByText("Troco").parentElement).toHaveTextContent(
+      "R$ 5,00",
+    );
 
     expect(
       screen.getByRole("button", {
@@ -127,7 +139,10 @@ describe("PdvCart", () => {
 
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
     await user.type(screen.getByLabelText("Desconto (R$)"), "0,01");
-    await user.click(screen.getByRole("button", { name: "Pix" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Forma de pagamento 1" }),
+      "pix",
+    );
 
     expect(screen.getByText("Subtotal").parentElement).toHaveTextContent(
       "R$ 15,00",
@@ -164,7 +179,10 @@ describe("PdvCart", () => {
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
     const discountInput = screen.getByLabelText("Desconto (R$)");
     await user.type(discountInput, "14,99");
-    await user.click(screen.getByRole("button", { name: "Pix" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Forma de pagamento 1" }),
+      "pix",
+    );
 
     expect(screen.getByDisplayValue("0,01")).toBeInTheDocument();
     expect(
@@ -235,14 +253,18 @@ describe("PdvCart", () => {
     await user.click(screen.getByRole("button", { name: "Adicionar" }));
     await user.type(screen.getByLabelText("Desconto (R$)"), "5,00");
     await user.type(screen.getByLabelText("Valor recebido"), "20,00");
-    expect(screen.getByText("Troco R$ 10,00")).toBeInTheDocument();
+    expect(screen.getByText("Troco").parentElement).toHaveTextContent(
+      "R$ 10,00",
+    );
 
     await user.click(
       screen.getByRole("button", {
         name: "Adicionar uma unidade de Chaveiro Polvo",
       }),
     );
-    expect(screen.getByText("Falta R$ 5,00")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Falta informar R$ 5,00.",
+    );
   });
 
   it("fills received amount from cash shortcuts", async () => {
@@ -284,7 +306,9 @@ describe("PdvCart", () => {
 
     expect(screen.getByDisplayValue("50,00")).toBeInTheDocument();
 
-    expect(screen.getByText("Troco R$ 35,00")).toBeInTheDocument();
+    expect(screen.getByText("Troco").parentElement).toHaveTextContent(
+      "R$ 35,00",
+    );
   });
 
   it("shows the missing amount when cash payment is insufficient", async () => {
@@ -312,7 +336,9 @@ describe("PdvCart", () => {
 
     await user.type(screen.getByLabelText("Valor recebido"), "10,00");
 
-    expect(screen.getByText("Falta R$ 5,00")).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "Falta informar R$ 5,00.",
+    );
   });
 
   it("filters products by name and SKU", async () => {
@@ -424,7 +450,14 @@ describe("PdvCart", () => {
       }),
     );
 
-    await user.type(screen.getByLabelText("Valor recebido"), "20,00");
+    await user.click(screen.getByRole("button", { name: "Dividir pagamento" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Forma de pagamento 2" }),
+      "credit_card",
+    );
+    await user.type(screen.getByLabelText("Valor do pagamento 1"), "10,00");
+    await user.type(screen.getByLabelText("Valor do pagamento 2"), "5,00");
+    await user.click(screen.getByRole("radio", { name: "3x" }));
 
     await user.click(
       screen.getByRole("button", {
@@ -440,13 +473,22 @@ describe("PdvCart", () => {
 
     expect(formData.has("eventId")).toBe(false);
 
-    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
-
-    expect(formData.get("amountReceivedInReais")).toBe("20,00");
+    expect(formData.has("amountReceivedInReais")).toBe(false);
 
     expect(formData.get("discountInReais")).toBe("");
 
-    expect(formData.get("paymentMethod")).toBe("cash");
+    expect(formData.has("paymentMethod")).toBe(false);
+
+    expect(formData.get("paymentsJson")).toBe(
+      JSON.stringify([
+        { amountInReais: "10,00", method: "cash" },
+        {
+          amountInReais: "5,00",
+          installmentCount: 3,
+          method: "credit_card",
+        },
+      ]),
+    );
 
     expect(formData.get("itemsJson")).toBe(
       JSON.stringify([
@@ -461,9 +503,11 @@ describe("PdvCart", () => {
   it("clears the cart and payment after a successful sale", async () => {
     const user = userEvent.setup();
 
+    const action = createAction();
+
     render(
       <PdvCart
-        action={createAction()}
+        action={action}
         products={[
           {
             id: "product-1",
@@ -483,11 +527,14 @@ describe("PdvCart", () => {
 
     await user.type(screen.getByLabelText("Desconto (R$)"), "5,00");
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Pix",
-      }),
+    await user.click(screen.getByRole("button", { name: "Dividir pagamento" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Forma de pagamento 2" }),
+      "credit_card",
     );
+    await user.type(screen.getByLabelText("Valor do pagamento 1"), "5,00");
+    await user.type(screen.getByLabelText("Valor do pagamento 2"), "5,00");
+    await user.click(screen.getByRole("radio", { name: "3x" }));
 
     await user.click(
       screen.getByRole("button", {
@@ -503,20 +550,15 @@ describe("PdvCart", () => {
 
     expect(screen.queryByText("1 × R$ 15,00")).not.toBeInTheDocument();
 
-    expect(screen.getByLabelText("Valor recebido")).toHaveAttribute(
-      "name",
-      "amountReceivedInReais",
-    );
-
     expect(screen.getByLabelText("Valor recebido")).toHaveValue("");
 
     expect(screen.getByLabelText("Desconto (R$)")).toHaveValue("");
 
+    expect(screen.getAllByRole("combobox")).toHaveLength(1);
     expect(
-      screen.getByRole("button", {
-        name: "Dinheiro",
-      }),
-    ).toHaveAttribute("aria-pressed", "true");
+      screen.getByRole("combobox", { name: "Forma de pagamento 1" }),
+    ).toHaveValue("cash");
+    expect(screen.queryByRole("radio", { name: "3x" })).not.toBeInTheDocument();
 
     expect(
       screen.getByRole("button", {
@@ -548,21 +590,16 @@ describe("PdvCart", () => {
       }),
     );
 
-    await user.click(
-      screen.getByRole("button", {
-        name: "Pix",
-      }),
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Forma de pagamento 1" }),
+      "pix",
     );
 
     expect(screen.getByDisplayValue("15,00")).toBeInTheDocument();
 
-    expect(screen.getByText("Pix no valor de R$ 15,00")).toBeInTheDocument();
-
     expect(
-      screen.getByRole("button", {
-        name: "Pix",
-      }),
-    ).toHaveAttribute("aria-pressed", "true");
+      screen.getByRole("combobox", { name: "Forma de pagamento 1" }),
+    ).toHaveValue("pix");
 
     expect(
       screen.getByRole("button", {

@@ -123,8 +123,8 @@ try {
       closedSession({
         closedAt: "2026-09-16T06:00:00.000Z",
         counted: 0,
-        difference: 0,
-        expected: 0,
+        difference: -50,
+        expected: 50,
         id: cashSessionIds.operatorACrossMidnight,
         openedAt: "2026-09-16T01:00:00.000Z",
         opening: 0,
@@ -198,20 +198,51 @@ try {
   const { error: salesError } = await serviceClient.from("sales").insert(sales);
   assert.equal(salesError, null, "could not create report sales");
 
-  const paymentMethods = [
-    "cash",
-    "pix",
-    "credit_card",
-    "pix",
-    "debit_card",
-    "debit_card",
+  const payments = [
+    {
+      amount_in_cents: 12_000,
+      change_in_cents: 2_000,
+      method: "cash",
+      sale_id: sales[0].id,
+    },
+    {
+      amount_in_cents: 5_000,
+      change_in_cents: 0,
+      method: "pix",
+      sale_id: sales[1].id,
+    },
+    {
+      amount_in_cents: 12_000,
+      change_in_cents: 0,
+      installment_count: 2,
+      method: "credit_card",
+      sale_id: sales[2].id,
+    },
+    {
+      amount_in_cents: 8_000,
+      change_in_cents: 0,
+      method: "pix",
+      sale_id: sales[2].id,
+    },
+    {
+      amount_in_cents: 30_000,
+      change_in_cents: 0,
+      method: "pix",
+      sale_id: sales[3].id,
+    },
+    {
+      amount_in_cents: 4_000,
+      change_in_cents: 0,
+      method: "debit_card",
+      sale_id: sales[4].id,
+    },
+    {
+      amount_in_cents: 7_000,
+      change_in_cents: 0,
+      method: "debit_card",
+      sale_id: sales[5].id,
+    },
   ];
-  const payments = sales.map((sale, index) => ({
-    amount_in_cents: index === 0 ? 12_000 : sale.total_in_cents,
-    change_in_cents: index === 0 ? 2_000 : 0,
-    method: paymentMethods[index],
-    sale_id: sale.id,
-  }));
   const items = sales.map((sale) => ({
     product_id: productId,
     product_name: `Report product ${testRunId}`,
@@ -224,6 +255,27 @@ try {
     .from("payments")
     .insert(payments);
   assert.equal(paymentError, null, "could not create report payments");
+  const { error: reconciliationError } = await serviceClient
+    .from("cash_session_reconciliations")
+    .insert([
+      ...reconciliationRows(cashSessionIds.operatorAFirst, {
+        cash: [11_000, 10_800],
+        credit_card: [0, 0],
+        debit_card: [0, 0],
+        pix: [0, 0],
+      }),
+      ...reconciliationRows(cashSessionIds.operatorASecond, {
+        cash: [0, 100],
+        credit_card: [12_000, 11_950],
+        debit_card: [0, 0],
+        pix: [8_000, 8_000],
+      }),
+    ]);
+  assert.equal(
+    reconciliationError,
+    null,
+    "could not create report reconciliation rows",
+  );
   const { error: itemError } = await serviceClient
     .from("sale_items")
     .insert(items);
@@ -265,9 +317,12 @@ try {
   assert.equal(operatorAReport.completed_total_in_cents, 41_000);
   assert.equal(operatorAReport.canceled_sales_count, 1);
   assert.equal(operatorAReport.canceled_total_in_cents, 5_000);
-  assert.equal(operatorAReport.cash_shortage_total_in_cents, 200);
+  assert.equal(operatorAReport.cash_shortage_total_in_cents, 250);
   assert.equal(operatorAReport.cash_surplus_total_in_cents, 100);
-  assert.equal(operatorAReport.cash_difference_total_in_cents, -100);
+  assert.equal(operatorAReport.cash_difference_total_in_cents, -150);
+  assert.equal(operatorAReport.reconciliation_shortage_total_in_cents, 300);
+  assert.equal(operatorAReport.reconciliation_surplus_total_in_cents, 100);
+  assert.equal(operatorAReport.reconciliation_difference_total_in_cents, -200);
   assert.equal(operatorAReport.post_close_adjustments_count, 0);
   assert.equal(operatorAReport.net_revenue_in_cents, 41_000);
   assert.deepEqual(
@@ -281,6 +336,13 @@ try {
     ),
     true,
     "a sale after midnight must stay on the session opening business date",
+  );
+  assert.deepEqual(
+    operatorAReport.sessions.find(
+      (session) => session.id === cashSessionIds.operatorACrossMidnight,
+    ).reconciliations,
+    [],
+    "legacy sessions without method rows must remain readable",
   );
 
   const { data: firstSessionsPage, error: firstSessionsPageError } =
@@ -391,9 +453,27 @@ try {
         payment.net_total_in_cents,
       ]),
     ),
-    { cash: 10_000, credit_card: 20_000, debit_card: 11_000, pix: 30_000 },
+    { cash: 10_000, credit_card: 12_000, debit_card: 11_000, pix: 38_000 },
     "completed payments must be aggregated without canceled payments",
   );
+  assert.deepEqual(
+    Object.fromEntries(
+      adminReport.payment_summary.map((payment) => [
+        payment.method,
+        payment.sales_count,
+      ]),
+    ),
+    { cash: 1, credit_card: 1, debit_card: 2, pix: 2 },
+    "a split sale must count once in each method without duplicating sales",
+  );
+  assert.deepEqual(adminReport.credit_installment_summary, [
+    { installment_count: 1, net_total_in_cents: 0, sales_count: 0 },
+    { installment_count: 2, net_total_in_cents: 12_000, sales_count: 1 },
+    { installment_count: 3, net_total_in_cents: 0, sales_count: 0 },
+  ]);
+  assert.equal(adminReport.reconciliation_shortage_total_in_cents, 300);
+  assert.equal(adminReport.reconciliation_surplus_total_in_cents, 100);
+  assert.equal(adminReport.reconciliation_difference_total_in_cents, -200);
 
   const { data: sessionReport, error: sessionReportError } =
     await identities.admin.client.rpc("get_store_sales_report_v2", {
@@ -417,6 +497,18 @@ try {
       total: session.completed_total_in_cents,
     })),
     [{ discount: 1_000, subtotal: 18_000, total: 17_000 }],
+  );
+  assert.equal(sessionReport.sessions[0].reconciliations.length, 4);
+  assert.deepEqual(
+    sessionReport.sessions[0].reconciliations.find(
+      (row) => row.method === "cash",
+    ),
+    {
+      counted_amount_in_cents: 10_800,
+      difference_amount_in_cents: -200,
+      expected_amount_in_cents: 11_000,
+      method: "cash",
+    },
   );
   assert.equal(sessionReport.canceled_sales_count, 1);
   assert.equal(sessionReport.canceled_total_in_cents, 5_000);
@@ -494,12 +586,11 @@ try {
 
   const beforeClose = Date.now();
   const { error: closeRpcError } = await identities.operatorA.client.rpc(
-    "close_cash_session",
+    "close_cash_session_v2",
     {
       p_admin_password: null,
       p_cash_session_id: cashSessionIds.rpcTimestamp,
-      p_closed_at: "2099-01-01T00:00:00.000Z",
-      p_counted_amount_in_cents: 1_000,
+      p_reconciliations: countedReconciliations({ cash: 1_000 }),
     },
   );
   assert.equal(closeRpcError, null, "cash close RPC must succeed");
@@ -627,11 +718,10 @@ try {
   );
 
   const [concurrentCloseResult, concurrentCancelResult] = await Promise.all([
-    identities.operatorA.client.rpc("close_cash_session", {
+    identities.operatorA.client.rpc("close_cash_session_v2", {
       p_admin_password: password,
       p_cash_session_id: cashSessionIds.rpcConcurrent,
-      p_closed_at: "2099-01-01T00:00:00.000Z",
-      p_counted_amount_in_cents: 2_000,
+      p_reconciliations: countedReconciliations({ cash: 2_000 }),
     }),
     identities.operatorA.client.rpc("cancel_sale", {
       p_admin_password: password,
@@ -819,6 +909,20 @@ try {
   await cleanupTestData();
 }
 
+function countedReconciliations({
+  cash = 0,
+  credit_card = 0,
+  debit_card = 0,
+  pix = 0,
+} = {}) {
+  return [
+    { counted_amount_in_cents: cash, method: "cash" },
+    { counted_amount_in_cents: pix, method: "pix" },
+    { counted_amount_in_cents: credit_card, method: "credit_card" },
+    { counted_amount_in_cents: debit_card, method: "debit_card" },
+  ];
+}
+
 function createIdentity(label) {
   return {
     client: undefined,
@@ -877,6 +981,18 @@ function saleFixture({
   };
 }
 
+function reconciliationRows(cashSessionId, amountsByMethod) {
+  return Object.entries(amountsByMethod).map(
+    ([method, [expectedAmountInCents, countedAmountInCents]]) => ({
+      cash_session_id: cashSessionId,
+      counted_amount_in_cents: countedAmountInCents,
+      difference_amount_in_cents: countedAmountInCents - expectedAmountInCents,
+      expected_amount_in_cents: expectedAmountInCents,
+      method,
+    }),
+  );
+}
+
 function createSupabaseClient(key) {
   return createClient(supabaseUrl, key, {
     auth: { autoRefreshToken: false, persistSession: false },
@@ -905,6 +1021,19 @@ function isLocalHostname(hostname) {
 
 async function cleanupTestData() {
   if (createdUserIds.length > 0) {
+    const { data: cashSessions } = await serviceClient
+      .from("cash_sessions")
+      .select("id")
+      .in("operator_id", createdUserIds);
+    const cashSessionIdsToDelete = (cashSessions ?? []).map(
+      (session) => session.id,
+    );
+    if (cashSessionIdsToDelete.length > 0) {
+      await serviceClient
+        .from("cash_session_reconciliations")
+        .delete()
+        .in("cash_session_id", cashSessionIdsToDelete);
+    }
     await serviceClient
       .from("sales")
       .delete()

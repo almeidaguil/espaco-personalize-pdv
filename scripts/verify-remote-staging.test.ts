@@ -17,6 +17,7 @@ const tables = [
   "products",
   "stock_movements",
   "cash_sessions",
+  "cash_session_reconciliations",
   "sales",
   "sale_items",
   "payments",
@@ -24,8 +25,10 @@ const tables = [
 const rpcs = [
   "open_cash_session_v3",
   "close_cash_session",
+  "close_cash_session_v2",
   "finalize_sale_v3",
   "finalize_sale_v4",
+  "finalize_sale_v5",
   "cancel_sale",
   "get_store_sales_report_v2",
 ];
@@ -153,8 +156,16 @@ describe("verifyRemoteStaging", () => {
   });
 
   test.each([
-    ["table", { tables: tables.filter((table) => table !== "payments"), rpcs }],
-    ["RPC", { tables, rpcs: rpcs.filter((rpc) => rpc !== "finalize_sale_v4") }],
+    [
+      "table",
+      {
+        tables: tables.filter(
+          (table) => table !== "cash_session_reconciliations",
+        ),
+        rpcs,
+      },
+    ],
+    ["RPC", { tables, rpcs: rpcs.filter((rpc) => rpc !== "finalize_sale_v5") }],
   ])("rejects a missing required %s", async (_name, schema) => {
     const managementClient = createManagementClient({ schema });
     await expect(
@@ -211,17 +222,17 @@ describe("verifyRemoteStaging", () => {
     [
       "RLS disabled",
       {
-        rls_enabled_table_count: 7,
-        table_count: 8,
-        tables_with_policies_count: 8,
+        rls_enabled_table_count: 8,
+        table_count: 9,
+        tables_with_policies_count: 9,
       },
     ],
     [
       "missing policies",
       {
-        rls_enabled_table_count: 8,
-        table_count: 8,
-        tables_with_policies_count: 7,
+        rls_enabled_table_count: 9,
+        table_count: 9,
+        tables_with_policies_count: 8,
       },
     ],
   ])("rejects %s on the required tables", async (_name, rlsSummary) => {
@@ -305,6 +316,7 @@ describe("verifyRemoteStaging", () => {
         "database-lint",
         "schema",
         "sale-discount-contract",
+        "split-payment-contract",
         "auth",
         "rls-policies",
         "admin-profile",
@@ -366,6 +378,7 @@ function createManagementClient(
     policyContractMatches?: boolean;
     rlsSummary?: Record<string, number>;
     saleDiscountContractMatches?: boolean;
+    splitPaymentContractMatches?: boolean;
     schema?: { rpcs: string[]; tables: string[] };
     secret?: string;
     userSummary?: Record<string, number | string>;
@@ -386,11 +399,12 @@ function createManagementClient(
     operationalRowCount = 0,
     policyContractMatches = true,
     rlsSummary = {
-      rls_enabled_table_count: 8,
-      table_count: 8,
-      tables_with_policies_count: 8,
+      rls_enabled_table_count: 9,
+      table_count: 9,
+      tables_with_policies_count: 9,
     },
     saleDiscountContractMatches = true,
+    splitPaymentContractMatches = true,
     schema = { rpcs, tables },
     secret = undefined,
     userSummary = {
@@ -417,6 +431,33 @@ function createManagementClient(
             authenticated_finalize_v3_execute: true,
             authenticated_finalize_v4_execute: true,
             sales_financial_column_count: 3,
+          },
+        ];
+      if (query.includes("split_payment_contract_row"))
+        return [
+          {
+            anon_close_v2_execute: false,
+            anon_finalize_v5_execute: false,
+            authenticated_close_v2_execute: true,
+            authenticated_finalize_v5_execute: true,
+            authenticated_legacy_close_execute: false,
+            authenticated_payment_helper_execute: !splitPaymentContractMatches,
+            authenticated_reconciliation_select: true,
+            authenticated_reconciliation_writes_blocked: true,
+            close_v2_contract_matches: true,
+            close_v2_exists: true,
+            finalize_v5_contract_matches: true,
+            finalize_v5_exists: true,
+            payment_constraint_count: 5,
+            payment_constraint_definitions_match: true,
+            payment_constraints_validated: true,
+            payment_helper_contract_matches: true,
+            payment_installment_column_count: 1,
+            payment_installment_type_matches: true,
+            reconciliation_constraint_count: 5,
+            reconciliation_constraint_definitions_match: true,
+            reconciliation_constraints_validated: true,
+            report_v2_contract_matches: true,
           },
         ];
       if (query.includes("auth.users")) return [userSummary];

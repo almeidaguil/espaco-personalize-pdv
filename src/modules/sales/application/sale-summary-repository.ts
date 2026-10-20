@@ -1,4 +1,4 @@
-import type { SaleStatus } from "../domain/sale";
+import type { Payment, SaleStatus } from "../domain/sale";
 
 export type SaleSummary = {
   cashSessionId: string;
@@ -7,6 +7,7 @@ export type SaleSummary = {
   cashSessionOpenedAt: Date | null;
   operatorId: string;
   operatorName: string;
+  payments: Payment[];
   id: string;
   status: SaleStatus;
   subtotalInCents: number;

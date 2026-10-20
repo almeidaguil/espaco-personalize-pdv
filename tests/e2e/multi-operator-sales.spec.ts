@@ -5,8 +5,10 @@ import { expect, test } from "@playwright/test";
 import {
   createAuthenticatedPage,
   createAuthenticatedSupabaseClient,
+  getE2EUserCredentials,
 } from "./support/auth";
 import {
+  closeCashSessionV2,
   closeOwnOpenCashSession,
   openCashSessionThroughUi,
 } from "./support/cash";
@@ -102,11 +104,12 @@ test("venda e fechamento concorrentes mantem reconciliacao e autoria", async ({
     const saleId = randomUUID();
     const [sale, close] = await Promise.all([
       finalizeSale(seller, session.id, product.productId, saleId),
-      closer.rpc("close_cash_session", {
-        p_cash_session_id: session.id,
-        p_counted_amount_in_cents: 11500,
-        p_closed_at: new Date().toISOString(),
-      }),
+      closeCashSessionV2(
+        closer,
+        session.id,
+        { cash: 11500, credit_card: 0, debit_card: 0, pix: 0 },
+        getE2EUserCredentials("admin").password,
+      ),
     ]);
     expect(close.error).toBeNull();
     const { data: closed, error } = await reader

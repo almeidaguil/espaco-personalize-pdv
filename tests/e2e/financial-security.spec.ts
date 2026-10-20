@@ -65,6 +65,16 @@ test("authenticated users cannot write financial records directly", async () => 
         sale_id: saleId,
       }),
     },
+    {
+      name: "insert cash reconciliation",
+      result: await supabase.from("cash_session_reconciliations").insert({
+        cash_session_id: crypto.randomUUID(),
+        counted_amount_in_cents: 0,
+        difference_amount_in_cents: 0,
+        expected_amount_in_cents: 0,
+        method: "cash",
+      }),
+    },
   ];
 
   for (const attempt of attempts) {
@@ -77,17 +87,34 @@ test("authenticated users cannot write financial records directly", async () => 
   }
 });
 
-test("anonymous users cannot execute discounted sale finalization", async () => {
+test("authenticated users cannot execute the legacy cash close RPC", async () => {
+  const supabase = await createAuthenticatedSupabaseClient();
+  const result = await supabase.rpc("close_cash_session", {
+    p_admin_password: null,
+    p_cash_session_id: crypto.randomUUID(),
+    p_closed_at: new Date().toISOString(),
+    p_counted_amount_in_cents: 0,
+  });
+
+  expect(result.data).toBeNull();
+  expect(result.error).not.toBeNull();
+  expect(`${result.error?.code ?? ""} ${result.error?.message ?? ""}`).toMatch(
+    /42501|permission denied/i,
+  );
+});
+
+test("anonymous users cannot execute split-payment sale finalization", async () => {
   const supabase = createAnonymousSupabaseClient();
-  const result = await supabase.rpc("finalize_sale_v4", {
+  const result = await supabase.rpc("finalize_sale_v5", {
     p_cash_session_id: crypto.randomUUID(),
     p_discount_in_cents: 100,
     p_items: [{ product_id: crypto.randomUUID(), quantity: 1 }],
-    p_payment: {
-      amount_in_cents: 1400,
-      change_in_cents: 0,
-      method: "pix",
-    },
+    p_payments: [
+      {
+        amount_in_cents: 1400,
+        method: "pix",
+      },
+    ],
     p_sale_id: crypto.randomUUID(),
   });
 

@@ -7,6 +7,15 @@ remota seja capturada. Banco criado não significa loja liberada.
 
 ## Regra De Release
 
+O último release publicado é `v1.0.0`. A reestruturação para loja física
+Roberto Multimarcas substitui o modelo operacional anterior pelo controle de
+caixa por operador; como essa mudança é incompatível com contratos e fluxos
+prévios, a próxima versão SemVer é `2.0.0`. `package.json` e
+`package-lock.json` devem permanecer alinhados nessa versão. Criar a tag e
+publicar o release `v2.0.0` somente depois que o PR09-B e seus gates forem
+concluídos; este alinhamento de metadados não autoriza deploy ou mutação em
+produção.
+
 1. Concluir a alteração em `feature/*`, com commits assinados.
 2. Integrar em `develop` por PR com checks aprovados.
 3. Executar o gate E2E em ambiente isolado e o smoke do
@@ -50,8 +59,9 @@ Conferir também:
 - `Quality checks` e `Database contract` aprovados;
 - ausência de conflitos e pendências críticas;
 - constraints, RLS e grants financeiros validados;
-- RPCs `open_cash_session_v3`, `finalize_sale_v3`, `cancel_sale` e
-  `close_cash_session` disponíveis;
+- RPCs `open_cash_session_v3`, `finalize_sale_v5`, `cancel_sale` e
+  `close_cash_session_v2` disponíveis; fechamento legado sem permissão de
+  execução para usuários da aplicação;
 - operador derivado da sessão autenticada; escritas financeiras diretas bloqueadas.
 
 ## 2. Gate E2E E Smoke Funcional
@@ -94,7 +104,9 @@ Antes de aplicar migrations remotamente, identificar o ambiente e validar o
 project ref, o backup e a sequência de promoção conforme
 [Ambientes](ambientes.md) e [Supabase CLI](supabase-cli.md).
 
-- Aplicar primeiro em staging e validar o schema e as RPCs.
+- Aplicar primeiro em staging e validar o schema e as RPCs usando as fases coordenadas descritas em
+  [Promoção para staging](vercel-cli.md#promover-uma-vers%C3%A3o-para-staging).
+  Não aplicar o corte legado antes do deploy e do smoke financeiro aprovados.
 - Confirmar banco alinhado às migrations da versão aprovada.
 - Manter RLS nas tabelas operacionais e validar isolamento por operador.
 - Manter migrations históricas imutáveis.
@@ -149,7 +161,9 @@ redigida registrada em [PR09 - corte de produção](evidencias/pr09-production-c
 - [ ] Staging legado `gpywbeoqcovjrfnmbdqx` confirmado `INACTIVE`.
 - [ ] Staging Roberto `otsxpchqtfypxgzjzrxs` confirmado `ACTIVE_HEALTHY`.
 - [ ] Produção legada `ciixpfquwmlsvzleattv` confirmada `ACTIVE_HEALTHY`.
-- [ ] Projeto Vercel `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` confirmado vazio.
+- [ ] Projeto Vercel `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` inventariado: recursos
+      preexistentes preservados; reconciliação e autorização específicas do
+      PR09 concluídas antes de qualquer mutação.
 - [ ] Inventário recente, hash íntegro e origem legada exata confirmados.
 - [ ] Organização, ref, topologia, evidência e rollback apresentados ao dono.
 - [ ] Confirmação literal nova recebida imediatamente antes da pausa:

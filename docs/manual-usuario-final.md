@@ -64,16 +64,19 @@ Uma segunda abertura simultânea para o mesmo usuário é recusada.
 3. Clique em `Adicionar` e ajuste as quantidades com `+` e `-`.
 4. Confira os itens, o estoque disponível e o total.
 5. Escolha `Dinheiro`, `Pix`, `Cartão de crédito` ou `Cartão de débito`.
-6. Para dinheiro, informe `Valor recebido` e confira o troco. O valor deve cobrir
-   o total. Nos demais meios, `Valor do pagamento` corresponde ao total da venda.
-7. Confirme o recebimento e clique em `Finalizar venda`.
-8. Aguarde a mensagem de sucesso antes de iniciar outra venda.
+6. Para usar duas formas distintas, clique em `Dividir pagamento` e informe o
+   valor de cada uma. Cada forma deve contribuir com pelo menos R$ 0,01.
+7. Para dinheiro, informe o valor entregue e confira o troco. Somente dinheiro
+   pode superar o restante da venda. Para crédito, escolha `À vista`, `2x` ou
+   `3x`; o parcelamento não altera o total.
+8. Confirme o recebimento e clique em `Finalizar venda`.
+9. Aguarde a mensagem de sucesso antes de iniciar outra venda.
 
 O PDV usa automaticamente o caixa aberto do usuário autenticado. Sem esse caixa,
 a tela orienta a abertura e bloqueia a finalização. O servidor valida identidade,
 caixa, produtos, preços, estoque e pagamento ao concluir a operação.
 
-A venda registra itens, pagamento e baixa de estoque. Pix e cartão são registrados
+A venda registra itens, todos os pagamentos e baixa de estoque. Pix e cartão são registrados
 no sistema; a confirmação do recebimento ocorre na conta ou no terminal usado
 pela loja, sem integração automática com esses serviços.
 
@@ -104,17 +107,18 @@ na data do cancelamento.
 1. Pare novas vendas e aguarde a conclusão das operações em andamento.
 2. Acesse `/cash/close` e confira seu nome, horário de abertura e identificação
    da sessão.
-3. Revise `Valor inicial`, `Vendas`, `Esperado` e `Cancelado`.
-4. Conte o dinheiro físico e preencha `Valor contado no caixa`.
-5. Confira a diferença exibida.
-6. Se houver falta, solicite a senha de um admin ativo e preencha
-   `Senha administrativa` para autorizar o fechamento.
+3. Revise `Valor inicial`, vendas concluídas e canceladas.
+4. Confira o esperado e preencha conscientemente os quatro campos: dinheiro
+   físico, extrato Pix, crédito e débito. Informe `0,00` quando não houver valor.
+5. Confira a diferença individual de cada método.
+6. Se qualquer método tiver sobra ou falta, solicite a senha de um admin ativo
+   e preencha `Senha administrativa`. Diferenças opostas não se compensam.
 7. Clique em `Fechar caixa`.
-8. Aguarde a mensagem de sucesso e confira a sessão no relatório.
+8. Aguarde a mensagem de sucesso e confira as quatro reconciliações no relatório.
 
 O dinheiro esperado considera o valor inicial e os pagamentos em dinheiro,
-descontando troco e cancelamentos aplicáveis. Pix, crédito e débito ficam na
-conciliação, mas não compõem o dinheiro físico esperado.
+descontando troco e cancelamentos aplicáveis. Pix, crédito e débito têm valores
+esperados próprios, derivados somente das vendas concluídas.
 
 Depois de fechar, você pode abrir outra sessão em `/cash/open`, inclusive no
 mesmo dia, informando o novo valor inicial. As sessões mantêm históricos separados.
@@ -168,12 +172,15 @@ pessoas que não tenham responsabilidade de autorização.
    opções permitidas para consolidar.
 4. Clique em `Aplicar filtros`.
 5. Confira receita, vendas canceladas, ajustes após fechamento, pagamentos,
-   sessões, produtos e divergências.
+   crédito por parcelas, sessões, produtos e reconciliações por método.
 6. Clique em `Exportar CSV` e confira os dados com os mesmos filtros da tela.
 
 O admin pode consolidar os caixas da loja; o operador consulta apenas os dados
 permitidos do próprio usuário. Uma sessão que atravesse a meia-noite mantém a
 data operacional calculada na abertura.
+Uma venda dividida conta uma vez no total geral e uma vez em cada método usado;
+por isso, as contagens por método não devem ser somadas. O CSV preserva a mesma
+regra e exporta parcelas e as quatro reconciliações de cada caixa fechado.
 
 ## Checklist Diário
 

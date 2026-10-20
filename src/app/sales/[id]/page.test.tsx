@@ -52,11 +52,13 @@ describe("SaleDetailsPage", () => {
             unitPriceInCents: 1500,
           },
         ],
-        payment: {
-          amountInCents: 5000,
-          changeInCents: 2000,
-          method: "cash",
-        },
+        payments: [
+          {
+            amountInCents: 5000,
+            changeInCents: 2000,
+            method: "cash",
+          },
+        ],
         status: "completed",
         subtotalInCents: 3000,
         discountInCents: 0,

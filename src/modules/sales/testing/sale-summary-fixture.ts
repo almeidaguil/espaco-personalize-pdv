@@ -8,6 +8,13 @@ export function saleSummaryFixture(
     cashSessionId: "cash-session-1",
     operatorId: "operator-1",
     operatorName: "Ana",
+    payments: [
+      {
+        amountInCents: 3000,
+        changeInCents: 0,
+        method: "cash",
+      },
+    ],
     businessDate: "2026-07-10",
     cashSessionOpenedAt: new Date("2026-07-10T11:00:00Z"),
     completedAt: new Date("2026-07-10T12:00:00Z"),

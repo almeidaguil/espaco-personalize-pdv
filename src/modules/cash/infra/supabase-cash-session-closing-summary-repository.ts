@@ -7,7 +7,7 @@ import type {
 type SupabasePaymentRow = {
   amount_in_cents: number;
   change_in_cents: number;
-  method: "cash";
+  method: "cash" | "credit_card" | "debit_card" | "pix";
 };
 
 type SupabaseSaleRow = {
@@ -92,18 +92,19 @@ export class SupabaseCashSessionClosingSummaryRepository implements CashSessionC
     const summaries = new Map<string, CashSessionClosingSummary>();
 
     for (const cashSession of cashSessionsResult.data ?? []) {
-      const openingAmountInReais = centsToReais(
-        cashSession.opening_amount_in_cents,
-      );
-
       summaries.set(cashSession.id, {
         canceledSalesCount: 0,
-        canceledSalesTotalInReais: 0,
+        canceledSalesTotalInCents: 0,
         cashSessionId: cashSession.id,
         completedSalesCount: 0,
-        completedSalesTotalInReais: 0,
-        expectedAmountInReais: openingAmountInReais,
-        openingAmountInReais,
+        completedSalesTotalInCents: 0,
+        expectedByMethodInCents: {
+          cash: cashSession.opening_amount_in_cents,
+          credit_card: 0,
+          debit_card: 0,
+          pix: 0,
+        },
+        openingAmountInCents: cashSession.opening_amount_in_cents,
       });
     }
 
@@ -115,28 +116,17 @@ export class SupabaseCashSessionClosingSummaryRepository implements CashSessionC
       }
 
       if (sale.status === "completed") {
-        const cashPaymentTotal = sale.payments
-          .filter((payment) => payment.method === "cash")
-          .reduce(
-            (total, payment) =>
-              total + payment.amount_in_cents - payment.change_in_cents,
-            0,
-          );
-
         summary.completedSalesCount += 1;
-        summary.completedSalesTotalInReais = roundBrl(
-          summary.completedSalesTotalInReais + centsToReais(cashPaymentTotal),
-        );
-        summary.expectedAmountInReais = roundBrl(
-          summary.openingAmountInReais + summary.completedSalesTotalInReais,
-        );
+        summary.completedSalesTotalInCents += sale.total_in_cents;
+        for (const payment of sale.payments) {
+          summary.expectedByMethodInCents[payment.method] +=
+            payment.amount_in_cents - payment.change_in_cents;
+        }
       }
 
       if (sale.status === "canceled") {
         summary.canceledSalesCount += 1;
-        summary.canceledSalesTotalInReais = roundBrl(
-          summary.canceledSalesTotalInReais + centsToReais(sale.total_in_cents),
-        );
+        summary.canceledSalesTotalInCents += sale.total_in_cents;
       }
     }
 
@@ -145,12 +135,4 @@ export class SupabaseCashSessionClosingSummaryRepository implements CashSessionC
       success: true,
     };
   }
-}
-
-function centsToReais(value: number): number {
-  return roundBrl(value / 100);
-}
-
-function roundBrl(value: number): number {
-  return Math.round(value * 100) / 100;
 }

@@ -4,342 +4,216 @@ import { useActionState, useState } from "react";
 
 import { FieldError } from "@/shared/components/field-error";
 import { InlineFeedback } from "@/shared/components/inline-feedback";
+import {
+  paymentMethods,
+  type PaymentMethod,
+} from "@/shared/types/payment-method";
 
 import type { CashSessionActionState } from "./cash-session-action-state";
 import { parseBrlCurrencyInput } from "./open-cash-session-form-data";
 
 const initialState: CashSessionActionState = {};
+const methodLabels: Record<PaymentMethod, string> = {
+  cash: "Dinheiro",
+  credit_card: "Cartão de crédito",
+  debit_card: "Cartão de débito",
+  pix: "Pix",
+};
 
 export type CloseCashSessionOption = {
   canceledSalesCount: number;
-  canceledSalesTotalInReais: number;
+  canceledSalesTotalInCents: number;
   completedSalesCount: number;
-  completedSalesTotalInReais: number;
-  expectedAmountInReais: number;
+  completedSalesTotalInCents: number;
+  expectedByMethodInCents: Record<PaymentMethod, number>;
   id: string;
   label: string;
-  openingAmountInReais: number;
+  openingAmountInCents: number;
 };
 
-type CloseCashSessionFormProps = {
+type Props = {
   action: (
-    previousState: CashSessionActionState,
-    formData: FormData,
+    state: CashSessionActionState,
+    data: FormData,
   ) => Promise<CashSessionActionState>;
   sessions: CloseCashSessionOption[];
 };
 
-export function CloseCashSessionForm({
-  action,
-  sessions,
-}: CloseCashSessionFormProps) {
+export function CloseCashSessionForm({ action, sessions }: Props) {
   return (
     <div className="grid gap-5">
       {sessions.map((session) => (
-        <CloseCashSessionCard
-          action={action}
-          key={session.id}
-          session={session}
-        />
+        <ClosingCard action={action} key={session.id} session={session} />
       ))}
     </div>
   );
 }
 
-type CloseCashSessionCardProps = {
-  action: CloseCashSessionFormProps["action"];
+function ClosingCard({
+  action,
+  session,
+}: {
+  action: Props["action"];
   session: CloseCashSessionOption;
-};
-
-function CloseCashSessionCard({ action, session }: CloseCashSessionCardProps) {
+}) {
   const [state, formAction, isPending] = useActionState(action, initialState);
-
-  const [countedAmountInput, setCountedAmountInput] = useState("");
-
-  const cashSessionError = state.fieldErrors?.cashSessionId;
-
-  const countedAmountError = state.fieldErrors?.countedAmountInReais;
-
-  const cashSessionErrorId = `cashSessionId-error-${session.id}`;
-
-  const countedAmountErrorId = `countedAmountInReais-error-${session.id}`;
-
-  const countedAmountInReais = parseBrlCurrencyInput(countedAmountInput);
-
-  const hasCountedAmount = Number.isFinite(countedAmountInReais);
-
-  const differenceAmountInReais = hasCountedAmount
-    ? countedAmountInReais - session.expectedAmountInReais
-    : 0;
-
-  const shortageAmountInReais =
-    hasCountedAmount && countedAmountInReais < session.expectedAmountInReais
-      ? session.expectedAmountInReais - countedAmountInReais
-      : 0;
-
-  const hasShortage = shortageAmountInReais > 0;
+  const [values, setValues] = useState<Record<PaymentMethod, string>>({
+    cash: "",
+    credit_card: "",
+    debit_card: "",
+    pix: "",
+  });
+  const counted = Object.fromEntries(
+    paymentMethods.map((method) => [
+      method,
+      parseBrlCurrencyInput(values[method]) * 100,
+    ]),
+  ) as Record<PaymentMethod, number>;
+  const allValid = paymentMethods.every(
+    (method) => Number.isSafeInteger(counted[method]) && counted[method] >= 0,
+  );
+  const differences = Object.fromEntries(
+    paymentMethods.map((method) => [
+      method,
+      counted[method] - session.expectedByMethodInCents[method],
+    ]),
+  ) as Record<PaymentMethod, number>;
+  const hasDifference =
+    allValid && paymentMethods.some((method) => differences[method] !== 0);
+  const error = state.fieldErrors?.reconciliations;
 
   return (
     <form
       action={formAction}
-      aria-describedby={cashSessionError ? cashSessionErrorId : undefined}
-      className="grid gap-5 rounded-2xl border border-[var(--border)] bg-[var(--brand-surface)] p-4 shadow-[0_8px_30px_rgba(0,0,0,0.04)] sm:p-6"
+      className="grid gap-5 rounded-2xl border border-[var(--border)] bg-[var(--brand-surface)] p-4 sm:p-6"
       noValidate
     >
       <input name="cashSessionId" type="hidden" value={session.id} />
-
-      {/* Cabeçalho */}
-      <div>
+      <header>
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-[var(--brand-accent-foreground)]">
           Caixa em operação
         </p>
-
-        <h2 className="mt-1.5 text-lg font-bold text-[var(--brand-foreground)]">
-          {session.label}
-        </h2>
-
-        <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
-          Confira o movimento financeiro antes de concluir o fechamento.
-        </p>
-      </div>
-
-      {/* Resumo financeiro */}
-      <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <SummaryItem
-          label="Valor inicial"
-          value={moneyFormatter.format(session.openingAmountInReais)}
+        <h2 className="mt-1 text-lg font-bold">{session.label}</h2>
+      </header>
+      <dl className="grid gap-3 sm:grid-cols-3">
+        <Summary label="Valor inicial" value={session.openingAmountInCents} />
+        <Summary
+          label="Vendas concluídas"
+          value={session.completedSalesTotalInCents}
         />
-
-        <SummaryItem
-          label="Vendas"
-          value={moneyFormatter.format(session.completedSalesTotalInReais)}
-          tone="success"
-        />
-
-        <SummaryItem
-          highlight
-          label="Esperado"
-          value={moneyFormatter.format(session.expectedAmountInReais)}
-        />
-
-        <SummaryItem
-          label="Cancelado"
-          value={moneyFormatter.format(session.canceledSalesTotalInReais)}
-          tone="danger"
+        <Summary
+          label="Vendas canceladas"
+          value={session.canceledSalesTotalInCents}
         />
       </dl>
-
-      {/* Quantidade de vendas */}
-      <div className="flex flex-wrap gap-x-5 gap-y-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 text-sm">
-        <span className="text-[var(--brand-muted)]">
-          Concluídas:{" "}
-          <strong className="font-bold text-[var(--brand-foreground)]">
-            {session.completedSalesCount}
-          </strong>
-        </span>
-
-        <span className="text-[var(--brand-muted)]">
-          Canceladas:{" "}
-          <strong className="font-bold text-[var(--brand-foreground)]">
-            {session.canceledSalesCount}
-          </strong>
-        </span>
-      </div>
-
-      {/* Valor contado */}
-      <div className="grid gap-2">
-        <label
-          className="text-sm font-semibold text-[var(--brand-foreground)]"
-          htmlFor={`countedAmountInReais-${session.id}`}
-        >
-          Valor contado no caixa
-        </label>
-
-        <input
-          aria-describedby={
-            countedAmountError ? countedAmountErrorId : undefined
-          }
-          aria-invalid={countedAmountError ? true : undefined}
-          className={
-            countedAmountError
-              ? "h-12 w-full rounded-xl border border-red-300 bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition placeholder:text-neutral-400 focus:border-red-400 focus:ring-2 focus:ring-red-100"
-              : "h-12 w-full rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none transition placeholder:text-neutral-400 focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
-          }
-          id={`countedAmountInReais-${session.id}`}
-          inputMode="decimal"
-          name="countedAmountInReais"
-          onChange={(event) => setCountedAmountInput(event.target.value)}
-          placeholder="Ex.: 450,00"
-          type="text"
-          value={countedAmountInput}
-        />
-
-        <p className="text-xs leading-5 text-[var(--brand-muted)]">
-          Informe o total físico encontrado no caixa após conferir o dinheiro.
-        </p>
-
-        {countedAmountError ? (
-          <FieldError id={countedAmountErrorId}>
-            {countedAmountError}
-          </FieldError>
-        ) : null}
-
-        {cashSessionError ? (
-          <FieldError id={cashSessionErrorId}>{cashSessionError}</FieldError>
-        ) : null}
-      </div>
-
-      {/* Diferença */}
-      {hasCountedAmount ? (
-        <CashDifference differenceAmountInReais={differenceAmountInReais} />
-      ) : null}
-
-      {/* Autorização administrativa */}
-      {hasShortage ? (
-        <div className="grid gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4">
-          <div>
-            <p className="text-sm font-bold text-amber-950">
-              Divergência no caixa
+      <p className="text-sm text-[var(--brand-muted)]">
+        Concluídas: <strong>{session.completedSalesCount}</strong> · Canceladas:{" "}
+        <strong>{session.canceledSalesCount}</strong>
+      </p>
+      <div className="grid gap-4 sm:grid-cols-2">
+        {paymentMethods.map((method) => (
+          <section
+            className="grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4"
+            key={method}
+          >
+            <h3 className="font-bold">{methodLabels[method]}</h3>
+            <p className="text-sm">
+              Esperado:{" "}
+              <strong>{money(session.expectedByMethodInCents[method])}</strong>
             </p>
-
-            <p className="mt-1 text-sm leading-6 text-amber-900">
-              Faltam{" "}
-              <strong>{moneyFormatter.format(shortageAmountInReais)}</strong> em
-              relação ao valor esperado.
-            </p>
-          </div>
-
-          <div className="grid gap-2">
             <label
-              className="text-sm font-semibold text-amber-950"
-              htmlFor={`adminPassword-${session.id}`}
+              className="text-sm font-semibold"
+              htmlFor={`counted-${method}-${session.id}`}
             >
-              Senha administrativa
+              Valor conferido — {methodLabels[method]}
             </label>
-
             <input
-              className="h-12 w-full rounded-xl border border-amber-300 bg-white px-3 text-base outline-none transition placeholder:text-amber-700/50 focus:border-amber-500 focus:ring-2 focus:ring-amber-100"
-              id={`adminPassword-${session.id}`}
-              name="adminPassword"
-              placeholder="Digite a senha temporária"
-              type="password"
+              className="h-12 rounded-xl border border-[var(--border)] bg-white px-3"
+              id={`counted-${method}-${session.id}`}
+              inputMode="decimal"
+              name={`countedAmount_${method}`}
+              onChange={(event) =>
+                setValues((current) => ({
+                  ...current,
+                  [method]: event.target.value,
+                }))
+              }
+              placeholder="0,00"
+              type="text"
+              value={values[method]}
             />
-
-            <p className="text-xs leading-5 text-amber-900">
-              A autorização administrativa é necessária quando o valor contado é
-              menor que o esperado.
-            </p>
-          </div>
+            {allValid ? <Difference value={differences[method]} /> : null}
+          </section>
+        ))}
+      </div>
+      {error ? (
+        <FieldError id={`reconciliations-error-${session.id}`}>
+          {error}
+        </FieldError>
+      ) : null}
+      {state.fieldErrors?.cashSessionId ? (
+        <FieldError id={`cash-session-error-${session.id}`}>
+          {state.fieldErrors.cashSessionId}
+        </FieldError>
+      ) : null}
+      {hasDifference ? (
+        <div className="grid gap-2 rounded-xl border border-amber-200 bg-amber-50 p-4">
+          <label
+            className="font-semibold"
+            htmlFor={`adminPassword-${session.id}`}
+          >
+            Senha administrativa
+          </label>
+          <input
+            className="h-12 rounded-xl border border-amber-300 bg-white px-3"
+            id={`adminPassword-${session.id}`}
+            name="adminPassword"
+            type="password"
+          />
+          <p className="text-sm">
+            A autorização administrativa é necessária para qualquer sobra ou
+            falta.
+          </p>
         </div>
       ) : null}
-
-      {/* Feedback */}
       {state.formError ? (
         <InlineFeedback tone="error">{state.formError}</InlineFeedback>
       ) : null}
-
       {state.successMessage ? (
         <InlineFeedback tone="success">{state.successMessage}</InlineFeedback>
       ) : null}
-
-      {/* Ação */}
-      <div className="flex border-t border-[var(--border)] pt-5 sm:justify-end">
-        <button
-          className="h-12 w-full rounded-xl border border-[var(--brand-primary)] bg-[var(--brand-primary)] px-6 text-sm font-bold text-white shadow-sm transition hover:bg-[var(--brand-primary-hover)] disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-44"
-          disabled={isPending || Boolean(state.successMessage)}
-          type="submit"
-        >
-          {isPending ? "Fechando..." : "Fechar caixa"}
-        </button>
-      </div>
+      <button
+        className="h-12 rounded-xl bg-[var(--brand-primary)] px-6 font-bold text-white disabled:opacity-60"
+        disabled={!allValid || isPending || Boolean(state.successMessage)}
+        type="submit"
+      >
+        {isPending ? "Fechando..." : "Fechar caixa"}
+      </button>
     </form>
   );
 }
 
-type SummaryItemProps = {
-  highlight?: boolean;
-  label: string;
-  tone?: "default" | "success" | "danger";
-  value: string;
-};
-
-function SummaryItem({
-  highlight = false,
-  label,
-  tone = "default",
-  value,
-}: SummaryItemProps) {
-  const valueClassName =
-    tone === "success"
-      ? "text-emerald-700"
-      : tone === "danger"
-        ? "text-red-700"
-        : "text-[var(--brand-foreground)]";
-
+function Summary({ label, value }: { label: string; value: number }) {
   return (
-    <div
-      className={
-        highlight
-          ? "rounded-xl border border-[var(--brand-accent)]/40 bg-[var(--brand-accent)]/[0.07] p-4"
-          : "rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] p-4"
-      }
-    >
-      <dt className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--brand-muted)]">
-        {label}
-      </dt>
-
-      <dd className={`mt-2 text-lg font-bold ${valueClassName}`}>{value}</dd>
+    <div className="rounded-xl border border-[var(--border)] p-4">
+      <dt className="text-xs font-bold uppercase">{label}</dt>
+      <dd className="mt-2 font-bold">{money(value)}</dd>
     </div>
   );
 }
 
-function CashDifference({
-  differenceAmountInReais,
-}: {
-  differenceAmountInReais: number;
-}) {
-  if (differenceAmountInReais < 0) {
-    return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
-        <p className="text-xs font-bold uppercase tracking-[0.1em] text-amber-700">
-          Diferença
-        </p>
-
-        <p className="mt-1 text-sm font-bold text-amber-950">
-          Faltam {moneyFormatter.format(Math.abs(differenceAmountInReais))}
-        </p>
-      </div>
-    );
-  }
-
-  if (differenceAmountInReais > 0) {
-    return (
-      <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3">
-        <p className="text-xs font-bold uppercase tracking-[0.1em] text-emerald-700">
-          Diferença
-        </p>
-
-        <p className="mt-1 text-sm font-bold text-emerald-800">
-          Sobram {moneyFormatter.format(differenceAmountInReais)}
-        </p>
-      </div>
-    );
-  }
-
+function Difference({ value }: { value: number }) {
+  if (value === 0) return <p className="text-sm font-bold">Sem divergência</p>;
   return (
-    <div className="rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3">
-      <p className="text-xs font-bold uppercase tracking-[0.1em] text-[var(--brand-muted)]">
-        Diferença
-      </p>
-
-      <p className="mt-1 text-sm font-bold text-[var(--brand-foreground)]">
-        Sem divergência
-      </p>
-    </div>
+    <p className="text-sm font-bold">
+      {value > 0 ? "Sobra" : "Falta"}: {money(Math.abs(value))}
+    </p>
   );
 }
 
-const moneyFormatter = new Intl.NumberFormat("pt-BR", {
-  currency: "BRL",
-  style: "currency",
-});
+function money(cents: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    currency: "BRL",
+    style: "currency",
+  }).format(cents / 100);
+}

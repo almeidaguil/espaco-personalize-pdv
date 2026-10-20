@@ -22,7 +22,10 @@ test("admin creates and cancels a sale restoring stock", async ({ page }) => {
   await openCashSessionThroughUi(page);
   await createSale(page, productName, {
     discount: "5,00",
-    receivedAmount: "20,00",
+    splitCashAndPix: {
+      cashReceived: "10,00",
+      pixAmount: "4,00",
+    },
   });
   await cancelLatestSale(page, productName, {
     discount: "R$ 5,00",
@@ -57,6 +60,7 @@ test("admin records discounted and full-price sales and closes cash with net rec
     paymentMethodLabel: "Pix",
   });
   await createSale(page, productName, {
+    installmentCount: 3,
     paymentMethodLabel: "Cartão de crédito",
   });
   await createSale(page, productName, {
@@ -68,18 +72,42 @@ test("admin records discounted and full-price sales and closes cash with net rec
   const cashCloseForm = cashSessionCloseForm(page, session.id);
 
   await expect(cashCloseForm).toContainText("Concluídas: 3");
-  await expect(cashCloseForm).toContainText("R$ 100,00");
-  await expect(cashCloseForm).toContainText("R$ 10,00");
-  await expect(cashCloseForm).toContainText("R$ 110,00");
+  await expect(
+    cashCloseForm.getByText("Valor inicial").locator(".."),
+  ).toContainText("R$ 100,00");
+  await expect(
+    cashCloseForm.getByText("Vendas concluídas").locator(".."),
+  ).toContainText("R$ 38,00");
+  for (const [method, expected] of [
+    ["Dinheiro", "R$ 110,00"],
+    ["Pix", "R$ 13,00"],
+    ["Cartão de crédito", "R$ 15,00"],
+    ["Cartão de débito", "R$ 0,00"],
+  ] as const) {
+    const methodCard = cashCloseForm
+      .getByRole("heading", { name: method, exact: true })
+      .locator("xpath=ancestor::section[1]");
+    await expect(methodCard).toContainText(`Esperado: ${expected}`);
+  }
   await expect(cashCloseForm.getByLabel("Senha administrativa")).toHaveCount(0);
 
-  await closeCashSessionThroughUi(page, session.id, "110,00");
+  await closeCashSessionThroughUi(page, session.id, {
+    cash: "110,00",
+    credit_card: "15,00",
+    debit_card: "0,00",
+    pix: "13,00",
+  });
 });
 
 type CreateSaleOptions = {
   discount?: string;
+  installmentCount?: 2 | 3;
   paymentMethodLabel?: "Cartão de crédito" | "Cartão de débito" | "Pix";
   receivedAmount?: string;
+  splitCashAndPix?: {
+    cashReceived: string;
+    pixAmount: string;
+  };
 };
 
 async function createSale(
@@ -109,15 +137,46 @@ async function createSale(
     ? 1500 - Math.round(Number(options.discount.replace(",", ".")) * 100)
     : 1500;
 
-  if (options.paymentMethodLabel) {
+  if (options.splitCashAndPix) {
+    await page.getByRole("button", { name: "Dividir pagamento" }).click();
     await page
-      .getByRole("button", { name: options.paymentMethodLabel })
-      .click();
+      .getByLabel("Valor do pagamento 1")
+      .fill(options.splitCashAndPix.cashReceived);
+    await page
+      .getByLabel("Valor do pagamento 2")
+      .fill(options.splitCashAndPix.pixAmount);
+    const grossInCents =
+      Math.round(
+        Number(options.splitCashAndPix.cashReceived.replace(",", ".")) * 100,
+      ) +
+      Math.round(
+        Number(options.splitCashAndPix.pixAmount.replace(",", ".")) * 100,
+      );
     await expect(
-      page.getByText(
-        `${options.paymentMethodLabel} no valor de ${formatMoney(expectedTotal)}`,
-      ),
-    ).toBeVisible();
+      page.getByText("Troco", { exact: true }).locator(".."),
+    ).toContainText(formatMoney(grossInCents - expectedTotal));
+  } else if (options.paymentMethodLabel) {
+    const method = {
+      "Cartão de crédito": "credit_card",
+      "Cartão de débito": "debit_card",
+      Pix: "pix",
+    }[options.paymentMethodLabel];
+    await page
+      .getByRole("combobox", { name: "Forma de pagamento 1" })
+      .selectOption(method);
+    if (options.installmentCount) {
+      await page
+        .getByText(`${options.installmentCount}x`, { exact: true })
+        .click();
+      await expect(
+        page.getByText(
+          new RegExp(`${options.installmentCount} parcelas de aproximadamente`),
+        ),
+      ).toBeVisible();
+    }
+    await expect(page.getByLabel("Valor do pagamento 1")).toHaveValue(
+      formatInputMoney(expectedTotal),
+    );
   } else {
     await page
       .getByLabel("Valor recebido")
@@ -126,8 +185,8 @@ async function createSale(
       Number((options.receivedAmount ?? "20,00").replace(",", ".")) * 100,
     );
     await expect(
-      page.getByText(`Troco ${formatMoney(receivedInCents - expectedTotal)}`),
-    ).toBeVisible();
+      page.getByText("Troco", { exact: true }).locator(".."),
+    ).toContainText(formatMoney(receivedInCents - expectedTotal));
   }
 
   await page.getByRole("button", { name: "Finalizar venda" }).click();
@@ -162,6 +221,11 @@ async function cancelLatestSale(
     page.getByRole("heading", { level: 1, name: "Detalhe da venda" }),
   ).toBeVisible();
   await expect(page.getByText(productName, { exact: true })).toBeVisible();
+  await expect(page.getByText("Dinheiro", { exact: true })).toBeVisible();
+  await expect(page.getByText("Pix", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText("Troco", { exact: true }).locator(".."),
+  ).toContainText("R$ 4,00");
   await expect(
     page.getByText("Subtotal", { exact: true }).locator(".."),
   ).toContainText(amounts.subtotal);
@@ -193,4 +257,8 @@ function formatMoney(cents: number) {
     currency: "BRL",
     style: "currency",
   }).format(cents / 100);
+}
+
+function formatInputMoney(cents: number) {
+  return (cents / 100).toFixed(2).replace(".", ",");
 }
