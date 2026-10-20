@@ -17,10 +17,10 @@ documentação, PRs ou logs.
 
 ## Alvos Autorizados
 
-| Uso           | Projeto                           | Project ID                         | Regra                                               |
-| ------------- | --------------------------------- | ---------------------------------- | --------------------------------------------------- |
-| Staging PR08  | `roberto-multimarcas-pdv-staging` | `prj_fb7pug2hcbCGI1XIMLz5VuMr4S79` | `Production` representa staging; sem integração Git |
-| Produção PR09 | `roberto-multimarcas-pdv`         | `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` | alvo separado; estado existente preservado          |
+| Uso           | Projeto                           | Project ID                         | Regra                                                |
+| ------------- | --------------------------------- | ---------------------------------- | ---------------------------------------------------- |
+| Staging PR08  | `roberto-multimarcas-pdv-staging` | `prj_fb7pug2hcbCGI1XIMLz5VuMr4S79` | `Production` representa staging; sem integração Git  |
+| Produção PR09 | `roberto-multimarcas-pdv`         | `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` | ativa; dados operacionais existentes são preservados |
 
 Org ID: `team_jstETBWBHJi0hsir3a3bAkbK`. Supabase de staging:
 `otsxpchqtfypxgzjzrxs`.
@@ -208,8 +208,76 @@ Não feche caixas de staging antes do smoke apenas para liberar a promoção: us
 as sessões de teste existentes para validar o novo fechamento quando adequado.
 Depois do smoke, reconcilie e encerre as sessões de teste pelo runtime novo. Em
 qualquer divergência, interrompa a sequência; não execute SQL manual, não faça
-reset remoto e não altere o projeto de produção reservado. Produção continua
-dependente do PR de release e dos checkpoints do PR09.
+reset remoto e não altere o projeto de produção fora do fluxo da release.
 
 Em divergência, pare sem promover, excluir projeto ou alterar `main`. Preserve
 evidências redigidas e retome apenas a etapa idempotente correspondente.
+
+## Promover Uma Versão Para Produção
+
+Produção Roberto está ativa e contém contas, produtos, vendas, pagamentos,
+movimentações de estoque e caixas históricos. Nunca exija banco vazio, cancele
+operações para limpar dados ou use `db reset`. A promoção preserva todos os
+registros. Faça primeiro os gates financeiros completos em staging; o corte de
+produção segue a ordem foundation → deployment → cutover para não revogar a RPC
+legada antes de o runtime novo estar no alias estável.
+
+1. Gere um backup criptografado e verificado do projeto de produção e mantenha
+   schema, dados e evidência fora do repositório. A evidência deve apontar para
+   `wjuzwjbvctbyfvgmprmd`, incluir os dois arquivos `.dpapi` da mesma captura e
+   declarar que o plaintext foi removido. Valide a descriptografia e os hashes
+   antes de remover o plaintext. O runner recusa evidência com mais de uma hora,
+   verifica os arquivos/captura e exige confirmação literal dessa validação.
+
+2. No checkout local do SHA exato já integrado em `main`, confira o dry-run e
+   aplique somente a migration aditiva:
+
+   ```powershell
+   npm.cmd run ops:rollout-production -- --phase apply-foundation --source-ref main --commit-sha <sha-main> --backup-evidence <caminho-da-evidencia>
+   npm.cmd run ops:rollout-production -- --phase apply-foundation --source-ref main --commit-sha <sha-main> --backup-evidence <caminho-da-evidencia> --execute --confirm-backup-verified PRODUCTION_BACKUP_VERIFIED --confirm-database-ref wjuzwjbvctbyfvgmprmd --confirm-staging-gates STAGING_RELEASE_GATE_PASSED --confirm-migration 20261018120000_add_split_payments_and_cash_reconciliation.sql
+   ```
+
+   A etapa exige o estado de cutover `verified`, saúde e identidade exatas do
+   banco, `main` remoto igual ao SHA pedido, checkout local no mesmo SHA e
+   predecessor migrations completas. Ela cria um bundle temporário e só executa
+   se o dry-run listar exatamente
+   `20261018120000_add_split_payments_and_cash_reconciliation.sql`.
+
+3. Implante esse mesmo SHA no projeto Vercel de produção:
+
+   ```powershell
+   npm.cmd run ops:provision-vercel-production -- --phase deploy --source-ref main --commit-sha <sha-main>
+   npm.cmd run ops:provision-vercel-production -- --phase deploy --source-ref main --commit-sha <sha-main> --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
+   ```
+
+   Registre o `deployment-id` e a `deployment-url` retornados. Confirme que o
+   deployment está `READY`, usa o SHA exato de `main` e está associado ao alias
+   estável. Não altere variáveis, proteção, domínios ou histórico Vercel.
+
+4. Depois de confirmar que o runtime novo está `READY` no alias, aplique
+   separadamente a migration de cutover:
+
+   ```powershell
+   npm.cmd run ops:rollout-production -- --phase apply-cutover --source-ref main --commit-sha <sha-main> --deployment-id <deployment-id> --backup-evidence <backup-recente>
+   npm.cmd run ops:rollout-production -- --phase apply-cutover --source-ref main --commit-sha <sha-main> --deployment-id <deployment-id> --backup-evidence <backup-recente> --execute --confirm-backup-verified PRODUCTION_BACKUP_VERIFIED --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq --confirm-database-ref wjuzwjbvctbyfvgmprmd --confirm-staging-gates STAGING_RELEASE_GATE_PASSED --confirm-migration 20261018180000_disable_legacy_cash_close.sql
+   ```
+
+   Esse gate valida o deployment de produção pelo projeto, estado `READY`, alias
+   estável, SHA/ref GitHub, fingerprint do ambiente e metadados da release. O
+   dry-run precisa listar exclusivamente
+   `20261018180000_disable_legacy_cash_close.sql`; ao final, a automação confirma
+   que a RPC legada não pode ser executada e que `close_cash_session_v2` continua
+   autorizada. Se o backup tiver mais de uma hora, capture outro antes da fase.
+
+5. Após o cutover, execute a verificação completa e o smoke de produção
+   somente leitura com a mesma identidade de deployment:
+
+   ```powershell
+   npm.cmd run ops:verify-production -- --confirm-ref wjuzwjbvctbyfvgmprmd --deployment-id <deployment-id> --deployment-url <deployment-url> --source-ref main --commit-sha <sha-main>
+   npm.cmd run test:e2e:production-smoke -- --deployment-id <deployment-id> --deployment-url <deployment-url> --source-ref main --commit-sha <sha-main>
+   ```
+
+   Preserve os dados de produção; não faça vendas, cancelamentos, ajustes de
+   estoque nem fechamentos artificiais como smoke. Monitore os checks de saúde e
+   erros por pelo menos 30 minutos. Só depois da verificação, smoke e janela de
+   monitoramento aprovados publique a tag assinada `v2.0.0`.

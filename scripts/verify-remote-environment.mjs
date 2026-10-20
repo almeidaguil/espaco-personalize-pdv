@@ -163,6 +163,7 @@ export const requiredPolicyContract = Object.freeze([
 ]);
 
 export async function verifyRemoteEnvironment({
+  allowExistingProductionData = false,
   authPolicy = /** @type {any} */ (undefined),
   environment,
   logger = () => {},
@@ -692,7 +693,7 @@ export async function verifyRemoteEnvironment({
   const profile = await supabase.authenticatedClient.getOwnProfile();
   if (profile?.id !== session.userId || profile?.role !== "admin") {
     throw new Error(
-      `The authenticated ${environment} profile is not the sole admin.`,
+      `The authenticated ${environment} profile is not an admin.`,
     );
   }
 
@@ -703,7 +704,10 @@ export async function verifyRemoteEnvironment({
           (select count(*)::integer from auth.users) as auth_user_count,
           count(*)::integer as profile_count,
           count(*) filter (where profiles.role = 'admin')::integer as admin_profile_count,
-          count(*) filter (where profiles.role <> 'admin')::integer as non_admin_profile_count,
+          count(*) filter (where profiles.role = 'operator')::integer as operator_profile_count,
+          count(*) filter (
+            where profiles.role not in ('admin', 'operator')
+          )::integer as unknown_role_profile_count,
           count(*) filter (
             where exists (select 1 from auth.users where auth.users.id = profiles.id)
           )::integer as profiles_linked_to_auth_count
@@ -711,15 +715,36 @@ export async function verifyRemoteEnvironment({
       `,
     }),
   );
+  const allowExistingData =
+    environment === "production" && allowExistingProductionData;
+  const validInitialUserInventory =
+    userSummary?.auth_user_count === 1 &&
+    userSummary.profile_count === 1 &&
+    userSummary.admin_profile_count === 1 &&
+    userSummary.operator_profile_count === 0 &&
+    userSummary.unknown_role_profile_count === 0 &&
+    userSummary.profiles_linked_to_auth_count === 1;
+  const validExistingUserInventory =
+    Number.isInteger(userSummary?.auth_user_count) &&
+    userSummary.auth_user_count > 0 &&
+    userSummary.profile_count === userSummary.auth_user_count &&
+    Number.isInteger(userSummary.admin_profile_count) &&
+    userSummary.admin_profile_count > 0 &&
+    Number.isInteger(userSummary.operator_profile_count) &&
+    userSummary.operator_profile_count >= 0 &&
+    Number.isInteger(userSummary.unknown_role_profile_count) &&
+    userSummary.unknown_role_profile_count === 0 &&
+    Number.isInteger(userSummary.profiles_linked_to_auth_count) &&
+    userSummary.profiles_linked_to_auth_count === userSummary.profile_count;
   if (
-    userSummary?.auth_user_count !== 1 ||
-    userSummary.profile_count !== 1 ||
-    userSummary.admin_profile_count !== 1 ||
-    userSummary.non_admin_profile_count !== 0 ||
-    userSummary.profiles_linked_to_auth_count !== 1
+    !(allowExistingData
+      ? validExistingUserInventory
+      : validInitialUserInventory)
   ) {
     throw new Error(
-      `${capitalize(environment)} must contain exactly one admin and no other users.`,
+      allowExistingData
+        ? `${capitalize(environment)} user inventory is inconsistent.`
+        : `${capitalize(environment)} must contain exactly one admin and no other users.`,
     );
   }
 
@@ -739,7 +764,15 @@ export async function verifyRemoteEnvironment({
       `,
     }),
   );
-  if (operationalSummary?.operational_row_count !== 0) {
+  if (
+    !Number.isInteger(operationalSummary?.operational_row_count) ||
+    operationalSummary.operational_row_count < 0
+  ) {
+    throw new Error(
+      `${capitalize(environment)} operational data inventory could not be verified.`,
+    );
+  }
+  if (!allowExistingData && operationalSummary?.operational_row_count !== 0) {
     throw new Error(
       `${capitalize(environment)} contains unexpected operational data.`,
     );
@@ -765,7 +798,7 @@ export async function verifyRemoteEnvironment({
     "rls-policies",
     "admin-profile",
     "user-inventory",
-    "empty-operational-data",
+    allowExistingData ? "existing-operational-data" : "empty-operational-data",
     "financial-grants",
   );
   const report = {
