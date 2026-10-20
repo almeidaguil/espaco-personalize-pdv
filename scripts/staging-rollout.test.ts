@@ -219,9 +219,71 @@ describe("runStagingRollout", () => {
       projectId,
     });
     expect(vercelClient.getProject).toHaveBeenCalledWith(projectId, orgId);
+    expect(vercelClient.getProject).toHaveBeenCalledWith(
+      manifest.vercel.targets.production.projectId,
+      orgId,
+    );
+    expect(vercelClient.listProjectDeployments).toHaveBeenCalledWith(
+      projectId,
+      orgId,
+    );
+    expect(vercelClient.listProjectDeployments).not.toHaveBeenCalledWith(
+      manifest.vercel.targets.production.projectId,
+      orgId,
+    );
+    expect(
+      vercelClient.listProjectEnvironmentVariables,
+    ).not.toHaveBeenCalledWith(
+      manifest.vercel.targets.production.projectId,
+      orgId,
+    );
+    expect(vercelClient.listProjectDomains).not.toHaveBeenCalled();
     expect(
       vercelClient.upsertProjectEnvironmentVariable,
     ).not.toHaveBeenCalled();
+  });
+
+  test("rejects server secrets in Preview variables", async () => {
+    const vercelClient = createVercelClient({
+      previewVariables: [
+        {
+          key: "NEXT_PUBLIC_SUPABASE_URL",
+          target: ["preview"],
+          type: "encrypted",
+        },
+        {
+          key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+          target: ["preview"],
+          type: "encrypted",
+        },
+        {
+          key: "SUPABASE_SECRET_KEY",
+          target: ["preview"],
+          type: "sensitive",
+        },
+      ],
+    });
+
+    await expect(
+      run({
+        args: [
+          "--phase",
+          "deploy",
+          "--execute",
+          "--confirm-project",
+          projectId,
+          "--source-ref",
+          "develop",
+          "--commit-sha",
+          commitSha,
+        ],
+        environment: { VERCEL_TOKEN: vercelToken },
+        resolveSourceCommit: vi.fn<ResolveSourceCommit>(async () => commitSha),
+        vercelClient,
+      }),
+    ).rejects.toThrow(/environment variable inventory/i);
+
+    expect(vercelClient.createGitDeployment).not.toHaveBeenCalled();
   });
 
   test("deployment refuses a commit that is no longer the develop head", async () => {
@@ -474,8 +536,21 @@ function createSupabaseClient({
 
 function createVercelClient({
   deployment = {},
+  previewVariables = [
+    {
+      key: "NEXT_PUBLIC_SUPABASE_URL",
+      target: ["preview"],
+      type: "encrypted",
+    },
+    {
+      key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+      target: ["preview"],
+      type: "encrypted",
+    },
+  ],
 }: {
   deployment?: Record<string, unknown>;
+  previewVariables?: Record<string, unknown>[];
 } = {}) {
   return {
     createGitDeployment: vi.fn(async () => ({
@@ -521,6 +596,18 @@ function createVercelClient({
         id === projectId
           ? [
               {
+                id: "dpl_historical_preview",
+                meta: { githubCommitRef: "feature/old-feature" },
+                name: projectName,
+                target: null,
+              },
+              {
+                id: "dpl_historical_main",
+                meta: { githubCommitRef: "main" },
+                name: projectName,
+                target: "production",
+              },
+              {
                 id: "dpl_bootstrap_staging",
                 meta: {
                   dedicated_staging: "true",
@@ -531,7 +618,13 @@ function createVercelClient({
                 target: "production",
               },
             ]
-          : [],
+          : [
+              {
+                id: "dpl_reserved_production",
+                name: manifest.vercel.targets.production.projectName,
+                target: "production",
+              },
+            ],
     })),
     listProjectDomains: vi.fn(async (id: string) => ({
       domains:
@@ -546,8 +639,25 @@ function createVercelClient({
     listProjectEnvironmentVariables: vi.fn(async (id: string) => ({
       envs:
         id === manifest.vercel.targets.production.projectId
-          ? []
+          ? [
+              {
+                key: "NEXT_PUBLIC_SUPABASE_URL",
+                target: ["production"],
+                type: "encrypted",
+              },
+              {
+                key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY",
+                target: ["production"],
+                type: "encrypted",
+              },
+              {
+                key: "SUPABASE_SECRET_KEY",
+                target: ["production"],
+                type: "sensitive",
+              },
+            ]
           : [
+              ...previewVariables,
               {
                 key: "NEXT_PUBLIC_SUPABASE_URL",
                 target: ["production"],

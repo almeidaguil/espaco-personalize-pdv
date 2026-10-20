@@ -152,7 +152,9 @@ redigida registrada em [PR09 - corte de produção](evidencias/pr09-production-c
 - [ ] Staging legado `gpywbeoqcovjrfnmbdqx` confirmado `INACTIVE`.
 - [ ] Staging Roberto `otsxpchqtfypxgzjzrxs` confirmado `ACTIVE_HEALTHY`.
 - [ ] Produção legada `ciixpfquwmlsvzleattv` confirmada `ACTIVE_HEALTHY`.
-- [ ] Projeto Vercel `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` confirmado vazio.
+- [ ] Projeto Vercel `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` inventariado: recursos
+      preexistentes preservados; reconciliação e autorização específicas do
+      PR09 concluídas antes de qualquer mutação.
 - [ ] Inventário recente, hash íntegro e origem legada exata confirmados.
 - [ ] Organização, ref, topologia, evidência e rollback apresentados ao dono.
 - [ ] Confirmação literal nova recebida imediatamente antes da pausa:

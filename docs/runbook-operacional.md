@@ -167,22 +167,32 @@ Regras obrigatórias:
    PR08.
 5. O projeto Vercel dedicado `roberto-multimarcas-pdv-staging` deve usar preset Next.js e Node 22.x. Qualquer
    divergência de conta, project ID, repositório ou framework exige interrupção.
-6. O target técnico Production é permitido somente no projeto dedicado terminado em
-   `-staging`; o projeto reservado `roberto-multimarcas-pdv` deve permanecer sem
-   variáveis, domínios customizados e deployments de qualquer target até o
-   PR09; somente seu domínio padrão `.vercel.app` é esperado. O ambiente lógico
-   autorizado pelo validador continua sendo exclusivamente `staging`.
+6. O target técnico Production é permitido somente no projeto dedicado terminado
+   em `-staging`, sem conexão Git; o ambiente lógico autorizado pelo validador
+   continua sendo exclusivamente `staging`. O histórico de deployments e as
+   duas variáveis públicas de Preview existentes são preservados. O projeto
+   reservado `roberto-multimarcas-pdv` tem deployments e variáveis Production
+   preexistentes; operações de staging validam sua identidade, mas não o
+   enumeram nem o alteram.
 7. Tokens, senha do banco e credenciais do admin permanecem somente na sessão.
 
-Depois da criação, registre somente refs/IDs não sensíveis no manifesto,
-execute bootstrap idempotente e verificação:
+O provisionador `ops:provision-vercel` é somente para o bootstrap em um projeto
+inicialmente vazio. Depois que o rollout começa, não o reutilize para validar a
+história atual. Registre somente refs/IDs não sensíveis no manifesto, execute
+bootstrap idempotente e verifique as promoções com `ops:rollout-staging`:
 
 ```powershell
 npm.cmd run ops:bootstrap-staging-admin -- --execute --confirm-ref <novo-staging-ref>
 npm.cmd run ops:verify-staging -- --confirm-ref <novo-staging-ref>
-npm.cmd run ops:provision-vercel -- --phase verify-staging --execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79
 npm.cmd run test:e2e:staging-smoke -- --execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79
 ```
+
+Para verificar uma promoção, use `ops:rollout-staging -- --phase verify` com o
+SHA e o ID do deployment retornado. Essa verificação valida o deployment
+específico, o alias estável, o inventário autorizado de variáveis e a proteção;
+deployments históricos não precisam carregar os metadados do fluxo novo.
+Execute primeiro a fase `deploy` documentada em
+[Promoção para staging](vercel-cli.md#promover-uma-vers%C3%A3o-para-staging).
 
 O smoke remoto é somente leitura: login, dashboard e rotas protegidas. Ele usa
 um bypass Vercel temporário, mantém SSO habilitado e exige contagem final zero
@@ -217,9 +227,11 @@ checkpoint por vez, confira a saída real e atualize
 3. Revalidar o manifesto, a organização Supabase
    `wcqoluxxlvglqtebcucz`, o projeto Vercel
    `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` e a região `sa-east-1`.
-4. Confirmar a topologia: staging legado `INACTIVE`, staging Roberto
-   `ACTIVE_HEALTHY`, produção legada `ACTIVE_HEALTHY`, produção Roberto ausente
-   e projeto Vercel reservado ainda vazio.
+4. Confirmar a topologia dos bancos: staging legado `INACTIVE`, staging Roberto
+   `ACTIVE_HEALTHY`, produção legada `ACTIVE_HEALTHY` e destino de produção
+   Roberto ainda não liberado. O projeto Vercel reservado existe e tem recursos
+   preexistentes: 4 deployments Production `READY` e 3 variáveis Production no
+   inventário de 20/10/2026. Não leia valores nem altere esses recursos.
 5. Carregar credenciais apenas do Windows Credential Manager para variáveis
    temporárias da sessão. Nunca copie os valores para o comando ou documento.
 6. Executar os dry-runs:
@@ -231,10 +243,11 @@ npm.cmd run ops:provision-production -- --inventory .provisioning/production-bac
 npm.cmd run ops:provision-vercel-production -- --phase audit
 ```
 
-O `audit` inicial da Vercel é estritamente somente leitura e pode ser executado
-antes de existir estado de cutover. Nessa fase ele exige que o projeto reservado
-esteja vazio; as fases `configure` e `deploy` continuam bloqueadas até o estado
-correspondente do corte.
+O fluxo atual de produção foi escrito para um projeto vazio e deve permanecer
+bloqueado diante do estado Vercel existente. Não execute `configure` nem
+`deploy`, e não trate um `audit` que falha na precondição de projeto vazio como
+aprovação. O PR09 precisa estabelecer um plano próprio para o inventário e a
+reconciliação desses recursos antes de qualquer mutação.
 
 O inventário é somente leitura e precisa identificar a produção legada exata.
 Antes da pausa, confira origem, hash, integridade e idade máxima de uma hora da
@@ -313,20 +326,13 @@ operacional existente bloqueiam o corte; não sobrescreva nem limpe registros.
 
 ### 5. Vercel De Produção
 
-O alvo exclusivo é `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`. Configure exatamente
-as três variáveis de produção, mantendo `SUPABASE_SECRET_KEY` sensível, e
-publique somente o commit assinado autorizado:
-
-```powershell
-npm.cmd run ops:provision-vercel-production -- --phase audit --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
-npm.cmd run ops:provision-vercel-production -- --phase configure --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
-npm.cmd run ops:provision-vercel-production -- --phase deploy --source-ref feature/production-cutover --commit-sha <signed-commit-sha> --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
-npm.cmd run ops:provision-vercel-production -- --phase verify --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
-```
-
-Exija preset Next.js, Node.js 22.x, deployment `READY`, URL imutável, alias
-estável e ausência de Vercel Authentication e bypass. Não altere o staging nem
-o projeto Vercel legado e não crie domínio customizado.
+O alvo reservado é `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`, mas ele já contém
+deployments Production e três variáveis Production. Não execute as fases
+`audit`, `configure` ou `deploy` do provisionador atual como se o projeto
+estivesse vazio: os valores das variáveis não foram lidos e não há autorização
+para sobrescrevê-los. O PR09 deve primeiro reconciliar o estado e aprovar um
+fluxo de produção compatível; preserve todos os recursos enquanto isso. Os
+comandos de produção serão publicados após essa revisão.
 
 ### 6. Verificação, Smoke E Monitoramento
 

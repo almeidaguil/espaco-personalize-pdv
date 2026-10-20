@@ -30,6 +30,10 @@ const environmentVariables = [
   { key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", type: "encrypted" },
   { key: "SUPABASE_SECRET_KEY", type: "sensitive" },
 ];
+const previewEnvironmentVariables = [
+  { key: "NEXT_PUBLIC_SUPABASE_URL", type: "encrypted" },
+  { key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY", type: "encrypted" },
+];
 const phases = new Set([
   "apply-foundation",
   "apply-cutover",
@@ -165,10 +169,6 @@ export async function runStagingRollout({
       productionTarget: productionVercelTarget,
       target: vercelTarget,
     });
-    assertProjectDeployments(
-      await listDeployments(deploymentClient, vercelTarget),
-      vercelTarget,
-    );
     assertEnvironmentVariables(
       await listEnvironmentVariables(deploymentClient, vercelTarget),
       vercelTarget,
@@ -552,6 +552,11 @@ async function resolveRemoteSourceCommit(sourceRef, runCommand, environment) {
 }
 
 async function verifyVercelProject({ client, productionTarget, target }) {
+  if (productionTarget.projectId === target.projectId) {
+    throw new Error(
+      "Staging and production must use different Vercel projects.",
+    );
+  }
   const project = await client.getProject(target.projectId, target.orgId);
   if (
     project?.id !== target.projectId ||
@@ -581,22 +586,6 @@ async function verifyVercelProject({ client, productionTarget, target }) {
       "The reserved production Vercel project identity is divergent.",
     );
   }
-  const [deployments, variables, domains] = await Promise.all([
-    client.listProjectDeployments(productionTarget.projectId, target.orgId),
-    client.listProjectEnvironmentVariables(
-      productionTarget.projectId,
-      target.orgId,
-    ),
-    client.listProjectDomains(productionTarget.projectId, target.orgId),
-  ]);
-  if (
-    (deployments?.deployments ?? []).length !== 0 ||
-    (variables?.envs ?? []).length !== 0 ||
-    (domains?.domains ?? []).length !== 1 ||
-    domains.domains[0]?.name !== `${productionTarget.projectName}.vercel.app`
-  ) {
-    throw new Error("The reserved production Vercel project is not empty.");
-  }
   return project;
 }
 
@@ -608,21 +597,6 @@ async function listDeployments(client, target) {
   return response?.deployments ?? [];
 }
 
-function assertProjectDeployments(deployments, target) {
-  const divergent = deployments.find((deployment) => {
-    const metadata = deployment?.meta ?? {};
-    return (
-      deployment?.name !== target.projectName ||
-      deployment?.target !== target.deploymentEnvironment ||
-      metadata.roberto_environment !== "staging" ||
-      metadata.dedicated_staging !== "true"
-    );
-  });
-  if (divergent) {
-    throw new Error("The dedicated staging deployment history is divergent.");
-  }
-}
-
 async function listEnvironmentVariables(client, target) {
   const response = await client.listProjectEnvironmentVariables(
     target.projectId,
@@ -632,19 +606,34 @@ async function listEnvironmentVariables(client, target) {
 }
 
 function assertEnvironmentVariables(entries, target) {
-  if (entries.length !== environmentVariables.length) {
-    throw new Error("Staging must contain exactly three Production variables.");
+  const expectedEntries = [
+    ...environmentVariables.map((entry) => ({
+      ...entry,
+      target: target.deploymentEnvironment,
+    })),
+    ...previewEnvironmentVariables.map((entry) => ({
+      ...entry,
+      target: "preview",
+    })),
+  ];
+  if (entries.length !== expectedEntries.length) {
+    throw new Error("Staging environment variable inventory is divergent.");
   }
-  for (const expected of environmentVariables) {
-    const matches = entries.filter((entry) => entry.key === expected.key);
+  for (const expected of expectedEntries) {
+    const matches = entries.filter(
+      (entry) =>
+        entry.key === expected.key &&
+        entry.target?.length === 1 &&
+        entry.target[0] === expected.target,
+    );
     if (
       matches.length !== 1 ||
       matches[0].type !== expected.type ||
-      matches[0].target?.length !== 1 ||
-      matches[0].target[0] !== target.deploymentEnvironment ||
       matches[0].gitBranch
     ) {
-      throw new Error(`Staging variable ${expected.key} is divergent.`);
+      throw new Error(
+        `Staging variable ${expected.key} for ${expected.target} is divergent.`,
+      );
     }
   }
 }
@@ -723,7 +712,6 @@ async function verifyDeployment({
     productionTarget,
     target,
   });
-  assertProjectDeployments(await listDeployments(client, target), target);
   assertEnvironmentVariables(
     await listEnvironmentVariables(client, target),
     target,
