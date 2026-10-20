@@ -7,10 +7,10 @@ remota seja capturada. Banco criado não significa loja liberada.
 
 ## Regra De Release
 
-O último release publicado é `v1.0.0`, da operação Espaco Personalize. A
-reestruturação para Roberto Multimarcas remove o fluxo de eventos e altera o
-modelo operacional para caixas por operador; por ser incompatível com o fluxo
-anterior, a próxima versão SemVer é `2.0.0`. `package.json` e
+O último release publicado é `v1.0.0`. A reestruturação para loja física
+Roberto Multimarcas substitui o modelo operacional anterior pelo controle de
+caixa por operador; como essa mudança é incompatível com contratos e fluxos
+prévios, a próxima versão SemVer é `2.0.0`. `package.json` e
 `package-lock.json` devem permanecer alinhados nessa versão. Criar a tag e
 publicar o release `v2.0.0` somente depois que o PR09-B e seus gates forem
 concluídos; este alinhamento de metadados não autoriza deploy ou mutação em
