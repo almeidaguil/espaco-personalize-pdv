@@ -175,18 +175,13 @@ export async function runVercelProductionProvisioning({
       const listed = await listDeployments(client, target);
       if (state.phase === "verified") {
         const prior = readStateFacts(state, "deployment-ready");
-        const priorDeployments = listed.filter(
-          (candidate) => (candidate.uid ?? candidate.id) === prior.deploymentId,
-        );
-        if (
-          source.sourceRef !== "main" ||
-          listed.length !== 1 ||
-          priorDeployments.length !== 1
-        ) {
-          throw new Error(
-            "Production release deployment history is divergent.",
-          );
-        }
+        await assertVerifiedDeploymentHistory({
+          client,
+          listed,
+          prior,
+          source,
+          target,
+        });
       } else if (listed.length !== 0) {
         throw new Error("An unrelated production deployment already exists.");
       }
@@ -542,6 +537,48 @@ async function listDeployments(client, target) {
     target.orgId,
   );
   return response?.deployments ?? [];
+}
+
+async function assertVerifiedDeploymentHistory({
+  client,
+  listed,
+  prior,
+  source,
+  target,
+}) {
+  const deploymentIds = listed.map(
+    (candidate) => candidate.uid ?? candidate.id,
+  );
+  const priorDeployments = listed.filter(
+    (candidate) => (candidate.uid ?? candidate.id) === prior.deploymentId,
+  );
+  const priorDeployment =
+    priorDeployments.length === 1
+      ? await client.getDeployment(prior.deploymentId, target.orgId)
+      : null;
+  const priorSource = {
+    commitSha: prior.commitSha,
+    environmentFingerprint: source.environmentFingerprint,
+    sourceRef: prior.sourceRef,
+  };
+  if (
+    source.sourceRef !== "main" ||
+    priorDeployments.length !== 1 ||
+    deploymentIds.some((id) => !/^dpl_[A-Za-z0-9]+$/.test(id ?? "")) ||
+    new Set(deploymentIds).size !== deploymentIds.length ||
+    listed.some(
+      (candidate) =>
+        candidate.name !== target.projectName ||
+        !["production", "preview"].includes(candidate.target),
+    ) ||
+    (priorDeployment?.uid ?? priorDeployment?.id) !== prior.deploymentId ||
+    priorDeployment?.name !== target.projectName ||
+    priorDeployment?.target !== "production" ||
+    priorDeployment?.readyState !== "READY" ||
+    !deploymentMatchesSource(priorDeployment, priorSource, target)
+  ) {
+    throw new Error("Production release deployment history is divergent.");
+  }
 }
 
 async function findExistingDeployment(client, target, source) {

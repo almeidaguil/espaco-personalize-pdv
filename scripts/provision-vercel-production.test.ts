@@ -480,6 +480,123 @@ describe("runVercelProductionProvisioning", () => {
       sourceRef: "main",
     });
   });
+
+  test("allows validated Vercel deployment history after a verified release", async () => {
+    const mainSha = "b".repeat(40);
+    const olderSha = "c".repeat(40);
+    const prior = readyDeployment();
+    const history = [
+      prior,
+      readyDeployment({
+        gitSource: {
+          ref: olderSha,
+          repoId: 1264018806,
+          sha: olderSha,
+        },
+        meta: {
+          ...prior.meta,
+          roberto_commit_sha: olderSha,
+          roberto_source_ref: "main",
+        },
+        uid: "dpl_OlderProduction456",
+      }),
+      readyDeployment({
+        alias: [],
+        target: "preview",
+        uid: "dpl_PreviewDeployment456",
+      }),
+      readyDeployment({
+        gitSource: {
+          ref: olderSha,
+          repoId: 1264018806,
+          sha: olderSha,
+        },
+        meta: {
+          ...prior.meta,
+          roberto_commit_sha: olderSha,
+          roberto_source_ref: "main",
+        },
+        uid: "dpl_AnotherProduction456",
+      }),
+    ];
+    const main = readyDeployment({
+      gitSource: { ref: mainSha, repoId: 1264018806, sha: mainSha },
+      meta: {
+        ...prior.meta,
+        roberto_commit_sha: mainSha,
+        roberto_source_ref: "main",
+      },
+      uid: "dpl_MainProduction456",
+      url: "roberto-main-build.vercel.app",
+    });
+    const client = createClient({
+      deployment: main,
+      deployments: history,
+      variables: expectedVariables(),
+    });
+
+    await expect(
+      run({
+        client,
+        options: {
+          commitSha: mainSha,
+          confirmation: projectId,
+          execute: true,
+          phase: "deploy",
+          sourceRef: "main",
+        },
+        resolveSourceCommit: vi.fn().mockResolvedValue(mainSha),
+        state: verifiedState(),
+      }),
+    ).resolves.toMatchObject({
+      deploymentId: "dpl_MainProduction456",
+      sourceRef: "main",
+    });
+    expect(client.createGitDeployment).toHaveBeenCalledTimes(1);
+  });
+
+  test("still requires the persisted prior production deployment in history", async () => {
+    const mainSha = "b".repeat(40);
+    const main = readyDeployment({
+      gitSource: { ref: mainSha, repoId: 1264018806, sha: mainSha },
+      meta: {
+        ...readyDeployment().meta,
+        roberto_commit_sha: mainSha,
+        roberto_source_ref: "main",
+      },
+      uid: "dpl_MainProduction456",
+      url: "roberto-main-build.vercel.app",
+    });
+    const client = createClient({
+      deployment: main,
+      deployments: [
+        readyDeployment({
+          uid: "dpl_OlderProduction456",
+        }),
+        readyDeployment({
+          uid: "dpl_AnotherProduction456",
+        }),
+      ],
+      variables: expectedVariables(),
+    });
+
+    await expect(
+      run({
+        client,
+        options: {
+          commitSha: mainSha,
+          confirmation: projectId,
+          execute: true,
+          phase: "deploy",
+          sourceRef: "main",
+        },
+        resolveSourceCommit: vi.fn().mockResolvedValue(mainSha),
+        state: verifiedState(),
+      }),
+    ).rejects.toThrow(/history is divergent/i);
+    expect(client.createGitDeployment).not.toHaveBeenCalled();
+    expect(client.mutations).toHaveLength(0);
+  });
 });
 
 describe("runProvisionVercelProductionCli", () => {
@@ -730,7 +847,7 @@ function createClient({
       failCreation = false;
       throw new Error("injected deployment response failure");
     }
-    return { id: "dpl_Production123", target: "production" };
+    return { id: deployment.uid, target: "production" };
   });
   const upsertProjectEnvironmentVariable = vi.fn(
     async (input: {
@@ -759,7 +876,12 @@ function createClient({
   return {
     createAutomationBypass: vi.fn(),
     createGitDeployment,
-    getDeployment: vi.fn(async () => structuredClone(deployment)),
+    getDeployment: vi.fn(async (deploymentId: string) => {
+      const existing = currentDeployments.find(
+        (candidate) => candidate.uid === deploymentId,
+      );
+      return structuredClone(existing ?? deployment);
+    }),
     getProject: vi.fn(async () => ({
       framework: "nextjs",
       id: projectId,
