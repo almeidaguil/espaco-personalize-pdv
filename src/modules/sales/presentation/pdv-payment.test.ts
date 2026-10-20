@@ -47,6 +47,47 @@ describe("summarizePaymentDrafts", () => {
     });
   });
 
+  it("includes entered split amounts when another payment is still blank", () => {
+    expect(
+      summarizePaymentDrafts(
+        [
+          {
+            amountInput: "50,00",
+            installmentCount: 3,
+            method: "credit_card",
+          },
+          { amountInput: "", method: "cash" },
+        ],
+        7000,
+      ),
+    ).toEqual({
+      changeInCents: 0,
+      error: "Informe valores válidos para todos os pagamentos.",
+      grossAmountInCents: 5000,
+      isValid: false,
+      netAmountInCents: 5000,
+      remainingInCents: 2000,
+    });
+  });
+
+  it("preserves valid entered amounts when another split amount is malformed", () => {
+    expect(
+      summarizePaymentDrafts(
+        [
+          { amountInput: "50,00", method: "credit_card", installmentCount: 3 },
+          { amountInput: "inválido", method: "cash" },
+        ],
+        7000,
+      ),
+    ).toMatchObject({
+      error: "Informe valores válidos para todos os pagamentos.",
+      grossAmountInCents: 5000,
+      isValid: false,
+      netAmountInCents: 5000,
+      remainingInCents: 2000,
+    });
+  });
+
   it("rejects excess without cash", () => {
     expect(
       summarizePaymentDrafts(
