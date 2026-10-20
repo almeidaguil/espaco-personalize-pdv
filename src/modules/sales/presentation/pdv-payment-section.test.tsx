@@ -52,6 +52,26 @@ describe("PdvPaymentSection", () => {
     );
   });
 
+  it("shows the entered credit amount and remaining balance before cash is entered", async () => {
+    const user = userEvent.setup();
+    render(<PaymentHarness totalInCents={7000} />);
+
+    await user.click(screen.getByRole("button", { name: "Dividir pagamento" }));
+    await user.selectOptions(
+      screen.getByRole("combobox", { name: "Forma de pagamento 1" }),
+      "credit_card",
+    );
+    await user.click(screen.getByRole("radio", { name: "3x" }));
+    await user.type(screen.getByLabelText("Valor do pagamento 1"), "50,00");
+
+    expect(screen.getByText("Total informado").parentElement).toHaveTextContent(
+      "R$ 50,00",
+    );
+    expect(screen.getByText("Restante").parentElement).toHaveTextContent(
+      "R$ 20,00",
+    );
+  });
+
   it("selects credit installments and shows the approximate installment", async () => {
     const user = userEvent.setup();
     render(<PaymentHarness />);
@@ -81,7 +101,13 @@ describe("PdvPaymentSection", () => {
   });
 });
 
-function PaymentHarness({ errorMessage }: { errorMessage?: string }) {
+function PaymentHarness({
+  errorMessage,
+  totalInCents = 1500,
+}: {
+  errorMessage?: string;
+  totalInCents?: number;
+}) {
   const [drafts, setDrafts] = useState<PaymentDraft[]>([
     { amountInput: "", method: "cash" },
   ]);
@@ -91,7 +117,7 @@ function PaymentHarness({ errorMessage }: { errorMessage?: string }) {
       drafts={drafts}
       errorMessage={errorMessage}
       onChange={setDrafts}
-      totalInCents={1500}
+      totalInCents={totalInCents}
     />
   );
 }

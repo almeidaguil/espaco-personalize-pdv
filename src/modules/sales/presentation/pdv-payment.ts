@@ -88,19 +88,18 @@ export function summarizePaymentDrafts(
     }
   }
 
-  const amountsInCents = drafts.map((draft) =>
+  const parsedAmountsInCents = drafts.map((draft) =>
     parseBrlCurrencyToCents(draft.amountInput),
   );
-
-  if (
-    amountsInCents.some(
-      (amountInCents) =>
-        !Number.isSafeInteger(amountInCents) || amountInCents <= 0,
-    )
-  ) {
-    return invalidSummary("Informe valores válidos para todos os pagamentos.");
-  }
-
+  const hasInvalidAmount = parsedAmountsInCents.some(
+    (amountInCents) =>
+      !Number.isSafeInteger(amountInCents) || amountInCents <= 0,
+  );
+  const amountsInCents = parsedAmountsInCents.map((amountInCents) =>
+    Number.isSafeInteger(amountInCents) && amountInCents > 0
+      ? amountInCents
+      : 0,
+  );
   const grossAmountInCents = amountsInCents.reduce(
     (total, amountInCents) => total + amountInCents,
     0,
@@ -108,6 +107,14 @@ export function summarizePaymentDrafts(
 
   if (!Number.isSafeInteger(grossAmountInCents)) {
     return invalidSummary("O total informado é muito alto.");
+  }
+
+  if (hasInvalidAmount) {
+    return invalidSummary("Informe valores válidos para todos os pagamentos.", {
+      grossAmountInCents,
+      netAmountInCents: grossAmountInCents,
+      remainingInCents: Math.max(totalInCents - grossAmountInCents, 0),
+    });
   }
 
   const remainingInCents = Math.max(totalInCents - grossAmountInCents, 0);
