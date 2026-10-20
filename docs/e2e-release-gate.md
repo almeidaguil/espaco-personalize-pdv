@@ -24,6 +24,13 @@ multioperador automatizada inclui:
 - vendas vinculadas aos caixas corretos e relatório consolidado, por operador
   e sessão, com CSV equivalente.
 
+O fluxo financeiro também prova um e dois métodos por venda, Pix + dinheiro com
+troco, crédito em 3x, baixa e restauração única de estoque, quatro conferências
+obrigatórias, fechamento exato, sobra, falta, diferenças opostas, autorização
+administrativa e relatório/CSV com parcelas e reconciliações. Os helpers usam
+`finalize_sale_v5` e `close_cash_session_v2`; o gate confirma que usuários
+autenticados não podem executar o fechamento legado.
+
 O smoke do [Runbook operacional](runbook-operacional.md) complementa os testes
 com a conferência da operação e dos dispositivos após deploy.
 

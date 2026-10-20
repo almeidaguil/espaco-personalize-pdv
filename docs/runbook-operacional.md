@@ -42,10 +42,13 @@ sem conexão.
 Para cada venda:
 
 1. Buscar produto por nome ou SKU, adicionar e conferir quantidade e saldo.
-2. Conferir total e forma de pagamento.
-3. Para dinheiro, informar valor recebido e conferir troco.
+2. Conferir total e escolher uma forma ou `Dividir pagamento` entre duas formas
+   distintas.
+3. Para dinheiro, informar valor recebido e conferir troco; para crédito,
+   registrar à vista, 2x ou 3x.
 4. Para Pix ou cartão, confirmar o recebimento na conta ou no terminal da loja.
-5. Finalizar e aguardar a confirmação antes da próxima venda.
+5. Conferir total informado, contribuição líquida e restante antes de finalizar.
+6. Finalizar e aguardar a confirmação antes da próxima venda.
 
 O PDV localiza automaticamente o caixa do usuário autenticado. Não existe escolha
 de outro vendedor para registrar a venda. Não recarregue durante a finalização.
@@ -67,13 +70,15 @@ fechamento original.
 
 1. Parar novas vendas na sessão e aguardar operações em andamento.
 2. Acessar `/cash/close` e conferir vendedor, horário e identificação da sessão.
-3. Conferir valor inicial, vendas, esperado e cancelado.
-4. Contar somente o dinheiro físico e preencher `Valor contado no caixa`.
-5. Se houver falta, reconferir e solicitar senha administrativa se persistir.
+3. Conferir valor inicial, vendas concluídas e canceladas.
+4. Preencher os valores conferidos de dinheiro, Pix, crédito e débito, inclusive
+   `0,00` quando aplicável.
+5. Comparar esperado e conferido em cada método. Qualquer sobra ou falta exige
+   senha administrativa; diferenças opostas não se compensam.
 6. Fechar e aguardar confirmação.
-7. Conferir a sessão e a diferença em `/reports`.
+7. Conferir as quatro reconciliações da sessão em `/reports`.
 
-Pix, crédito e débito são conciliados, mas não entram no dinheiro físico esperado.
+Pix, crédito e débito têm conferências próprias e não entram no dinheiro físico esperado.
 Fechar um caixa não interrompe os outros. O mesmo operador pode abrir outra sessão
 no mesmo dia em `/cash/open`; o novo valor inicial e histórico são independentes.
 
@@ -437,17 +442,19 @@ secrets, e para o Supabase mesmo em falha.
 1. Fazer login e conferir painel e permissões.
 2. Cadastrar produto e registrar saldo inicial.
 3. Abrir caixa próprio e conferir associação automática no PDV.
-4. Fazer venda em dinheiro com troco e venda em Pix ou cartão.
-5. Conferir vendas e baixa de estoque.
-6. Cancelar uma venda e conferir histórico, estoque e financeiro.
-7. Fechar, conferir valores e reabrir no mesmo dia; fechar a nova sessão.
+4. Fazer venda em um método, venda dividida Pix + dinheiro com troco e crédito 3x.
+5. Conferir pagamentos, parcelamento, vendas e baixa de estoque.
+6. Cancelar uma venda e conferir histórico, estoque e financeiro uma única vez.
+7. Fechar com os quatro valores, validar fechamento exato, sobra, falta,
+   diferenças opostas e senha administrativa; reabrir no mesmo dia.
 8. Com dois usuários em sessões de navegador separadas, conferir caixas
    simultâneos, associação de cada venda e continuidade ao fechar um dos caixas.
 9. Conferir consulta restrita do operador e fechamento administrativo de outro
    caixa em contingência.
-10. Conferir consolidado do período, filtros por vendedor/sessão e CSV.
+10. Conferir total geral único, contagens por método, parcelas, reconciliações,
+    filtros por vendedor/sessão e CSV.
 
-Registre o resultado do smoke manual após deploy. O gate do PR07 já automatiza
+Registre o resultado do smoke manual após deploy. O gate E2E automatiza
 caixas independentes, concorrência de abertura/vendas/fechamento, isolamento,
 contingência auditada e relatórios/CSV multioperador, sem skips autenticados.
 Os contextos de navegador e clientes são separados por identidade; a preparação

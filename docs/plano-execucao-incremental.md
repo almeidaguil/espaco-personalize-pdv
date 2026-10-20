@@ -183,36 +183,36 @@ Criterio de pronto:
 
 ## Evolucao Atual - Pagamentos Divididos E Conferencia Por Metodo
 
-Status: fundacao aditiva do banco em branch de funcionalidade. A interface e o
-corte funcional pertencem a um segundo PR, criado somente depois da integracao
-desta fundacao em `develop`.
+Status: aplicacao e corte funcional implementados na segunda branch de
+funcionalidade; promocao remota depende dos gates completos e do pull request
+para `develop`.
 
-Escopo deste primeiro PR:
+Runtime desta entrega:
 
 - `payments.installment_count`, com credito em 1x, 2x ou 3x e compatibilidade
   de credito historico como 1x;
 - ate dois metodos distintos por venda, com contribuicao liquida minima de um
   centavo e troco calculado no servidor somente para dinheiro;
-- `finalize_sale_v5` atomica, mantendo v3/v4 executaveis durante a transicao;
+- `finalize_sale_v5` atomica usada pela aplicacao, mantendo v3/v4 somente para
+  compatibilidade de vendas;
 - `close_cash_session_v2` com conferencia independente de dinheiro, Pix,
-  credito e debito, mantendo o fechamento legado executavel neste PR;
+  credito e debito;
 - quatro linhas auditaveis em `cash_session_reconciliations`, enquanto os
   campos escalares do caixa continuam representando somente dinheiro fisico;
 - relatorio SQL compativel com pagamentos divididos, parcelas e reconciliacoes;
-- verificacao remota dos objetos, assinaturas, RLS e grants da fase aditiva.
-
-Fora do runtime deste primeiro PR:
-
-- o PDV ainda nao envia `payments[]` nem exibe parcelamento;
-- o formulario de fechamento ainda nao envia as quatro conferencias;
-- a aplicacao ainda nao consome os novos campos do relatorio;
-- o fechamento legado somente sera revogado no PR de corte, depois da migracao
-  integral da aplicacao e do gate E2E correspondente.
+- PDV com `payments[]`, divisao em dois metodos e credito em ate 3x;
+- detalhes e historico com todos os pagamentos;
+- fechamento com quatro valores inicialmente vazios e autorizacao para qualquer
+  divergencia;
+- relatorio e CSV com contagem distinta por metodo, parcelas e reconciliacoes;
+- fechamento legado preservado no schema para historico, mas sem `execute` para
+  `public`, `anon` ou `authenticated`;
+- verificacao remota dos objetos, assinaturas, RLS e grants apos o corte.
 
 Criterio de pronto da fundacao:
 
 - migrations de upgrade e reset limpo produzem o mesmo contrato;
-- V3, V4 e fechamento legado continuam funcionais;
+- V3 e V4 permanecem compativeis; o fechamento legado fica bloqueado;
 - V5 e fechamento V2 passam validacao, RLS, concorrencia, rollback e
   idempotencia;
 - o verificador remoto exige tabela, coluna, RPCs e grants novos sem registrar
