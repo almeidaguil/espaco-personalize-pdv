@@ -440,7 +440,7 @@ function createManagementClient(
             anon_finalize_v5_execute: false,
             authenticated_close_v2_execute: true,
             authenticated_finalize_v5_execute: true,
-            authenticated_legacy_close_execute: true,
+            authenticated_legacy_close_execute: false,
             authenticated_payment_helper_execute: !splitPaymentContractMatches,
             authenticated_reconciliation_select: true,
             authenticated_reconciliation_writes_blocked: true,

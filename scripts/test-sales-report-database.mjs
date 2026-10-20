@@ -583,12 +583,11 @@ try {
 
   const beforeClose = Date.now();
   const { error: closeRpcError } = await identities.operatorA.client.rpc(
-    "close_cash_session",
+    "close_cash_session_v2",
     {
       p_admin_password: null,
       p_cash_session_id: cashSessionIds.rpcTimestamp,
-      p_closed_at: "2099-01-01T00:00:00.000Z",
-      p_counted_amount_in_cents: 1_000,
+      p_reconciliations: countedReconciliations({ cash: 1_000 }),
     },
   );
   assert.equal(closeRpcError, null, "cash close RPC must succeed");
@@ -716,11 +715,10 @@ try {
   );
 
   const [concurrentCloseResult, concurrentCancelResult] = await Promise.all([
-    identities.operatorA.client.rpc("close_cash_session", {
+    identities.operatorA.client.rpc("close_cash_session_v2", {
       p_admin_password: password,
       p_cash_session_id: cashSessionIds.rpcConcurrent,
-      p_closed_at: "2099-01-01T00:00:00.000Z",
-      p_counted_amount_in_cents: 2_000,
+      p_reconciliations: countedReconciliations({ cash: 2_000 }),
     }),
     identities.operatorA.client.rpc("cancel_sale", {
       p_admin_password: password,
@@ -906,6 +904,20 @@ try {
   );
 } finally {
   await cleanupTestData();
+}
+
+function countedReconciliations({
+  cash = 0,
+  credit_card = 0,
+  debit_card = 0,
+  pix = 0,
+} = {}) {
+  return [
+    { counted_amount_in_cents: cash, method: "cash" },
+    { counted_amount_in_cents: pix, method: "pix" },
+    { counted_amount_in_cents: credit_card, method: "credit_card" },
+    { counted_amount_in_cents: debit_card, method: "debit_card" },
+  ];
 }
 
 function createIdentity(label) {

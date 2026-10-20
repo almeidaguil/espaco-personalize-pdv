@@ -345,12 +345,12 @@ select extensions.ok(
   'PUBLIC cannot close with payment reconciliation'
 );
 select extensions.ok(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
     'public.close_cash_session(uuid,integer,timestamp with time zone,text)',
     'EXECUTE'
   ),
-  'authenticated users retain the legacy close contract during PR 1'
+  'authenticated users cannot bypass payment reconciliation through the legacy close RPC'
 );
 select extensions.ok(
   pg_get_functiondef(

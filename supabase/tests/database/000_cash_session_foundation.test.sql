@@ -2,7 +2,7 @@ begin;
 
 create extension if not exists pgtap with schema extensions;
 
-select extensions.plan(51);
+select extensions.plan(52);
 
 select extensions.has_column(
   'public',
@@ -322,12 +322,12 @@ select extensions.ok(
 );
 
 select extensions.ok(
-  has_function_privilege(
+  not has_function_privilege(
     'authenticated',
     'public.close_cash_session(uuid,integer,timestamp with time zone,text)',
     'EXECUTE'
   ),
-  'authenticated users keep close_cash_session access'
+  'authenticated users cannot execute the legacy close_cash_session RPC after cutover'
 );
 
 select extensions.ok(
@@ -337,6 +337,15 @@ select extensions.ok(
     'EXECUTE'
   ),
   'anonymous users cannot execute close_cash_session'
+);
+
+select extensions.ok(
+  not has_function_privilege(
+    'public',
+    'public.close_cash_session(uuid,integer,timestamp with time zone,text)',
+    'EXECUTE'
+  ),
+  'PUBLIC cannot execute the legacy close_cash_session RPC after cutover'
 );
 
 select extensions.ok(

@@ -575,7 +575,7 @@ export async function verifyRemoteEnvironment({
     splitPaymentContract.anon_finalize_v5_execute !== false ||
     splitPaymentContract.authenticated_close_v2_execute !== true ||
     splitPaymentContract.anon_close_v2_execute !== false ||
-    splitPaymentContract.authenticated_legacy_close_execute !== true ||
+    splitPaymentContract.authenticated_legacy_close_execute !== false ||
     splitPaymentContract.authenticated_payment_helper_execute !== false ||
     splitPaymentContract.authenticated_reconciliation_select !== true ||
     splitPaymentContract.authenticated_reconciliation_writes_blocked !== true ||
