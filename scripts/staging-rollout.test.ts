@@ -162,6 +162,11 @@ describe("runStagingRollout", () => {
 
   test("deployment is pinned to the exact develop SHA and gets a stable alias", async () => {
     const vercelClient = createVercelClient();
+    const runCommand = vi.fn<RunCommand>(() => ({
+      status: 0,
+      stderr: "",
+      stdout: `${commitSha}\trefs/heads/develop`,
+    }));
     const result = await run({
       args: [
         "--phase",
@@ -174,11 +179,24 @@ describe("runStagingRollout", () => {
         "--commit-sha",
         commitSha,
       ],
-      environment: { VERCEL_TOKEN: vercelToken },
-      resolveSourceCommit: vi.fn<ResolveSourceCommit>(async () => commitSha),
+      environment: {
+        VERCEL_TOKEN: vercelToken,
+        VERCEL_OIDC_TOKEN: "vercel-oidc-sentinel",
+      },
+      runCommand,
       vercelClient,
     });
 
+    expect(runCommand).toHaveBeenCalledWith(
+      "git",
+      ["ls-remote", "origin", "refs/heads/develop"],
+      {
+        environment: {
+          VERCEL_TOKEN: undefined,
+          VERCEL_OIDC_TOKEN: undefined,
+        },
+      },
+    );
     expect(vercelClient.createGitDeployment).toHaveBeenCalledWith({
       environment: "production",
       metadata: expect.objectContaining({

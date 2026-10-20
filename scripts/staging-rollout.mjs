@@ -46,7 +46,7 @@ export async function runStagingRollout({
   managementClient,
   repoRoot = process.cwd(),
   resolveSourceCommit = (sourceRef) =>
-    resolveRemoteSourceCommit(sourceRef, runCommand),
+    resolveRemoteSourceCommit(sourceRef, runCommand, environment),
   runCommand = runCliCommand,
   tempRoot = () => mkdtemp(join(tmpdir(), "pdv-staging-rollout-")),
   vercelClient,
@@ -526,12 +526,24 @@ async function resolveDeploymentSource(options, resolveSourceCommit) {
   return { commitSha: options.commitSha, sourceRef: options.sourceRef };
 }
 
-async function resolveRemoteSourceCommit(sourceRef, runCommand) {
-  const result = runCommand("git", [
-    "ls-remote",
-    "origin",
-    `refs/heads/${sourceRef}`,
-  ]);
+async function resolveRemoteSourceCommit(sourceRef, runCommand, environment) {
+  const gitEnvironment = { ...environment };
+  for (const name of [
+    "SUPABASE_ACCESS_TOKEN",
+    "SUPABASE_DB_PASSWORD",
+    "SUPABASE_SECRET_KEY",
+    "VERCEL_OIDC_TOKEN",
+    "VERCEL_TOKEN",
+  ]) {
+    delete gitEnvironment[name];
+  }
+  const result = runCommand(
+    "git",
+    ["ls-remote", "origin", `refs/heads/${sourceRef}`],
+    {
+      environment: gitEnvironment,
+    },
+  );
   if (result.status !== 0) {
     throw new Error("Unable to resolve the remote develop commit.");
   }
