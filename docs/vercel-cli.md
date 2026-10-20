@@ -112,10 +112,75 @@ Confirme por metadados:
 - produção legada Vercel/Supabase intacta.
 
 O deployment inicial usa o `sourceRef` de bootstrap
-`feature/provision-roberto-environments`; esse commit passa a compor `develop`
-quando o PR for integrado. O provisionador do PR08 é deliberadamente imutável e
-não substitui deployments persistidos. Como não há integração Git, promoções
-futuras dependem de um fluxo posterior, versionado e auditado.
+`feature/provision-roberto-environments`; esse commit passou a compor `develop`
+quando o PR foi integrado. O provisionador do PR08 é deliberadamente imutável e
+não substitui deployments persistidos. Promoções posteriores usam o fluxo
+versionado `ops:rollout-staging`, que cria deployments pela API para o SHA exato
+de `develop` sem habilitar a integração Git no projeto.
+
+## Promover Uma Versão Para Staging
+
+Execute o fluxo a partir do checkout do commit integrado em `develop`. Os
+comandos são dry-run por padrão, exceto `verify`, que é somente leitura e
+consulta os metadados remotos sem exigir `--execute`.
+
+1. Conferir o plano e aplicar apenas a migration aditiva:
+
+   ```powershell
+   npm.cmd run ops:rollout-staging -- --phase apply-foundation
+   npm.cmd run ops:rollout-staging -- --phase apply-foundation --execute --confirm-project otsxpchqtfypxgzjzrxs
+   ```
+
+   A etapa exige `SUPABASE_ACCESS_TOKEN` e `SUPABASE_DB_PASSWORD` no ambiente do
+   processo. Ela cria um bundle temporário contendo migrations somente até
+   `20261018120000`, confirma que o dry-run planeja exclusivamente a migration
+   aditiva e remove o bundle ao terminar. Não use `db push` direto: a migration
+   de corte legado posterior não pode ser aplicada nesta fase.
+
+2. Promover um SHA exato que ainda seja o HEAD remoto de `develop`:
+
+   ```powershell
+   npm.cmd run ops:rollout-staging -- --phase deploy --source-ref develop --commit-sha <sha>
+   npm.cmd run ops:rollout-staging -- --phase deploy --source-ref develop --commit-sha <sha> --execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79
+   ```
+
+   A etapa exige `VERCEL_TOKEN` no ambiente do processo, mantém Vercel
+   Authentication e valida as três variáveis de staging, o projeto reservado
+   de produção vazio, o deployment `READY` e o alias estável. Ela não altera
+   variáveis, proteção ou a conexão Git.
+
+3. Fazer verificação somente leitura, fornecendo o SHA e o ID retornado pela
+   promoção:
+
+   ```powershell
+   npm.cmd run ops:rollout-staging -- --phase verify --source-ref develop --commit-sha <sha> --deployment-id <deployment-id>
+   ```
+
+   Antes do corte, executar e aprovar o smoke financeiro no runtime novo,
+   incluindo fechamento e reabertura do caixa de teste com a RPC nova. Não
+   aplique a migration de corte antes desse checkpoint.
+
+4. Depois do smoke aprovado, conferir o plano e autorizar separadamente os dois
+   alvos antes de revogar o fechamento legado:
+
+   ```powershell
+   npm.cmd run ops:rollout-staging -- --phase apply-cutover --source-ref develop --commit-sha <sha> --deployment-id <deployment-id>
+   npm.cmd run ops:rollout-staging -- --phase apply-cutover --source-ref develop --commit-sha <sha> --deployment-id <deployment-id> --execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79 --confirm-database-ref otsxpchqtfypxgzjzrxs --confirm-smoke-passed STAGING_FINANCIAL_SMOKE_PASSED --confirm-cutover 20261018180000_disable_legacy_cash_close.sql
+   ```
+
+   Essa fase confirma novamente que o deployment exato está `READY`, que o
+   alias estável aponta para ele e que o smoke foi confirmado explicitamente.
+   O dry-run deve planejar somente
+   `20261018180000_disable_legacy_cash_close.sql`. Após a aplicação, a
+   automação verifica que o RPC legado não é executável e que
+   `close_cash_session_v2` permanece executável.
+
+Não feche caixas de staging antes do smoke apenas para liberar a promoção: use
+as sessões de teste existentes para validar o novo fechamento quando adequado.
+Depois do smoke, reconcilie e encerre as sessões de teste pelo runtime novo. Em
+qualquer divergência, interrompa a sequência; não execute SQL manual, não faça
+reset remoto e não altere o projeto de produção reservado. Produção continua
+dependente do PR de release e dos checkpoints do PR09.
 
 Em divergência, pare sem promover, excluir projeto ou alterar `main`. Preserve
 evidências redigidas e retome apenas a etapa idempotente correspondente.

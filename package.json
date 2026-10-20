@@ -37,6 +37,7 @@
     "ops:verify-target": "node scripts/verify-remote-target.mjs",
     "ops:verify-staging": "node scripts/verify-remote-staging.mjs",
     "ops:verify-production": "node scripts/verify-remote-production.mjs",
+    "ops:rollout-staging": "node scripts/staging-rollout.mjs",
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
