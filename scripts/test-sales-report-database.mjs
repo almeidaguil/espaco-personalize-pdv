@@ -123,8 +123,8 @@ try {
       closedSession({
         closedAt: "2026-09-16T06:00:00.000Z",
         counted: 0,
-        difference: 0,
-        expected: 0,
+        difference: -50,
+        expected: 50,
         id: cashSessionIds.operatorACrossMidnight,
         openedAt: "2026-09-16T01:00:00.000Z",
         opening: 0,
@@ -317,9 +317,12 @@ try {
   assert.equal(operatorAReport.completed_total_in_cents, 41_000);
   assert.equal(operatorAReport.canceled_sales_count, 1);
   assert.equal(operatorAReport.canceled_total_in_cents, 5_000);
-  assert.equal(operatorAReport.cash_shortage_total_in_cents, 200);
+  assert.equal(operatorAReport.cash_shortage_total_in_cents, 250);
   assert.equal(operatorAReport.cash_surplus_total_in_cents, 100);
-  assert.equal(operatorAReport.cash_difference_total_in_cents, -100);
+  assert.equal(operatorAReport.cash_difference_total_in_cents, -150);
+  assert.equal(operatorAReport.reconciliation_shortage_total_in_cents, 300);
+  assert.equal(operatorAReport.reconciliation_surplus_total_in_cents, 100);
+  assert.equal(operatorAReport.reconciliation_difference_total_in_cents, -200);
   assert.equal(operatorAReport.post_close_adjustments_count, 0);
   assert.equal(operatorAReport.net_revenue_in_cents, 41_000);
   assert.deepEqual(
@@ -468,9 +471,9 @@ try {
     { installment_count: 2, net_total_in_cents: 12_000, sales_count: 1 },
     { installment_count: 3, net_total_in_cents: 0, sales_count: 0 },
   ]);
-  assert.equal(adminReport.reconciliation_shortage_total_in_cents, 250);
+  assert.equal(adminReport.reconciliation_shortage_total_in_cents, 300);
   assert.equal(adminReport.reconciliation_surplus_total_in_cents, 100);
-  assert.equal(adminReport.reconciliation_difference_total_in_cents, -150);
+  assert.equal(adminReport.reconciliation_difference_total_in_cents, -200);
 
   const { data: sessionReport, error: sessionReportError } =
     await identities.admin.client.rpc("get_store_sales_report_v2", {
