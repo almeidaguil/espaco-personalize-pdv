@@ -1,9 +1,10 @@
 # Checklist De Go-Live
 
 Checklist para liberar a operação da loja física Roberto Multimarcas.
-O staging foi provisionado no PR08. O corte técnico de produção e a liberação
-operacional pertencem ao PR09 e permanecem pendentes até que cada evidência
-remota seja capturada. Banco criado não significa loja liberada.
+O staging foi provisionado no PR08 e o corte provisório PR09-A foi executado.
+O PR09-B está integrado em `main`, mas o deploy final, a tag de release e a
+liberação operacional permanecem pendentes até que cada evidência remota seja
+capturada. Banco criado ou PR integrado não significa loja liberada.
 
 ## Regra De Release
 
@@ -11,10 +12,11 @@ O último release publicado é `v1.0.0`. A reestruturação para loja física
 Roberto Multimarcas substitui o modelo operacional anterior pelo controle de
 caixa por operador; como essa mudança é incompatível com contratos e fluxos
 prévios, a próxima versão SemVer é `2.0.0`. `package.json` e
-`package-lock.json` devem permanecer alinhados nessa versão. Criar a tag e
-publicar o release `v2.0.0` somente depois que o PR09-B e seus gates forem
-concluídos; este alinhamento de metadados não autoriza deploy ou mutação em
-produção.
+`package-lock.json` devem permanecer alinhados nessa versão. O PR #191 já foi
+integrado em `main` e os gates pós-merge passaram, mas `v2.0.0` ainda não foi
+implantada nem etiquetada. Criar a tag e publicar o release somente depois do
+deploy do SHA exato de `main`, smoke, monitoramento e validação final; o
+alinhamento de metadados não autoriza mutação remota.
 
 1. Concluir a alteração em `feature/*`, com commits assinados.
 2. Integrar em `develop` por PR com checks aprovados.
@@ -191,16 +193,21 @@ reinicialize projeto automaticamente.
 
 ## 7. Release PR09-B
 
-- [ ] PR de `develop` para `main` contém somente mudanças já revisadas.
-- [ ] Quality, Database contract e E2E Release Gate verdes, sem bypass.
-- [ ] Merge produz commit assinado e compatível com histórico linear.
+- [x] PR #191 promoveu o snapshot revisado para `main`; merge assinado
+      `41b83edab9c78a583e1bb2f1c7df750911ec566b`.
+- [x] Quality e E2E Release Gate pós-merge verdes, sem bypass.
+- [x] Merge produziu commit assinado e compatível com histórico linear.
 - [ ] Audit Vercel permite `main` e confirma as três variáveis inalteradas.
 - [ ] Deploy final usa o SHA assinado resultante de `main`.
 - [ ] Gate final recebeu deployment ID, URL imutável, `source-ref main` e o
       mesmo SHA assinado, sem reescrever manifesto ou estado versionado.
 - [ ] Fingerprint das três variáveis do deployment corresponde à URL e às
       chaves lidas do Supabase de produção, sem expor seus valores.
-- [ ] Deployment, alias, banco, admin único e banco vazio foram revalidados.
+- [ ] Deployment, alias e banco foram revalidados. A exigência de um único
+      admin e banco vazio vale para o primeiro provisionamento; depois da
+      operação validada, preservar os dados existentes, exigir perfis ligados
+      a usuários Auth com papéis permitidos e verificar os invariantes
+      financeiros antes/depois das migrations.
 - [ ] Smoke somente leitura e monitoramento de 30 minutos aprovados.
 - [ ] Produção legada permanece pausada e preservada por 30 dias.
 
