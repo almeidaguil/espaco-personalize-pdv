@@ -28,7 +28,7 @@ O arquivo `.env.local` nao deve ser versionado.
 | Staging Roberto Multimarcas  | `otsxpchqtfypxgzjzrxs` | ativo; promoções coordenadas            |
 | Staging legado               | `gpywbeoqcovjrfnmbdqx` | pausado; não usar para novas validações |
 | Produção legada              | `ciixpfquwmlsvzleattv` | preservada; não alterar                 |
-| Produção Roberto Multimarcas | `wjuzwjbvctbyfvgmprmd` | reservada; release PR09 pendente        |
+| Produção Roberto Multimarcas | `wjuzwjbvctbyfvgmprmd` | ativa; dados operacionais preservados   |
 
 Nunca compartilhe banco, usuarios ou chaves entre os dois ambientes.
 
@@ -45,8 +45,11 @@ Confirme o project ref antes de qualquer comando remoto e nunca execute
 
 Para promover migrations em staging, use o fluxo versionado
 [Promoção para staging](vercel-cli.md#promover-uma-vers%C3%A3o-para-staging).
+Para releases de produção, use a sequência protegida em
+[Promoção para produção](vercel-cli.md#promover-uma-vers%C3%A3o-para-produ%C3%A7%C3%A3o).
 Não execute `supabase db push` diretamente contra os ambientes remotos: o fluxo
-limita cada fase ao bundle de migrations aprovado e valida o projeto de destino.
+limita cada fase ao bundle de migrations aprovado, valida o projeto de destino,
+exige backup recente e respeita a ordem foundation → deployment → cutover.
 
 ## Comandos Uteis
 

@@ -9,6 +9,34 @@ de saídas reais e redigidas. Resultados ainda não observados permanecem como
 Este arquivo nunca deve conter token, chave, senha, e-mail do administrador,
 conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 
+## Atualização 2026-10-20 - Promoção 2.0.0
+
+As fases históricas abaixo registram o estado observado durante o corte inicial.
+Esta atualização mais recente prevalece para o estado atual da produção.
+
+- PR #191 foi integrado em `main` no commit assinado
+  `41b83edab9c78a583e1bb2f1c7df750911ec566b`.
+- Os workflows pós-merge Quality e E2E Release Gate passaram para esse SHA:
+  [Quality](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/39505465094)
+  e
+  [E2E Release Gate](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/39505465102).
+- A produção Roberto já contém dados operacionais e contas; a última inspeção
+  encontrou 3 admins, 2 operadores, 147 produtos, 12 vendas concluídas,
+  12 pagamentos, 129 movimentações de estoque e 5 caixas fechados. A validação
+  histórica de pagamentos não encontrou duplicidades, totais divergentes,
+  valores inválidos, vendas sem pagamento ou vendas com mais de dois métodos.
+- Por decisão explícita do proprietário, os registros foram preservados. Backup
+  de schema e dados foi exportado, criptografado com DPAPI do Windows e
+  verificado; artefatos e credenciais permanecem fora do repositório.
+- As migrations `20261018120000` e `20261018180000` continuam pendentes. Nenhuma
+  migration foi aplicada, nenhum deploy do SHA final foi feito e a tag `v2.0.0`
+  ainda não foi criada.
+- A verificação final encontrou guardas que ainda pressupunham banco vazio e
+  histórico Vercel sem deployments prévios. A correção está sendo feita via
+  branch/PR antes de qualquer mutação remota. Não executar reset nem `db push`
+  direto; continuar pelo provisionador oficial, com dry-run e confirmação
+  explícita do ref.
+
 ## Identidades Autorizadas
 
 | Item                       | Valor esperado                                                           | Resultado observado |
@@ -33,11 +61,11 @@ conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 | PR09-A E2E Release Gate URL/resultado                 | [APROVADO (5m42s)](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/38385201548/job/115255143921) |
 | PR09-A revisão independente                           | `APROVADO`; zero Critical/Important após correções                                                                  |
 | PR09-A merge SHA assinado em `develop`                | `PENDENTE`                                                                                                          |
-| PR09-B URL (`develop` → `main`)                       | `PENDENTE`                                                                                                          |
-| PR09-B Quality URL/resultado                          | `PENDENTE`                                                                                                          |
-| PR09-B Database contract URL/resultado                | `PENDENTE`                                                                                                          |
-| PR09-B E2E Release Gate URL/resultado                 | `PENDENTE`                                                                                                          |
-| PR09-B merge SHA assinado em `main`                   | `PENDENTE`                                                                                                          |
+| PR09-B URL (`develop` → `main`)                       | [PR #191](https://github.com/almeidaguil/espaco-personalize-pdv/pull/191), `MERGEADO`                               |
+| PR09-B Quality URL/resultado                          | [Workflow](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/39505465094), `APROVADO`              |
+| PR09-B Database contract URL/resultado                | [E2E Release Gate](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/39505465102), `APROVADO`      |
+| PR09-B E2E Release Gate URL/resultado                 | [E2E Release Gate](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/39505465102), `APROVADO`      |
+| PR09-B merge SHA assinado em `main`                   | `41b83edab9c78a583e1bb2f1c7df750911ec566b`                                                                          |
 
 ## Gates Locais Do PR09-A
 
