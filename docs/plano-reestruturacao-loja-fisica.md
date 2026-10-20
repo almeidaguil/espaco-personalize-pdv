@@ -223,7 +223,8 @@ Politica de provisionamento:
 - aplicar migrations primeiro em staging;
 - conectar producao somente no PR09-A, depois da pausa autorizada do legado;
 - no PR08, permitir Production somente no projeto dedicado terminado em
-  `-staging`; manter o projeto reservado para producao vazio;
+  `-staging`; manter o projeto reservado para producao isolado e intocado. Se
+  houver recursos preexistentes, preserva-los e exigir reconciliacao no PR09;
 - manter no maximo dois projetos Supabase Free ativos: staging e uma producao;
 - preservar a producao legada pausada por 30 dias como rollback;
 - nunca excluir, restaurar ou reinicializar projeto remoto automaticamente;

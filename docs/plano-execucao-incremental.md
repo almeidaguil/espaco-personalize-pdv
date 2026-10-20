@@ -254,7 +254,8 @@ Escopo:
 - Supabase somente de staging; producao nova pertence ao PR09;
 - Vercel `roberto-multimarcas-pdv-staging` dedicado, usando seu ambiente
   Production exclusivamente como staging no PR08;
-- `roberto-multimarcas-pdv` reservado sem variaveis ou deployments para o PR09;
+- `roberto-multimarcas-pdv` reservado exclusivamente para o PR09; recursos
+  existentes devem ser inventariados e preservados, sem uso no staging;
 - URL estavel de staging validada para homologacao;
 - variaveis por ambiente;
 - bootstrap de admin e vendedores;
@@ -265,8 +266,9 @@ Criterio de pronto:
 
 - quota e eventual custo aprovados;
 - staging novo passa migrations, smoke e E2E;
-- projeto dedicado tem somente as tres variaveis de staging e um deployment
-  READY; o projeto reservado para producao permanece vazio;
+- projeto dedicado tem tres variaveis `Production`, duas variaveis publicas
+  `Preview`, Git desconectado e deployment promovido validado por SHA/alias; o
+  projeto reservado e validado por identidade e permanece fora do rollout;
 - nenhuma credencial aparece no repositorio ou em logs.
 
 ## Entrega 9 - Release
