@@ -2,9 +2,11 @@
 
 Checklist para liberar a operação da loja física Roberto Multimarcas.
 O staging foi provisionado no PR08 e o corte provisório PR09-A foi executado.
-O PR09-B está integrado em `main`, mas o deploy final, a tag de release e a
-liberação operacional permanecem pendentes até que cada evidência remota seja
-capturada. Banco criado ou PR integrado não significa loja liberada.
+O PR09-B está integrado em `main`; a produção Roberto já contém dados
+operacionais reais e autorizados. O deploy final, a tag de release e a liberação
+operacional permanecem pendentes até que cada evidência remota seja capturada.
+Banco criado ou PR integrado não significa loja liberada; banco populado também
+não pode ser resetado nem limpo para satisfazer o baseline histórico do corte.
 
 ## Regra De Release
 
@@ -109,6 +111,10 @@ project ref, o backup e a sequência de promoção conforme
 - Aplicar primeiro em staging e validar o schema e as RPCs usando as fases coordenadas descritas em
   [Promoção para staging](vercel-cli.md#promover-uma-vers%C3%A3o-para-staging).
   Não aplicar o corte legado antes do deploy e do smoke financeiro aprovados.
+- Em produção, usar a sequência protegida
+  [Promoção para produção](vercel-cli.md#promover-uma-vers%C3%A3o-para-produ%C3%A7%C3%A3o):
+  backup recente e verificado, migration foundation, deployment do SHA exato de
+  `main`, migration cutover, verificação completa e smoke somente leitura.
 - Confirmar banco alinhado às migrations da versão aprovada.
 - Manter RLS nas tabelas operacionais e validar isolamento por operador.
 - Manter migrations históricas imutáveis.
@@ -120,10 +126,14 @@ delete e SQL manual também são proibidos pela automação.
 
 ## 4. Acessos E Segredos
 
-No corte técnico, conferir:
+O baseline inicial do corte PR09-A exigia somente um administrador e banco
+operacional vazio. Esse requisito histórico não se aplica à promoção 2.0.0: a
+produção atual contém contas e dados operacionais autorizados. Para esta
+release, conferir:
 
-- exatamente um admin oficial e nenhum outro usuário;
-- banco operacional vazio, sem produtos, estoque, caixas ou vendas;
+- contas existentes e seus papéis autorizados, sem exigir exatamente um admin;
+- inventário de produtos, vendas, pagamentos, estoque e caixas preservado antes
+  e depois das migrations; não exigir banco operacional vazio;
 - signup público desabilitado conforme a política do projeto;
 - `leaked password protection` habilitada no Supabase Auth ou, no plano Free,
   exceção explícita registrada como `unavailable-free-plan`, sem reduzir os
