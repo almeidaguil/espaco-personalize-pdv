@@ -123,8 +123,8 @@ try {
       closedSession({
         closedAt: "2026-09-16T06:00:00.000Z",
         counted: 0,
-        difference: 0,
-        expected: 0,
+        difference: -50,
+        expected: 50,
         id: cashSessionIds.operatorACrossMidnight,
         openedAt: "2026-09-16T01:00:00.000Z",
         opening: 0,
@@ -317,9 +317,12 @@ try {
   assert.equal(operatorAReport.completed_total_in_cents, 41_000);
   assert.equal(operatorAReport.canceled_sales_count, 1);
   assert.equal(operatorAReport.canceled_total_in_cents, 5_000);
-  assert.equal(operatorAReport.cash_shortage_total_in_cents, 200);
+  assert.equal(operatorAReport.cash_shortage_total_in_cents, 250);
   assert.equal(operatorAReport.cash_surplus_total_in_cents, 100);
-  assert.equal(operatorAReport.cash_difference_total_in_cents, -100);
+  assert.equal(operatorAReport.cash_difference_total_in_cents, -150);
+  assert.equal(operatorAReport.reconciliation_shortage_total_in_cents, 300);
+  assert.equal(operatorAReport.reconciliation_surplus_total_in_cents, 100);
+  assert.equal(operatorAReport.reconciliation_difference_total_in_cents, -200);
   assert.equal(operatorAReport.post_close_adjustments_count, 0);
   assert.equal(operatorAReport.net_revenue_in_cents, 41_000);
   assert.deepEqual(
@@ -468,9 +471,9 @@ try {
     { installment_count: 2, net_total_in_cents: 12_000, sales_count: 1 },
     { installment_count: 3, net_total_in_cents: 0, sales_count: 0 },
   ]);
-  assert.equal(adminReport.reconciliation_shortage_total_in_cents, 250);
+  assert.equal(adminReport.reconciliation_shortage_total_in_cents, 300);
   assert.equal(adminReport.reconciliation_surplus_total_in_cents, 100);
-  assert.equal(adminReport.reconciliation_difference_total_in_cents, -150);
+  assert.equal(adminReport.reconciliation_difference_total_in_cents, -200);
 
   const { data: sessionReport, error: sessionReportError } =
     await identities.admin.client.rpc("get_store_sales_report_v2", {
@@ -583,12 +586,11 @@ try {
 
   const beforeClose = Date.now();
   const { error: closeRpcError } = await identities.operatorA.client.rpc(
-    "close_cash_session",
+    "close_cash_session_v2",
     {
       p_admin_password: null,
       p_cash_session_id: cashSessionIds.rpcTimestamp,
-      p_closed_at: "2099-01-01T00:00:00.000Z",
-      p_counted_amount_in_cents: 1_000,
+      p_reconciliations: countedReconciliations({ cash: 1_000 }),
     },
   );
   assert.equal(closeRpcError, null, "cash close RPC must succeed");
@@ -716,11 +718,10 @@ try {
   );
 
   const [concurrentCloseResult, concurrentCancelResult] = await Promise.all([
-    identities.operatorA.client.rpc("close_cash_session", {
+    identities.operatorA.client.rpc("close_cash_session_v2", {
       p_admin_password: password,
       p_cash_session_id: cashSessionIds.rpcConcurrent,
-      p_closed_at: "2099-01-01T00:00:00.000Z",
-      p_counted_amount_in_cents: 2_000,
+      p_reconciliations: countedReconciliations({ cash: 2_000 }),
     }),
     identities.operatorA.client.rpc("cancel_sale", {
       p_admin_password: password,
@@ -906,6 +907,20 @@ try {
   );
 } finally {
   await cleanupTestData();
+}
+
+function countedReconciliations({
+  cash = 0,
+  credit_card = 0,
+  debit_card = 0,
+  pix = 0,
+} = {}) {
+  return [
+    { counted_amount_in_cents: cash, method: "cash" },
+    { counted_amount_in_cents: pix, method: "pix" },
+    { counted_amount_in_cents: credit_card, method: "credit_card" },
+    { counted_amount_in_cents: debit_card, method: "debit_card" },
+  ];
 }
 
 function createIdentity(label) {

@@ -14,6 +14,17 @@ const paymentMethodSchema = z.enum([
   "debit_card",
 ]);
 const cashSessionStatusSchema = z.enum(["open", "closed"]);
+const installmentCountSchema = z.union([
+  z.literal(1),
+  z.literal(2),
+  z.literal(3),
+]);
+const reconciliationSchema = z.object({
+  counted_amount_in_cents: z.coerce.number().int().nonnegative(),
+  difference_amount_in_cents: z.coerce.number().int(),
+  expected_amount_in_cents: z.coerce.number().int().nonnegative(),
+  method: paymentMethodSchema,
+});
 
 const reportResponseSchema = z.object({
   canceled_sales_count: z.coerce.number().int().nonnegative(),
@@ -31,6 +42,13 @@ const reportResponseSchema = z.object({
     }),
   ),
   cash_surplus_total_in_cents: z.coerce.number().int().nonnegative(),
+  credit_installment_summary: z.array(
+    z.object({
+      installment_count: installmentCountSchema,
+      net_total_in_cents: z.coerce.number().int().nonnegative(),
+      sales_count: z.coerce.number().int().nonnegative(),
+    }),
+  ),
   completed_discount_in_cents: z.coerce.number().int().nonnegative(),
   completed_sales_count: z.coerce.number().int().nonnegative(),
   completed_subtotal_in_cents: z.coerce.number().int().nonnegative(),
@@ -70,6 +88,9 @@ const reportResponseSchema = z.object({
   ),
   post_close_adjustments_count: z.coerce.number().int().nonnegative(),
   post_close_adjustments_total_in_cents: z.coerce.number().int().nonnegative(),
+  reconciliation_difference_total_in_cents: z.coerce.number().int(),
+  reconciliation_shortage_total_in_cents: z.coerce.number().int().nonnegative(),
+  reconciliation_surplus_total_in_cents: z.coerce.number().int().nonnegative(),
   selected_cash_session_id: z.uuid().nullable(),
   selected_operator_id: z.uuid().nullable(),
   sessions_limit: z.coerce.number().int().positive(),
@@ -97,6 +118,7 @@ const reportResponseSchema = z.object({
       opening_amount_in_cents: z.coerce.number().int().nonnegative(),
       operator_id: z.uuid(),
       operator_name: z.string(),
+      reconciliations: z.array(reconciliationSchema).optional(),
       status: cashSessionStatusSchema,
     }),
   ),
@@ -210,6 +232,13 @@ function mapReport(data: z.infer<typeof reportResponseSchema>): SalesReport {
     completedSalesCount: data.completed_sales_count,
     completedSubtotalInCents: data.completed_subtotal_in_cents,
     completedTotalInCents: data.completed_total_in_cents,
+    creditInstallmentSummary: data.credit_installment_summary.map(
+      (installment) => ({
+        installmentCount: installment.installment_count,
+        netTotalInCents: installment.net_total_in_cents,
+        salesCount: installment.sales_count,
+      }),
+    ),
     endDate: data.end_date,
     items: data.items.map((item) => ({
       grossTotalInCents: item.gross_total_in_cents,
@@ -236,6 +265,12 @@ function mapReport(data: z.infer<typeof reportResponseSchema>): SalesReport {
     postCloseAdjustmentsCount: data.post_close_adjustments_count,
     postCloseAdjustmentsTotalInCents:
       data.post_close_adjustments_total_in_cents,
+    reconciliationDifferenceTotalInCents:
+      data.reconciliation_difference_total_in_cents,
+    reconciliationShortageTotalInCents:
+      data.reconciliation_shortage_total_in_cents,
+    reconciliationSurplusTotalInCents:
+      data.reconciliation_surplus_total_in_cents,
     selectedCashSessionId: data.selected_cash_session_id,
     selectedOperatorId: data.selected_operator_id,
     sessions: data.sessions.map((session) => ({
@@ -255,10 +290,41 @@ function mapReport(data: z.infer<typeof reportResponseSchema>): SalesReport {
       openingAmountInCents: session.opening_amount_in_cents,
       operatorId: session.operator_id,
       operatorName: session.operator_name,
+      reconciliations: mapReconciliations(session),
       status: session.status,
     })),
     sessionsPage: data.sessions_offset / data.sessions_limit + 1,
     sessionsTotalCount: data.sessions_total_count,
     startDate: data.start_date,
   };
+}
+
+function mapReconciliations(
+  session: z.infer<typeof reportResponseSchema>["sessions"][number],
+): SalesReport["sessions"][number]["reconciliations"] {
+  if (session.reconciliations && session.reconciliations.length > 0) {
+    return session.reconciliations.map((reconciliation) => ({
+      countedAmountInCents: reconciliation.counted_amount_in_cents,
+      differenceAmountInCents: reconciliation.difference_amount_in_cents,
+      expectedAmountInCents: reconciliation.expected_amount_in_cents,
+      method: reconciliation.method,
+    }));
+  }
+
+  if (
+    session.expected_amount_in_cents === null ||
+    session.counted_amount_in_cents === null ||
+    session.difference_amount_in_cents === null
+  ) {
+    return [];
+  }
+
+  return [
+    {
+      countedAmountInCents: session.counted_amount_in_cents,
+      differenceAmountInCents: session.difference_amount_in_cents,
+      expectedAmountInCents: session.expected_amount_in_cents,
+      method: "cash",
+    },
+  ];
 }

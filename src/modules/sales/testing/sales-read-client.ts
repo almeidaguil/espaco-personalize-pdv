@@ -23,7 +23,12 @@ export function saleRow(overrides: Row = {}) {
       },
     ],
     payments: [
-      { method: "cash", amount_in_cents: 5000, change_in_cents: 2000 },
+      {
+        method: "cash",
+        amount_in_cents: 5000,
+        change_in_cents: 2000,
+        installment_count: null,
+      },
     ],
     ...overrides,
   };

@@ -950,25 +950,40 @@ begin
     v_definition,
     $old_reconciliation_totals$    'items_limit', p_items_limit,$old_reconciliation_totals$,
     $new_reconciliation_totals$    'reconciliation_difference_total_in_cents', coalesce((
+      select sum(filtered_sessions.difference_amount_in_cents)
+      from filtered_sessions
+      where filtered_sessions.status = 'closed'
+    ), 0) + coalesce((
       select sum(reconciliations.difference_amount_in_cents)
       from public.cash_session_reconciliations as reconciliations
       join filtered_sessions
         on filtered_sessions.id = reconciliations.cash_session_id
       where filtered_sessions.status = 'closed'
+        and reconciliations.method <> 'cash'
     ), 0),
     'reconciliation_shortage_total_in_cents', coalesce((
+      select sum(greatest(-filtered_sessions.difference_amount_in_cents, 0))
+      from filtered_sessions
+      where filtered_sessions.status = 'closed'
+    ), 0) + coalesce((
       select sum(greatest(-reconciliations.difference_amount_in_cents, 0))
       from public.cash_session_reconciliations as reconciliations
       join filtered_sessions
         on filtered_sessions.id = reconciliations.cash_session_id
       where filtered_sessions.status = 'closed'
+        and reconciliations.method <> 'cash'
     ), 0),
     'reconciliation_surplus_total_in_cents', coalesce((
+      select sum(greatest(filtered_sessions.difference_amount_in_cents, 0))
+      from filtered_sessions
+      where filtered_sessions.status = 'closed'
+    ), 0) + coalesce((
       select sum(greatest(reconciliations.difference_amount_in_cents, 0))
       from public.cash_session_reconciliations as reconciliations
       join filtered_sessions
         on filtered_sessions.id = reconciliations.cash_session_id
       where filtered_sessions.status = 'closed'
+        and reconciliations.method <> 'cash'
     ), 0),
     'items_limit', p_items_limit,$new_reconciliation_totals$
   );

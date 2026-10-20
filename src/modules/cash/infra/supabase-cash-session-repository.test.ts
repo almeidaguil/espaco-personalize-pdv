@@ -4,6 +4,12 @@ import type { CashSessionStatus } from "../domain/cash-session";
 import { SupabaseCashSessionRepository } from "./supabase-cash-session-repository";
 
 type FakeSupabaseCashSessionRow = {
+  cash_session_reconciliations?: Array<{
+    counted_amount_in_cents: number;
+    difference_amount_in_cents: number;
+    expected_amount_in_cents: number;
+    method: "cash" | "credit_card" | "debit_card" | "pix";
+  }>;
   closed_at: string | null;
   closed_by?: string | null;
   counted_amount_in_cents?: number | null;
@@ -107,7 +113,7 @@ class FakeSupabaseCashSessionClient {
   }
 
   rpc(
-    functionName: "close_cash_session",
+    functionName: "close_cash_session_v2",
     args: unknown,
   ): Promise<{
     data: string | null;
@@ -121,7 +127,7 @@ class FakeSupabaseCashSessionClient {
     error: { code?: string; message?: string } | null;
   }>;
   async rpc(
-    functionName: "close_cash_session" | "open_cash_session_v3",
+    functionName: "close_cash_session_v2" | "open_cash_session_v3",
     args: unknown,
   ) {
     this.rpcFunctionName = functionName;
@@ -283,7 +289,7 @@ describe("SupabaseCashSessionRepository", () => {
     }
   });
 
-  it("updates a cash session when closing it", async () => {
+  it("closes a cash session through V2 and maps persisted reconciliations", async () => {
     const supabaseClient = new FakeSupabaseCashSessionClient(
       {
         data: null,
@@ -291,6 +297,32 @@ describe("SupabaseCashSessionRepository", () => {
       },
       {
         data: {
+          cash_session_reconciliations: [
+            {
+              counted_amount_in_cents: 26075,
+              difference_amount_in_cents: 1025,
+              expected_amount_in_cents: 25050,
+              method: "cash",
+            },
+            {
+              counted_amount_in_cents: 1000,
+              difference_amount_in_cents: 0,
+              expected_amount_in_cents: 1000,
+              method: "pix",
+            },
+            {
+              counted_amount_in_cents: 2000,
+              difference_amount_in_cents: 0,
+              expected_amount_in_cents: 2000,
+              method: "credit_card",
+            },
+            {
+              counted_amount_in_cents: 3000,
+              difference_amount_in_cents: 0,
+              expected_amount_in_cents: 3000,
+              method: "debit_card",
+            },
+          ],
           closed_at: "2026-07-10T18:00:00.000Z",
           closed_by: "operator-1",
           counted_amount_in_cents: 26075,
@@ -307,27 +339,27 @@ describe("SupabaseCashSessionRepository", () => {
     );
     const repository = new SupabaseCashSessionRepository(supabaseClient);
 
-    const result = await repository.update(
-      {
-        closedAt: new Date("2026-07-10T18:00:00.000Z"),
-        countedAmountInReais: 260.75,
-        id: "cash-session-1",
-        openedAt: new Date("2026-07-10T12:00:00.000Z"),
-        openingAmountInReais: 150.5,
-        operatorId: "operator-1",
-        status: "closed",
-      },
-      {
-        adminPassword: "admin-password-test",
-      },
-    );
+    const result = await repository.close({
+      adminPassword: "admin-password-test",
+      cashSessionId: "cash-session-1",
+      reconciliations: [
+        { countedAmountInCents: 26075, method: "cash" },
+        { countedAmountInCents: 1000, method: "pix" },
+        { countedAmountInCents: 2000, method: "credit_card" },
+        { countedAmountInCents: 3000, method: "debit_card" },
+      ],
+    });
 
-    expect(supabaseClient.rpcFunctionName).toBe("close_cash_session");
+    expect(supabaseClient.rpcFunctionName).toBe("close_cash_session_v2");
     expect(supabaseClient.rpcArgs).toEqual({
       p_admin_password: "admin-password-test",
       p_cash_session_id: "cash-session-1",
-      p_closed_at: "2026-07-10T18:00:00.000Z",
-      p_counted_amount_in_cents: 26075,
+      p_reconciliations: [
+        { counted_amount_in_cents: 26075, method: "cash" },
+        { counted_amount_in_cents: 1000, method: "pix" },
+        { counted_amount_in_cents: 2000, method: "credit_card" },
+        { counted_amount_in_cents: 3000, method: "debit_card" },
+      ],
     });
     expect(supabaseClient.eqFilters).toEqual([
       { column: "id", value: "cash-session-1" },
@@ -342,6 +374,32 @@ describe("SupabaseCashSessionRepository", () => {
       expect(result.session.countedAmountInReais).toBe(260.75);
       expect(result.session.expectedAmountInReais).toBe(250.5);
       expect(result.session.differenceAmountInReais).toBe(10.25);
+      expect(result.session.reconciliations).toEqual([
+        {
+          countedAmountInCents: 26075,
+          differenceAmountInCents: 1025,
+          expectedAmountInCents: 25050,
+          method: "cash",
+        },
+        {
+          countedAmountInCents: 1000,
+          differenceAmountInCents: 0,
+          expectedAmountInCents: 1000,
+          method: "pix",
+        },
+        {
+          countedAmountInCents: 2000,
+          differenceAmountInCents: 0,
+          expectedAmountInCents: 2000,
+          method: "credit_card",
+        },
+        {
+          countedAmountInCents: 3000,
+          differenceAmountInCents: 0,
+          expectedAmountInCents: 3000,
+          method: "debit_card",
+        },
+      ]);
     }
   });
 
@@ -369,14 +427,14 @@ describe("SupabaseCashSessionRepository", () => {
     );
     const repository = new SupabaseCashSessionRepository(supabaseClient);
 
-    const result = await repository.update({
-      closedAt: new Date("2026-07-10T18:00:00.000Z"),
-      countedAmountInReais: 200,
-      id: "cash-session-1",
-      openedAt: new Date("2026-07-10T12:00:00.000Z"),
-      openingAmountInReais: 150.5,
-      operatorId: "operator-1",
-      status: "closed",
+    const result = await repository.close({
+      cashSessionId: "cash-session-1",
+      reconciliations: [
+        { countedAmountInCents: 20000, method: "cash" },
+        { countedAmountInCents: 0, method: "pix" },
+        { countedAmountInCents: 0, method: "credit_card" },
+        { countedAmountInCents: 0, method: "debit_card" },
+      ],
     });
 
     expect(result).toEqual({

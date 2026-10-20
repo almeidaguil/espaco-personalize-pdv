@@ -164,33 +164,43 @@ function toCashSessionOption(
     string,
     {
       canceledSalesCount: number;
-      canceledSalesTotalInReais: number;
+      canceledSalesTotalInCents: number;
       completedSalesCount: number;
-      completedSalesTotalInReais: number;
-      expectedAmountInReais: number;
-      openingAmountInReais: number;
+      completedSalesTotalInCents: number;
+      expectedByMethodInCents: {
+        cash: number;
+        credit_card: number;
+        debit_card: number;
+        pix: number;
+      };
+      openingAmountInCents: number;
     }
   >,
 ): CloseCashSessionOption {
   const summary = closingSummaries.get(overview.id) ?? {
     canceledSalesCount: 0,
-    canceledSalesTotalInReais: 0,
+    canceledSalesTotalInCents: 0,
     completedSalesCount: 0,
-    completedSalesTotalInReais: 0,
-    expectedAmountInReais: overview.openingAmountInReais,
-    openingAmountInReais: overview.openingAmountInReais,
+    completedSalesTotalInCents: 0,
+    expectedByMethodInCents: {
+      cash: Math.round(overview.openingAmountInReais * 100),
+      credit_card: 0,
+      debit_card: 0,
+      pix: 0,
+    },
+    openingAmountInCents: Math.round(overview.openingAmountInReais * 100),
   };
 
   return {
     canceledSalesCount: summary.canceledSalesCount,
-    canceledSalesTotalInReais: summary.canceledSalesTotalInReais,
+    canceledSalesTotalInCents: summary.canceledSalesTotalInCents,
     completedSalesCount: summary.completedSalesCount,
-    completedSalesTotalInReais: summary.completedSalesTotalInReais,
-    expectedAmountInReais: summary.expectedAmountInReais,
+    completedSalesTotalInCents: summary.completedSalesTotalInCents,
+    expectedByMethodInCents: summary.expectedByMethodInCents,
     id: overview.id,
     label: `${overview.operatorName} · aberto em ${dateTimeFormatter.format(
       overview.openedAt,
     )} · sessão ${overview.id}`,
-    openingAmountInReais: summary.openingAmountInReais,
+    openingAmountInCents: summary.openingAmountInCents,
   };
 }

@@ -1,4 +1,7 @@
-import type { CashSession } from "../domain/cash-session";
+import type {
+  CashSession,
+  CashSessionReconciliationInput,
+} from "../domain/cash-session";
 
 export type SaveCashSessionResult =
   | {
@@ -33,17 +36,18 @@ export type ListOpenCashSessionsResult =
       success: false;
     };
 
-export type CloseCashSessionPersistenceOptions = {
+export type CloseCashSessionPersistenceInput = {
   adminPassword?: string;
+  cashSessionId: string;
+  reconciliations: CashSessionReconciliationInput[];
 };
 
 export type CashSessionRepository = {
+  close(
+    input: CloseCashSessionPersistenceInput,
+  ): Promise<SaveCashSessionResult>;
   findOpenById(cashSessionId: string): Promise<FindOpenCashSessionResult>;
   findOpenByOperator(operatorId: string): Promise<FindOpenCashSessionResult>;
   listOpenByOperator(operatorId: string): Promise<ListOpenCashSessionsResult>;
   open(input: { openingAmountInReais: number }): Promise<SaveCashSessionResult>;
-  update(
-    session: CashSession,
-    options?: CloseCashSessionPersistenceOptions,
-  ): Promise<SaveCashSessionResult>;
 };

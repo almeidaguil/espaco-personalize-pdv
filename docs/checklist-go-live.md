@@ -50,8 +50,9 @@ Conferir também:
 - `Quality checks` e `Database contract` aprovados;
 - ausência de conflitos e pendências críticas;
 - constraints, RLS e grants financeiros validados;
-- RPCs `open_cash_session_v3`, `finalize_sale_v3`, `cancel_sale` e
-  `close_cash_session` disponíveis;
+- RPCs `open_cash_session_v3`, `finalize_sale_v5`, `cancel_sale` e
+  `close_cash_session_v2` disponíveis; fechamento legado sem permissão de
+  execução para usuários da aplicação;
 - operador derivado da sessão autenticada; escritas financeiras diretas bloqueadas.
 
 ## 2. Gate E2E E Smoke Funcional

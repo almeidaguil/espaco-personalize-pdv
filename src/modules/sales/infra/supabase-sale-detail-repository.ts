@@ -22,13 +22,6 @@ const detailSchema = saleSummaryRowSchema.extend({
       unit_price_in_cents: z.number(),
     }),
   ),
-  payments: z.array(
-    z.object({
-      method: z.enum(["cash", "pix", "credit_card", "debit_card"]),
-      amount_in_cents: z.number(),
-      change_in_cents: z.number(),
-    }),
-  ),
 });
 
 export class SupabaseSaleDetailRepository implements SaleDetailRepository {
@@ -38,7 +31,7 @@ export class SupabaseSaleDetailRepository implements SaleDetailRepository {
     const { data, error } = await this.supabaseClient
       .from("sales")
       .select(
-        `${saleSummaryColumns()},sale_items(product_id,product_name,quantity,unit_price_in_cents,total_in_cents),payments(method,amount_in_cents,change_in_cents)`,
+        `${saleSummaryColumns()},sale_items(product_id,product_name,quantity,unit_price_in_cents,total_in_cents)`,
       )
       .eq("id", id)
       .maybeSingle();
@@ -50,11 +43,6 @@ export class SupabaseSaleDetailRepository implements SaleDetailRepository {
     const names = await loadOperatorNames(this.supabaseClient, [
       row.operator_id,
     ]);
-    const payment = row.payments[0] ?? {
-      amount_in_cents: 0,
-      change_in_cents: 0,
-      method: "cash" as const,
-    };
     return {
       success: true,
       sale: {
@@ -66,11 +54,6 @@ export class SupabaseSaleDetailRepository implements SaleDetailRepository {
           totalInCents: item.total_in_cents,
           unitPriceInCents: item.unit_price_in_cents,
         })),
-        payment: {
-          method: payment.method,
-          amountInCents: payment.amount_in_cents,
-          changeInCents: payment.change_in_cents,
-        },
       },
     };
   }

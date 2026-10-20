@@ -1,11 +1,15 @@
-export const paymentMethods = [
-  "cash",
-  "pix",
-  "credit_card",
-  "debit_card",
-] as const;
+import {
+  paymentMethods,
+  type InstallmentCount,
+  type PaymentMethod,
+} from "@/shared/types/payment-method";
 
-export type PaymentMethod = (typeof paymentMethods)[number];
+export {
+  paymentMethods,
+  type InstallmentCount,
+  type PaymentMethod,
+} from "@/shared/types/payment-method";
+
 export type SaleStatus = "completed" | "canceled";
 
 export type SaleItem = {
@@ -16,11 +20,21 @@ export type SaleItem = {
   unitPriceInCents: number;
 };
 
+type NonCreditPaymentMethod = Exclude<PaymentMethod, "credit_card">;
+
 export type Payment = {
   amountInCents: number;
   changeInCents: number;
-  method: PaymentMethod;
-};
+} & (
+  | {
+      installmentCount: InstallmentCount;
+      method: "credit_card";
+    }
+  | {
+      installmentCount?: never;
+      method: NonCreditPaymentMethod;
+    }
+);
 
 export type Sale = {
   cashSessionId: string;
@@ -28,7 +42,7 @@ export type Sale = {
   discountInCents: number;
   id: string;
   items: SaleItem[];
-  payment: Payment;
+  payments: Payment[];
   status: SaleStatus;
   subtotalInCents: number;
   totalInCents: number;
@@ -43,8 +57,16 @@ export type CreateSaleItemInput = {
 
 export type CreatePaymentInput = {
   amountInCents: number;
-  method: PaymentMethod;
-};
+} & (
+  | {
+      installmentCount: InstallmentCount;
+      method: "credit_card";
+    }
+  | {
+      installmentCount?: never;
+      method: NonCreditPaymentMethod;
+    }
+);
 
 export type CreateSaleInput = {
   cashSessionId: string;
@@ -52,7 +74,7 @@ export type CreateSaleInput = {
   discountInCents: number;
   id: string;
   items: CreateSaleItemInput[];
-  payment: CreatePaymentInput;
+  payments: CreatePaymentInput[];
 };
 
 export type SaleValidationError = {
@@ -62,7 +84,7 @@ export type SaleValidationError = {
     | "discount"
     | "id"
     | "items"
-    | "payment";
+    | "payments";
   message: string;
 };
 
@@ -145,26 +167,21 @@ export function createSale(input: CreateSaleInput): CreateSaleResult {
     });
   }
 
-  const hasValidPayment =
-    Number.isSafeInteger(input.payment.amountInCents) &&
-    input.payment.amountInCents >= 0;
-
-  if (!hasValidPayment) {
-    errors.push({
-      field: "payment",
-      message: "Payment amount must be a non-negative integer.",
-    });
-  }
+  const hasValidPaymentCollection = validatePaymentCollection(
+    input.payments,
+    errors,
+  );
 
   const totalInCents = subtotalInCents - input.discountInCents;
+  let payments: Payment[] = [];
 
   if (
     hasValidSubtotal &&
     hasValidDiscount &&
     input.discountInCents < subtotalInCents &&
-    hasValidPayment
+    hasValidPaymentCollection
   ) {
-    validatePaymentAgainstTotal(input.payment, totalInCents, errors);
+    payments = normalizePayments(input.payments, totalInCents, errors);
   }
 
   if (errors.length > 0) {
@@ -178,11 +195,7 @@ export function createSale(input: CreateSaleInput): CreateSaleResult {
       discountInCents: input.discountInCents,
       id,
       items,
-      payment: {
-        amountInCents: input.payment.amountInCents,
-        changeInCents: getPaymentChangeInCents(input.payment, totalInCents),
-        method: input.payment.method,
-      },
+      payments,
       status: "completed",
       subtotalInCents,
       totalInCents,
@@ -234,35 +247,153 @@ function validateSaleItem(item: SaleItem, errors: SaleValidationError[]): void {
   }
 }
 
-function validatePaymentAgainstTotal(
-  payment: CreatePaymentInput,
-  totalInCents: number,
+function validatePaymentCollection(
+  payments: CreatePaymentInput[],
   errors: SaleValidationError[],
-): void {
-  if (payment.method === "cash") {
-    if (payment.amountInCents < totalInCents) {
-      errors.push({
-        field: "payment",
-        message: "Payment amount must cover the sale total.",
-      });
-    }
-
-    return;
-  }
-
-  if (payment.amountInCents !== totalInCents) {
+): boolean {
+  if (!Array.isArray(payments) || payments.length < 1 || payments.length > 2) {
     errors.push({
-      field: "payment",
-      message: "Non-cash payments must match the sale total exactly.",
+      field: "payments",
+      message: "Sale must have one or two payments.",
     });
+    return false;
   }
+
+  if (
+    payments.some(
+      (payment) =>
+        !Number.isSafeInteger(payment.amountInCents) ||
+        payment.amountInCents < 0,
+    )
+  ) {
+    errors.push({
+      field: "payments",
+      message: "Payment amount must be a positive safe integer.",
+    });
+    return false;
+  }
+
+  if (
+    payments.some(
+      (payment) => !paymentMethods.includes(payment.method as PaymentMethod),
+    )
+  ) {
+    errors.push({ field: "payments", message: "Payment method is invalid." });
+    return false;
+  }
+
+  if (
+    new Set(payments.map((payment) => payment.method)).size !== payments.length
+  ) {
+    errors.push({
+      field: "payments",
+      message: "Payment methods must be distinct.",
+    });
+    return false;
+  }
+
+  const hasInvalidInstallment = payments.some((payment) =>
+    payment.method === "credit_card"
+      ? ![1, 2, 3].includes(payment.installmentCount as number)
+      : payment.installmentCount !== undefined,
+  );
+
+  if (hasInvalidInstallment) {
+    errors.push({
+      field: "payments",
+      message:
+        "Credit installments must be 1, 2 or 3 and exclusive to credit card payments.",
+    });
+    return false;
+  }
+
+  return true;
 }
 
-function getPaymentChangeInCents(
-  payment: CreatePaymentInput,
+function normalizePayments(
+  inputs: CreatePaymentInput[],
   totalInCents: number,
-): number {
-  return payment.method === "cash" ? payment.amountInCents - totalInCents : 0;
+  errors: SaleValidationError[],
+): Payment[] {
+  if (inputs.some((payment) => payment.amountInCents === 0)) {
+    errors.push({
+      field: "payments",
+      message: "Payment amount must be a positive safe integer.",
+    });
+    return [];
+  }
+
+  const grossAmountInCents = inputs.reduce(
+    (total, payment) => total + payment.amountInCents,
+    0,
+  );
+
+  if (!Number.isSafeInteger(grossAmountInCents)) {
+    errors.push({
+      field: "payments",
+      message: "Payment total exceeds the supported range.",
+    });
+    return [];
+  }
+
+  const cashPayment = inputs.find((payment) => payment.method === "cash");
+  if (
+    grossAmountInCents < totalInCents ||
+    (!cashPayment && grossAmountInCents !== totalInCents)
+  ) {
+    errors.push({
+      field: "payments",
+      message: "Payment contributions must match the sale total exactly.",
+    });
+    return [];
+  }
+
+  const changeInCents = cashPayment ? grossAmountInCents - totalInCents : 0;
+  const normalized = inputs.map((payment): Payment => {
+    const change = payment.method === "cash" ? changeInCents : 0;
+
+    return payment.method === "credit_card"
+      ? {
+          amountInCents: payment.amountInCents,
+          changeInCents: change,
+          installmentCount: payment.installmentCount,
+          method: payment.method,
+        }
+      : {
+          amountInCents: payment.amountInCents,
+          changeInCents: change,
+          method: payment.method,
+        };
+  });
+
+  if (
+    normalized.some(
+      (payment) => payment.amountInCents - payment.changeInCents < 1,
+    )
+  ) {
+    errors.push({
+      field: "payments",
+      message: "Each payment must contribute at least one cent.",
+    });
+    return [];
+  }
+
+  const netAmountInCents = normalized.reduce(
+    (total, payment) => total + payment.amountInCents - payment.changeInCents,
+    0,
+  );
+  if (
+    !Number.isSafeInteger(netAmountInCents) ||
+    netAmountInCents !== totalInCents
+  ) {
+    errors.push({
+      field: "payments",
+      message: "Payment contributions must match the sale total exactly.",
+    });
+    return [];
+  }
+
+  return normalized;
 }
 
 function isValidDate(value: Date): boolean {
