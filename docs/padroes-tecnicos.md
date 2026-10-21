@@ -207,6 +207,8 @@ Regra:
 - Pull requests devem passar lint, type-check, testes e build.
 - PRs com migrations ou fluxos financeiros tambem devem validar reset local,
   RLS/RPC e E2E obrigatorio.
+- Nenhum deploy em producao deve acontecer sem que a versao tenha sido
+  previamente deployada e testada em staging.
 
 ## Convencoes
 
@@ -244,4 +246,5 @@ Cada entrega deve, quando aplicavel:
 - Nao mover regra critica para o frontend.
 - Preservar compatibilidade de runtime em PRs intermediarios de migration.
 - Nao reescrever migrations ja aplicadas.
+- Validar previamente em staging antes de qualquer promocao para producao.
 - Nao registrar segredos em logs, traces ou artefatos.

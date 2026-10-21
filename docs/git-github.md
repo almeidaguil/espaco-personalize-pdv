@@ -66,6 +66,8 @@ feature/* -> develop -> main
 - Trabalhos comecam em `feature/*`, criada a partir de `develop` atualizado.
 - Pull requests de funcionalidade apontam para `develop`.
 - Pull requests de release promovem `develop` para `main`.
+- Nenhum deploy em producao ou pull request de release para `main` deve acontecer
+  sem que a versao tenha sido previamente deployada e testada em staging.
 - Commits e pushes diretos em `main` sao proibidos.
 - Force push em `main` e `develop` e proibido.
 

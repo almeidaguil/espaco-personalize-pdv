@@ -17,7 +17,9 @@ foi concluída com sucesso.
 O staging utiliza o projeto Vercel dedicado `roberto-multimarcas-pdv-staging`.
 A integração Git permanece desconectada para evitar deploys automáticos
 inadvertidos; as promoções são executadas manualmente pelo fluxo versionado
-`npm run ops:rollout-staging`.
+`npm run ops:rollout-staging`. **Regra mandatória:** Nenhum deploy em produção
+deve acontecer sem que a versão correspondente tenha sido previamente
+deployada e testada em staging.
 
 A produção oficial da Roberto Multimarcas utiliza o projeto Vercel
 `roberto-multimarcas-pdv` (ID `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`) e o projeto
