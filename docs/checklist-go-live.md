@@ -10,15 +10,13 @@ não pode ser resetado nem limpo para satisfazer o baseline histórico do corte.
 
 ## Regra De Release
 
-O último release publicado é `v1.0.0`. A reestruturação para loja física
-Roberto Multimarcas substitui o modelo operacional anterior pelo controle de
-caixa por operador; como essa mudança é incompatível com contratos e fluxos
-prévios, a próxima versão SemVer é `2.0.0`. `package.json` e
-`package-lock.json` devem permanecer alinhados nessa versão. O PR #191 já foi
-integrado em `main` e os gates pós-merge passaram, mas `v2.0.0` ainda não foi
-implantada nem etiquetada. Criar a tag e publicar o release somente depois do
-deploy do SHA exato de `main`, smoke, monitoramento e validação final; o
-alinhamento de metadados não autoriza mutação remota.
+O último release publicado é `v2.0.0`. A adição de funcionalidades
+retrocompatíveis como a entrada de estoque inicial diretamente no cadastro de
+novos produtos e melhorias no fluxo mobile do checkout do PDV definem a
+próxima versão SemVer como `2.1.0`. `package.json` e `package-lock.json`
+devem permanecer alinhados nessa versão. Criar a tag e publicar o release
+somente depois do deploy do SHA exato de `main`, smoke, monitoramento e
+validação final; o alinhamento de metadados não autoriza mutação remota.
 
 1. Concluir a alteração em `feature/*`, com commits assinados.
 2. Integrar em `develop` por PR com checks aprovados.
