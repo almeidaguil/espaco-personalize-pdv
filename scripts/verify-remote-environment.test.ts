@@ -23,13 +23,14 @@ test("preserves the complete staging database verification contract", async () =
   const manifest = structuredClone(manifestFixture);
   manifest.supabase.targets.staging.projectRef = projectRef;
   manifest.supabase.targets.staging.hostname = `${projectRef}.supabase.co`;
+  const supabase = supabaseFixture({
+    siteUrl: manifest.vercel.targets.staging.siteUrl,
+  });
   const result = await verifyRemoteEnvironment({
     environment: "staging",
     manifest,
     runCommand: commandRunner(),
-    supabase: supabaseFixture({
-      siteUrl: manifest.vercel.targets.staging.siteUrl,
-    }),
+    supabase,
     vercel: {},
   });
 
@@ -52,6 +53,35 @@ test("preserves the complete staging database verification contract", async () =
     projectRef,
     status: "passed",
   });
+  expect(supabase.authenticatedClient.getOwnProfile).toHaveBeenCalledWith(
+    "admin-id",
+  );
+});
+
+test.each([
+  ["a different user", { id: "other-id", role: "admin" }],
+  ["a non-admin role", { id: "admin-id", role: "operator" }],
+])("rejects an authenticated profile for %s", async (_description, profile) => {
+  const manifest = structuredClone(manifestFixture);
+  manifest.supabase.targets.staging.projectRef = projectRef;
+  manifest.supabase.targets.staging.hostname = `${projectRef}.supabase.co`;
+  const supabase = supabaseFixture({
+    siteUrl: manifest.vercel.targets.staging.siteUrl,
+  });
+  supabase.authenticatedClient.getOwnProfile.mockResolvedValue(profile);
+
+  await expect(
+    verifyRemoteEnvironment({
+      environment: "staging",
+      manifest,
+      runCommand: commandRunner(),
+      supabase,
+      vercel: {},
+    }),
+  ).rejects.toThrow("The authenticated staging profile is not an admin.");
+  expect(supabase.authenticatedClient.getOwnProfile).toHaveBeenCalledWith(
+    "admin-id",
+  );
 });
 
 test("rejects a missing production extension and redacts credentials from logs", async () => {
