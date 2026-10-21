@@ -1,49 +1,44 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
-
-import { createProductUseCase } from "../application/create-product-use-case";
+import { revalidatePath } from "next/cache";
+import {
+  SupabaseCurrentUserProfileRepository,
+  type SupabaseCurrentUserProfileClient,
+} from "@/modules/auth/infra/supabase-current-user-profile-repository";
+import {
+  SupabaseStockMovementRepository,
+  type SupabaseStockMovementClient,
+} from "@/modules/stock/infra/supabase-stock-movement-repository";
 import {
   SupabaseProductRepository,
   type SupabaseProductClient,
 } from "../infra/supabase-product-repository";
 import { createSupabaseServerClient } from "@/shared/lib/supabase/server-client";
-
-import {
-  createEmptyProductFormValues,
-  getProductFormValues,
-  parseCreateProductFormData,
-} from "./product-form-data";
+import { createProductActionService } from "./create-product-action-service";
 import type { ProductActionState } from "./product-action-state";
 
 export async function createProductAction(
   _previousState: ProductActionState,
   formData: FormData,
 ): Promise<ProductActionState> {
-  const values = getProductFormValues(formData);
-  const supabaseClient = await createSupabaseServerClient();
-  const productRepository = new SupabaseProductRepository(
-    supabaseClient as unknown as SupabaseProductClient,
-  );
-
-  const result = await createProductUseCase(
-    parseCreateProductFormData(formData),
-    {
-      generateProductId: randomUUID,
-      productRepository,
-    },
-  );
-
-  if (!result.success) {
-    return {
-      fieldErrors: result.fieldErrors,
-      formError: result.formError,
-      values,
-    };
-  }
-
-  return {
-    successMessage: "Produto cadastrado com sucesso.",
-    values: createEmptyProductFormValues(),
-  };
+  const client = await createSupabaseServerClient();
+  const result = await createProductActionService(formData, {
+    currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
+      client as unknown as SupabaseCurrentUserProfileClient,
+    ),
+    productRepository: new SupabaseProductRepository(
+      client as unknown as SupabaseProductClient,
+    ),
+    stockMovementRepository: new SupabaseStockMovementRepository(
+      client as unknown as SupabaseStockMovementClient,
+    ),
+    generateProductId: randomUUID,
+    generateStockMovementId: randomUUID,
+    getCurrentDate: () => new Date(),
+  });
+  revalidatePath("/products");
+  revalidatePath("/stock");
+  revalidatePath("/pdv");
+  return result;
 }
