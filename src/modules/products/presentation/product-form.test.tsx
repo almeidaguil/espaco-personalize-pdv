@@ -17,6 +17,28 @@ vi.mock("react", async () => {
 });
 
 describe("ProductForm", () => {
+  it("shows initial stock only when enabled and associates its error", () => {
+    actionState.current = {
+      fieldErrors: { initialStockQuantity: "Informe uma quantidade inteira." },
+      values: {
+        name: "Camiseta",
+        priceInReais: "35,00",
+        sku: "",
+        isActive: true,
+        initialStockQuantity: "-1",
+      },
+    };
+    render(<ProductForm action={vi.fn()} allowInitialStock />);
+    expect(screen.getByLabelText("Quantidade inicial em estoque")).toHaveValue(
+      -1,
+    );
+    expect(
+      screen.getByLabelText("Quantidade inicial em estoque"),
+    ).toHaveAttribute("aria-invalid", "true");
+    expect(
+      screen.getByLabelText("Quantidade inicial em estoque"),
+    ).toHaveAccessibleDescription(/Informe uma quantidade inteira/);
+  });
   beforeEach(() => {
     actionState.current = {};
   });
@@ -58,6 +80,9 @@ describe("ProductForm", () => {
     );
 
     expect(screen.getByDisplayValue("Caneca premium")).toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("Quantidade inicial em estoque"),
+    ).not.toBeInTheDocument();
 
     expect(screen.getByDisplayValue("42,50")).toBeInTheDocument();
 

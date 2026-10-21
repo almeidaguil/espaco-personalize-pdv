@@ -29,7 +29,7 @@ export default function NewProductPage() {
         />
 
         <Panel>
-          <ProductForm action={createProductAction} />
+          <ProductForm action={createProductAction} allowInitialStock />
         </Panel>
       </section>
     </PageShell>

@@ -1,5 +1,9 @@
 import { expect, test } from "@playwright/test";
-import { authenticatePage, getE2EUserCredentials } from "./support/auth";
+import {
+  authenticatePage,
+  createAuthenticatedSupabaseClient,
+  getE2EUserCredentials,
+} from "./support/auth";
 
 test.beforeEach(async () => {
   getE2EUserCredentials();
@@ -19,6 +23,7 @@ test("admin creates a product and sees it in the products list", async ({
   await page.getByLabel("Nome do produto").fill(productName);
   await page.getByLabel("Preço").fill("35,00");
   await page.getByLabel("SKU").fill(productSkuInput);
+  await page.getByLabel("Quantidade inicial em estoque").fill("12");
   await page.getByRole("button", { name: "Salvar produto" }).click();
 
   await expect(page.getByText("Produto cadastrado com sucesso.")).toBeVisible();
@@ -34,4 +39,35 @@ test("admin creates a product and sees it in the products list", async ({
   await expect(productCard.getByText(productSku)).toBeVisible();
   await expect(productCard).not.toContainText(productSkuInput.trim());
   await expect(productCard.getByText("R$ 35,00")).toBeVisible();
+
+  await page.goto("/stock");
+  await page.locator("#stock-balance-search").fill(productSku);
+  const balance = page
+    .locator("article")
+    .filter({ hasText: productName })
+    .filter({ has: page.locator("strong", { hasText: /^12$/ }) });
+  await expect(balance).toHaveCount(1);
+  await expect(balance.locator("strong")).toHaveText("12");
+  await page.reload();
+  await page.locator("#stock-balance-search").fill(productSku);
+  await expect(balance.locator("strong")).toHaveText("12");
+
+  const client = await createAuthenticatedSupabaseClient("admin");
+  const { data: product, error: productError } = await client
+    .from("products")
+    .select("id")
+    .eq("sku", productSku)
+    .single();
+  expect(productError).toBeNull();
+  expect(product).not.toBeNull();
+  const { data: movements, error: movementError } = await client
+    .from("stock_movements")
+    .select("type,quantity_change")
+    .eq("product_id", product!.id);
+  expect(movementError).toBeNull();
+  expect(movements).toEqual([
+    { type: "initial_adjustment", quantity_change: 12 },
+  ]);
+  await page.goto(`/products/${product!.id}/edit`);
+  await expect(page.getByLabel("Quantidade inicial em estoque")).toHaveCount(0);
 });
