@@ -9,33 +9,27 @@ de saídas reais e redigidas. Resultados ainda não observados permanecem como
 Este arquivo nunca deve conter token, chave, senha, e-mail do administrador,
 conteúdo de linhas, hash de senha ou valor de variável de ambiente.
 
-## Atualização 2026-10-20 - Promoção 2.0.0
+## Conclusão Do Rollout De Produção (v2.0.0 e v2.1.0)
 
-As fases históricas abaixo registram o estado observado durante o corte inicial.
-Esta atualização mais recente prevalece para o estado atual da produção.
+A promoção de produção e a liberação das versões `2.0.0` e `2.1.0` foram
+concluídas com êxito:
 
-- PR #191 foi integrado em `main` no commit assinado
-  `41b83edab9c78a583e1bb2f1c7df750911ec566b`.
-- Os workflows pós-merge Quality e E2E Release Gate passaram para esse SHA:
-  [Quality](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/39505465094)
-  e
-  [E2E Release Gate](https://github.com/almeidaguil/espaco-personalize-pdv/actions/runs/39505465102).
-- A produção Roberto já contém dados operacionais e contas; a última inspeção
-  encontrou 3 admins, 2 operadores, 147 produtos, 12 vendas concluídas,
-  12 pagamentos, 129 movimentações de estoque e 5 caixas fechados. A validação
-  histórica de pagamentos não encontrou duplicidades, totais divergentes,
-  valores inválidos, vendas sem pagamento ou vendas com mais de dois métodos.
-- Por decisão explícita do proprietário, os registros foram preservados. Backup
-  de schema e dados foi exportado, criptografado com DPAPI do Windows e
-  verificado; artefatos e credenciais permanecem fora do repositório.
-- As migrations `20261018120000` e `20261018180000` continuam pendentes. Nenhuma
-  migration foi aplicada, nenhum deploy do SHA final foi feito e a tag `v2.0.0`
-  ainda não foi criada.
-- A verificação final encontrou guardas que ainda pressupunham banco vazio e
-  histórico Vercel sem deployments prévios. A correção está sendo feita via
-  branch/PR antes de qualquer mutação remota. Não executar reset nem `db push`
-  direto; continuar pelo provisionador oficial, com dry-run e confirmação
-  explícita do ref.
+- **Preservação de Dados**: Todos os registros operacionais (produtos, vendas,
+  pagamentos, estoque e caixas) foram mantidos íntegros.
+- **Backup Verificado**: Backup criptografado DPAPI CurrentUser realizado e
+  validado antes das migrações.
+- **Migrations Aplicadas**:
+  - `20261018120000_add_split_payments_and_cash_reconciliation.sql` (foundation);
+  - `20261018180000_disable_legacy_cash_close.sql` (cutover com desativação da RPC
+    legada e manutenção de `close_cash_session_v2`).
+- **Deploy v2.0.0**: Commit `227d9eaeaff18b95ace9a3858187039ad9e38229`, deployment
+  `dpl_AxTbWfmrhi2DUcfxfDQ22AZWXuJZ`, 18 checks de conformidade aprovados e
+  smoke test somente leitura passado. Tag `v2.0.0` publicada no GitHub.
+- **Deploy v2.1.0**: Commit `e71ee0ef5017f45fd36ff24bd694b6a252dddac0`, deployment
+  `dpl_7ag8STuiDQgD3GBLH5dY4JqcTU3b`, incorporando estoque inicial no cadastro
+  de produtos (#196) e correção do fluxo mobile do PDV (#183). Tag `v2.1.0`
+  publicada no GitHub.
+- **URL Estável Oficial**: [https://roberto-multimarcas-pdv.vercel.app](https://roberto-multimarcas-pdv.vercel.app).
 
 ## Identidades Autorizadas
 

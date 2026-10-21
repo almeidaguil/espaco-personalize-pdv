@@ -2,12 +2,12 @@
 
 ## Estado Atual
 
-O runtime atual opera como loja fisica, com caixas independentes por operador.
-As entregas 1 a 6 estao concluidas e integradas, incluindo PR05 e PR06.
-A entrega 6 removeu o modulo legado do runtime e do schema em 2026-10-06.
-O PR07 entregou seed de tres identidades, concorrencia real e gate local/CI e ja
-foi integrado. Ambientes (PR08) estao em execucao e a release (PR09) continua
-pendente.
+O sistema opera integralmente em produção com a versão `v2.1.0`.
+Todas as entregas incrementais planejadas (Entregas 1 a 9), incluindo o
+provisionamento de staging isolado (PR08), o corte de produção preservando dados
+operacionais (PR09), os pagamentos divididos com reconciliação financeira (v2.0.0)
+e a adição de estoque inicial no cadastro de produtos (v2.1.0), foram
+concluídas e homologadas com sucesso.
 
 O detalhamento de tarefas e criterios esta no
 [plano de reestruturacao](plano-reestruturacao-loja-fisica.md). A decisao

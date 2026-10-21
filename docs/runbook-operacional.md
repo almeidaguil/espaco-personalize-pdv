@@ -42,13 +42,13 @@ sem conexão.
 Para cada venda:
 
 1. Buscar produto por nome ou SKU, adicionar e conferir quantidade e saldo.
-2. Conferir total e escolher uma forma ou `Dividir pagamento` entre duas formas
-   distintas.
-3. Para dinheiro, informar valor recebido e conferir troco; para crédito,
+2. Aplicar desconto se aplicável e conferir o total líquido atualizado.
+3. Escolher uma forma ou `Dividir pagamento` entre duas formas distintas.
+4. Para dinheiro, informar valor recebido e conferir troco; para crédito,
    registrar à vista, 2x ou 3x.
-4. Para Pix ou cartão, confirmar o recebimento na conta ou no terminal da loja.
-5. Conferir total informado, contribuição líquida e restante antes de finalizar.
-6. Finalizar e aguardar a confirmação antes da próxima venda.
+5. Para Pix ou cartão, confirmar o recebimento na conta ou no terminal da loja.
+6. Conferir total informado, contribuição líquida e restante antes de finalizar.
+7. Finalizar e aguardar a confirmação antes da próxima venda.
 
 O PDV localiza automaticamente o caixa do usuário autenticado. Não existe escolha
 de outro vendedor para registrar a venda. Não recarregue durante a finalização.
