@@ -20,12 +20,14 @@ type ProductFormProps = {
   ) => Promise<ProductActionState>;
   initialValues?: ProductFormValues;
   submitLabel?: string;
+  allowInitialStock?: boolean;
 };
 
 export function ProductForm({
   action,
   initialValues = createEmptyProductFormValues(),
   submitLabel = "Salvar produto",
+  allowInitialStock = false,
 }: ProductFormProps) {
   const [state, formAction, isPending] = useActionState(action, initialState);
 
@@ -35,6 +37,7 @@ export function ProductForm({
   const nameError = state.fieldErrors?.name;
   const priceError = state.fieldErrors?.priceInReais;
   const skuError = state.fieldErrors?.sku;
+  const stockError = state.fieldErrors?.initialStockQuantity;
 
   return (
     <form action={formAction} className="grid gap-5" key={formKey} noValidate>
@@ -126,6 +129,46 @@ export function ProductForm({
           {skuError ? <FieldError id="sku-error">{skuError}</FieldError> : null}
         </div>
       </div>
+
+      {allowInitialStock ? (
+        <div className="grid gap-2">
+          <label
+            className="text-sm font-semibold text-[var(--brand-foreground)]"
+            htmlFor="initialStockQuantity"
+          >
+            Quantidade inicial em estoque
+          </label>
+          <input
+            aria-describedby={
+              stockError
+                ? "initialStockQuantity-help initialStockQuantity-error"
+                : "initialStockQuantity-help"
+            }
+            aria-invalid={stockError ? true : undefined}
+            className="h-12 w-full rounded-xl border border-[var(--border)] bg-white px-3 text-base text-[var(--brand-foreground)] outline-none focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+            defaultValue={values.initialStockQuantity ?? "0"}
+            id="initialStockQuantity"
+            inputMode="numeric"
+            min={0}
+            max={2147483647}
+            name="initialStockQuantity"
+            step={1}
+            type="number"
+          />
+          <p
+            className="text-xs text-[var(--brand-muted)]"
+            id="initialStockQuantity-help"
+          >
+            Informe a quantidade que está entrando no estoque. Deixe vazio ou
+            zero para cadastrar sem estoque.
+          </p>
+          {stockError ? (
+            <FieldError id="initialStockQuantity-error">
+              {stockError}
+            </FieldError>
+          ) : null}
+        </div>
+      ) : null}
 
       {/* Produto ativo */}
       <input name="isActive" type="hidden" value="false" />
