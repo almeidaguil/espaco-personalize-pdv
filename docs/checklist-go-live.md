@@ -1,32 +1,39 @@
 # Checklist De Go-Live
 
-Checklist para liberar a operação da loja física Roberto Multimarcas.
-O staging foi provisionado no PR08 e o corte provisório PR09-A foi executado.
-O PR09-B está integrado em `main`; a produção Roberto já contém dados
-operacionais reais e autorizados. O deploy final, a tag de release e a liberação
-operacional permanecem pendentes até que cada evidência remota seja capturada.
-Banco criado ou PR integrado não significa loja liberada; banco populado também
-não pode ser resetado nem limpo para satisfazer o baseline histórico do corte.
+Checklist para validação e liberação contínua da operação da loja física
+Roberto Multimarcas.
+
+A reestruturação para loja física com caixa por operador, pagamentos divididos,
+descontos auditados e módulo de estoque integrado foi concluída nas versões
+`v2.0.0` e `v2.1.0`, com deploy em produção e tags publicadas no GitHub.
+A produção Roberto opera ativamente com dados reais preservados. Qualquer nova
+evolução segue rigorosamente os checkpoints abaixo antes de ser promovida.
 
 ## Regra De Release
 
-O último release publicado é `v2.0.0`. A adição de funcionalidades
-retrocompatíveis como a entrada de estoque inicial diretamente no cadastro de
-novos produtos e melhorias no fluxo mobile do checkout do PDV definem a
-próxima versão SemVer como `2.1.0`. `package.json` e `package-lock.json`
-devem permanecer alinhados nessa versão. Criar a tag e publicar o release
-somente depois do deploy do SHA exato de `main`, smoke, monitoramento e
-validação final; o alinhamento de metadados não autoriza mutação remota.
+O último release publicado é `v2.1.0`. A revisão integral da documentação do
+sistema e readmes atualiza a versão para `2.1.1`. Toda alteração de código deve
+respeitar o versionamento semântico (SemVer):
 
-1. Concluir a alteração em `feature/*`, com commits assinados.
-2. Integrar em `develop` por PR com checks aprovados.
-3. Executar o gate E2E em ambiente isolado e o smoke do
-   [Runbook operacional](runbook-operacional.md).
-4. Conferir banco, acessos, configuração de ambientes e segredos.
-5. Concluir o PR09-A em `develop`, com corte provisório e evidência aprovados.
-6. Abrir o PR09-B de `develop` para `main` e revisar o diff.
-7. Publicar somente o commit assinado resultante de `main`.
-8. Repetir verificação, smoke e monitoramento antes da liberação operacional.
+- **Patch (2.1.x)**: correções de bugs, ajustes de documentação ou refatorações
+  sem alteração de contratos;
+- **Minor (2.x.0)**: adição de novas funcionalidades retrocompatíveis;
+- **Major (x.0.0)**: mudanças incompatíveis com contratos de banco, APIs ou
+  fluxos operacionais existentes.
+
+`package.json` e `package-lock.json` devem permanecer alinhados à versão vigente.
+A tag Git e a release no GitHub só podem ser criadas após o merge em `main`,
+deploy bem-sucedido na Vercel de produção, verificação de conformidade e smoke
+test aprovado.
+
+1. Concluir a alteração em branch `feature/*`, com commits assinados.
+2. Integrar em `develop` por pull request com checks de qualidade e E2E aprovados.
+3. Se houver migrations, validar aplicação coordenada em staging antes de produção.
+4. Abrir pull request de release de `develop` para `main` e revisar o diff.
+5. Fazer merge em `main` via pull request.
+6. Realizar deploy do commit exato de `main` na Vercel de produção.
+7. Executar `ops:verify-production` e `test:e2e:production-smoke` somente leitura.
+8. Monitorar por 30 minutos e publicar a tag assinada da versão correspondente.
 
 ## 1. Qualidade E Banco Local
 

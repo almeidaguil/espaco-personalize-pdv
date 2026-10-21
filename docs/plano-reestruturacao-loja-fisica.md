@@ -1,9 +1,9 @@
 # Plano De Reestruturacao Para Loja Fisica
 
-Estado atual: PR01 a PR07 concluidos e integrados.
-O runtime opera sem eventos, com caixas proprios e relatorios por vendedor/sessao.
-O PR08 implementa e executa o staging novo sem alterar a producao legada. O
-corte de producao permanece exclusivo do PR09.
+Estado atual: Reestruturação concluída e entregue em produção (v2.0.0 e v2.1.0).
+Todas as fases planejadas (PR01 ao PR09, provisionamento de staging dedicado,
+corte de produção, preservação dos dados da loja, split payments e estoque
+inicial no cadastro) foram implementadas, validadas e publicadas.
 
 ## 1. Objetivo
 
