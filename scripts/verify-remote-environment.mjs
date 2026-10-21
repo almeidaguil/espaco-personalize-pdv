@@ -690,7 +690,9 @@ export async function verifyRemoteEnvironment({
   }
 
   const session = await supabase.anonymousClient.authenticate();
-  const profile = await supabase.authenticatedClient.getOwnProfile();
+  const profile = await supabase.authenticatedClient.getOwnProfile(
+    session.userId,
+  );
   if (profile?.id !== session.userId || profile?.role !== "admin") {
     throw new Error(
       `The authenticated ${environment} profile is not an admin.`,

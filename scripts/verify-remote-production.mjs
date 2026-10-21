@@ -19,6 +19,7 @@ import {
 } from "./supabase-management-client.mjs";
 import { createVercelManagementClient } from "./vercel-management-client.mjs";
 import { hasActiveVercelProtectionBypass } from "./vercel-protection-bypass.mjs";
+import { readAuthenticatedProfile } from "./read-authenticated-profile.mjs";
 import { verifyRemoteEnvironment } from "./verify-remote-environment.mjs";
 
 const expectedVariables = new Map([
@@ -336,13 +337,8 @@ export async function runVerifyRemoteProductionCli(
         if (error) throw new Error(`Unable to count ${table}.`);
         return count ?? 0;
       },
-      async getOwnProfile() {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id,role")
-          .single();
-        if (error) throw new Error("Unable to read the admin profile.");
-        return data;
+      async getOwnProfile(userId) {
+        return readAuthenticatedProfile(supabase, userId);
       },
     },
     authPolicy: databaseReady
