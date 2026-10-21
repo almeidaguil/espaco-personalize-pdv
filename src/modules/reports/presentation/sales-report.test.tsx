@@ -101,6 +101,62 @@ describe("SalesReport", () => {
     expect(screen.getByText("-R$ 70,00")).toBeInTheDocument();
   });
 
+  it("shows split-payment counts, installments and reconciliation by method", () => {
+    render(
+      <SalesReport
+        filters={filters}
+        report={createSalesReportFixture({
+          completedSalesCount: 2,
+          creditInstallmentSummary: [
+            { installmentCount: 1, netTotalInCents: 0, salesCount: 0 },
+            { installmentCount: 2, netTotalInCents: 6000, salesCount: 1 },
+            { installmentCount: 3, netTotalInCents: 3000, salesCount: 1 },
+          ],
+          paymentSummary: [
+            { method: "cash", netTotalInCents: 3000, salesCount: 1 },
+            { method: "pix", netTotalInCents: 1500, salesCount: 1 },
+            {
+              method: "credit_card",
+              netTotalInCents: 9000,
+              salesCount: 2,
+            },
+            { method: "debit_card", netTotalInCents: 0, salesCount: 0 },
+          ],
+          reconciliationDifferenceTotalInCents: -150,
+          reconciliationShortageTotalInCents: 250,
+          reconciliationSurplusTotalInCents: 100,
+        })}
+      />,
+    );
+
+    expect(
+      screen.getByText(
+        "Uma venda dividida aparece em cada método utilizado; por isso, estas contagens não devem ser somadas.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Crédito por parcelas")).toBeInTheDocument();
+    expect(screen.getByText("À vista")).toBeInTheDocument();
+    expect(screen.getByText("2x")).toBeInTheDocument();
+    expect(screen.getByText("3x")).toBeInTheDocument();
+    expect(screen.getByText("R$ 60,00 · 1 venda")).toBeInTheDocument();
+    expect(screen.getByText("Faltas em todos os métodos")).toBeInTheDocument();
+    expect(screen.getByText("R$ 2,50")).toBeInTheDocument();
+    expect(screen.getByText("Sobras em todos os métodos")).toBeInTheDocument();
+    expect(screen.getByText("R$ 1,00")).toBeInTheDocument();
+  });
+
+  it("shows each reconciliation recorded for a closed cash session", () => {
+    render(
+      <SalesReport filters={filters} report={createSalesReportFixture()} />,
+    );
+
+    expect(screen.getByText("Conferência por método")).toBeInTheDocument();
+    expect(screen.getByText("Esperado: R$ 75,00")).toBeInTheDocument();
+    expect(screen.getByText("Conferido: R$ 74,00")).toBeInTheDocument();
+    expect(screen.getByText("Diferença: -R$ 1,00")).toBeInTheDocument();
+    expect(screen.getByText("Esperado: R$ 15,00")).toBeInTheDocument();
+  });
+
   it("requests the next product page without changing the report filters", async () => {
     const user = userEvent.setup();
     const items = Array.from({ length: 8 }, (_, index) => ({

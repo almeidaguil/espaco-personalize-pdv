@@ -41,7 +41,8 @@ Supabase Auth + Postgres + RLS
 Hospedagem e entrega:
 
 ```txt
-feature/* -> PR para develop -> Vercel Preview/Staging
+feature/* -> PR para develop -> checks no GitHub
+develop -> promoção manual de SHA exato para Vercel Staging
 develop -> PR de release para main -> Vercel Production
 ```
 

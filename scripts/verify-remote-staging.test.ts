@@ -255,9 +255,10 @@ describe("verifyRemoteStaging", () => {
       {
         admin_profile_count: 1,
         auth_user_count: 2,
-        non_admin_profile_count: 0,
+        operator_profile_count: 0,
         profile_count: 1,
         profiles_linked_to_auth_count: 1,
+        unknown_role_profile_count: 0,
       },
     ],
     [
@@ -265,9 +266,10 @@ describe("verifyRemoteStaging", () => {
       {
         admin_profile_count: 1,
         auth_user_count: 2,
-        non_admin_profile_count: 1,
+        operator_profile_count: 1,
         profile_count: 2,
         profiles_linked_to_auth_count: 2,
+        unknown_role_profile_count: 0,
       },
     ],
   ])("rejects staging with %s", async (_name, userSummary) => {
@@ -300,9 +302,10 @@ describe("verifyRemoteStaging", () => {
           admin_profile_count: 1,
           auth_user_count: 1,
           email,
-          non_admin_profile_count: 0,
+          operator_profile_count: 0,
           profile_count: 1,
           profiles_linked_to_auth_count: 1,
+          unknown_role_profile_count: 0,
           user_id: userId,
         },
       }),
@@ -410,9 +413,10 @@ function createManagementClient(
     userSummary = {
       admin_profile_count: 1,
       auth_user_count: 1,
-      non_admin_profile_count: 0,
+      operator_profile_count: 0,
       profile_count: 1,
       profiles_linked_to_auth_count: 1,
+      unknown_role_profile_count: 0,
     },
   } = options;
   return {
@@ -440,7 +444,7 @@ function createManagementClient(
             anon_finalize_v5_execute: false,
             authenticated_close_v2_execute: true,
             authenticated_finalize_v5_execute: true,
-            authenticated_legacy_close_execute: true,
+            authenticated_legacy_close_execute: false,
             authenticated_payment_helper_execute: !splitPaymentContractMatches,
             authenticated_reconciliation_select: true,
             authenticated_reconciliation_writes_blocked: true,

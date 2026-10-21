@@ -42,10 +42,13 @@ sem conexão.
 Para cada venda:
 
 1. Buscar produto por nome ou SKU, adicionar e conferir quantidade e saldo.
-2. Conferir total e forma de pagamento.
-3. Para dinheiro, informar valor recebido e conferir troco.
+2. Conferir total e escolher uma forma ou `Dividir pagamento` entre duas formas
+   distintas.
+3. Para dinheiro, informar valor recebido e conferir troco; para crédito,
+   registrar à vista, 2x ou 3x.
 4. Para Pix ou cartão, confirmar o recebimento na conta ou no terminal da loja.
-5. Finalizar e aguardar a confirmação antes da próxima venda.
+5. Conferir total informado, contribuição líquida e restante antes de finalizar.
+6. Finalizar e aguardar a confirmação antes da próxima venda.
 
 O PDV localiza automaticamente o caixa do usuário autenticado. Não existe escolha
 de outro vendedor para registrar a venda. Não recarregue durante a finalização.
@@ -67,13 +70,15 @@ fechamento original.
 
 1. Parar novas vendas na sessão e aguardar operações em andamento.
 2. Acessar `/cash/close` e conferir vendedor, horário e identificação da sessão.
-3. Conferir valor inicial, vendas, esperado e cancelado.
-4. Contar somente o dinheiro físico e preencher `Valor contado no caixa`.
-5. Se houver falta, reconferir e solicitar senha administrativa se persistir.
+3. Conferir valor inicial, vendas concluídas e canceladas.
+4. Preencher os valores conferidos de dinheiro, Pix, crédito e débito, inclusive
+   `0,00` quando aplicável.
+5. Comparar esperado e conferido em cada método. Qualquer sobra ou falta exige
+   senha administrativa; diferenças opostas não se compensam.
 6. Fechar e aguardar confirmação.
-7. Conferir a sessão e a diferença em `/reports`.
+7. Conferir as quatro reconciliações da sessão em `/reports`.
 
-Pix, crédito e débito são conciliados, mas não entram no dinheiro físico esperado.
+Pix, crédito e débito têm conferências próprias e não entram no dinheiro físico esperado.
 Fechar um caixa não interrompe os outros. O mesmo operador pode abrir outra sessão
 no mesmo dia em `/cash/open`; o novo valor inicial e histórico são independentes.
 
@@ -162,22 +167,32 @@ Regras obrigatórias:
    PR08.
 5. O projeto Vercel dedicado `roberto-multimarcas-pdv-staging` deve usar preset Next.js e Node 22.x. Qualquer
    divergência de conta, project ID, repositório ou framework exige interrupção.
-6. O target técnico Production é permitido somente no projeto dedicado terminado em
-   `-staging`; o projeto reservado `roberto-multimarcas-pdv` deve permanecer sem
-   variáveis, domínios customizados e deployments de qualquer target até o
-   PR09; somente seu domínio padrão `.vercel.app` é esperado. O ambiente lógico
-   autorizado pelo validador continua sendo exclusivamente `staging`.
+6. O target técnico Production é permitido somente no projeto dedicado terminado
+   em `-staging`, sem conexão Git; o ambiente lógico autorizado pelo validador
+   continua sendo exclusivamente `staging`. O histórico de deployments e as
+   duas variáveis públicas de Preview existentes são preservados. O projeto
+   reservado `roberto-multimarcas-pdv` tem deployments e variáveis Production
+   preexistentes; operações de staging validam sua identidade, mas não o
+   enumeram nem o alteram.
 7. Tokens, senha do banco e credenciais do admin permanecem somente na sessão.
 
-Depois da criação, registre somente refs/IDs não sensíveis no manifesto,
-execute bootstrap idempotente e verificação:
+O provisionador `ops:provision-vercel` é somente para o bootstrap em um projeto
+inicialmente vazio. Depois que o rollout começa, não o reutilize para validar a
+história atual. Registre somente refs/IDs não sensíveis no manifesto, execute
+bootstrap idempotente e verifique as promoções com `ops:rollout-staging`:
 
 ```powershell
 npm.cmd run ops:bootstrap-staging-admin -- --execute --confirm-ref <novo-staging-ref>
 npm.cmd run ops:verify-staging -- --confirm-ref <novo-staging-ref>
-npm.cmd run ops:provision-vercel -- --phase verify-staging --execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79
 npm.cmd run test:e2e:staging-smoke -- --execute --confirm-project prj_fb7pug2hcbCGI1XIMLz5VuMr4S79
 ```
+
+Para verificar uma promoção, use `ops:rollout-staging -- --phase verify` com o
+SHA e o ID do deployment retornado. Essa verificação valida o deployment
+específico, o alias estável, o inventário autorizado de variáveis e a proteção;
+deployments históricos não precisam carregar os metadados do fluxo novo.
+Execute primeiro a fase `deploy` documentada em
+[Promoção para staging](vercel-cli.md#promover-uma-vers%C3%A3o-para-staging).
 
 O smoke remoto é somente leitura: login, dashboard e rotas protegidas. Ele usa
 um bypass Vercel temporário, mantém SSO habilitado e exige contagem final zero
@@ -212,9 +227,11 @@ checkpoint por vez, confira a saída real e atualize
 3. Revalidar o manifesto, a organização Supabase
    `wcqoluxxlvglqtebcucz`, o projeto Vercel
    `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` e a região `sa-east-1`.
-4. Confirmar a topologia: staging legado `INACTIVE`, staging Roberto
-   `ACTIVE_HEALTHY`, produção legada `ACTIVE_HEALTHY`, produção Roberto ausente
-   e projeto Vercel reservado ainda vazio.
+4. Confirmar a topologia dos bancos: staging legado `INACTIVE`, staging Roberto
+   `ACTIVE_HEALTHY`, produção legada `ACTIVE_HEALTHY` e destino de produção
+   Roberto ainda não liberado. O projeto Vercel reservado existe e tem recursos
+   preexistentes: 4 deployments Production `READY` e 3 variáveis Production no
+   inventário de 20/10/2026. Não leia valores nem altere esses recursos.
 5. Carregar credenciais apenas do Windows Credential Manager para variáveis
    temporárias da sessão. Nunca copie os valores para o comando ou documento.
 6. Executar os dry-runs:
@@ -226,10 +243,11 @@ npm.cmd run ops:provision-production -- --inventory .provisioning/production-bac
 npm.cmd run ops:provision-vercel-production -- --phase audit
 ```
 
-O `audit` inicial da Vercel é estritamente somente leitura e pode ser executado
-antes de existir estado de cutover. Nessa fase ele exige que o projeto reservado
-esteja vazio; as fases `configure` e `deploy` continuam bloqueadas até o estado
-correspondente do corte.
+O fluxo atual de produção foi escrito para um projeto vazio e deve permanecer
+bloqueado diante do estado Vercel existente. Não execute `configure` nem
+`deploy`, e não trate um `audit` que falha na precondição de projeto vazio como
+aprovação. O PR09 precisa estabelecer um plano próprio para o inventário e a
+reconciliação desses recursos antes de qualquer mutação.
 
 O inventário é somente leitura e precisa identificar a produção legada exata.
 Antes da pausa, confira origem, hash, integridade e idade máxima de uma hora da
@@ -308,20 +326,13 @@ operacional existente bloqueiam o corte; não sobrescreva nem limpe registros.
 
 ### 5. Vercel De Produção
 
-O alvo exclusivo é `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`. Configure exatamente
-as três variáveis de produção, mantendo `SUPABASE_SECRET_KEY` sensível, e
-publique somente o commit assinado autorizado:
-
-```powershell
-npm.cmd run ops:provision-vercel-production -- --phase audit --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
-npm.cmd run ops:provision-vercel-production -- --phase configure --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
-npm.cmd run ops:provision-vercel-production -- --phase deploy --source-ref feature/production-cutover --commit-sha <signed-commit-sha> --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
-npm.cmd run ops:provision-vercel-production -- --phase verify --execute --confirm-project prj_oBs2uc7uxsHMc7ssHFKczfi52LMq
-```
-
-Exija preset Next.js, Node.js 22.x, deployment `READY`, URL imutável, alias
-estável e ausência de Vercel Authentication e bypass. Não altere o staging nem
-o projeto Vercel legado e não crie domínio customizado.
+O alvo reservado é `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`, mas ele já contém
+deployments Production e três variáveis Production. Não execute as fases
+`audit`, `configure` ou `deploy` do provisionador atual como se o projeto
+estivesse vazio: os valores das variáveis não foram lidos e não há autorização
+para sobrescrevê-los. O PR09 deve primeiro reconciliar o estado e aprovar um
+fluxo de produção compatível; preserve todos os recursos enquanto isso. Os
+comandos de produção serão publicados após essa revisão.
 
 ### 6. Verificação, Smoke E Monitoramento
 
@@ -437,17 +448,19 @@ secrets, e para o Supabase mesmo em falha.
 1. Fazer login e conferir painel e permissões.
 2. Cadastrar produto e registrar saldo inicial.
 3. Abrir caixa próprio e conferir associação automática no PDV.
-4. Fazer venda em dinheiro com troco e venda em Pix ou cartão.
-5. Conferir vendas e baixa de estoque.
-6. Cancelar uma venda e conferir histórico, estoque e financeiro.
-7. Fechar, conferir valores e reabrir no mesmo dia; fechar a nova sessão.
+4. Fazer venda em um método, venda dividida Pix + dinheiro com troco e crédito 3x.
+5. Conferir pagamentos, parcelamento, vendas e baixa de estoque.
+6. Cancelar uma venda e conferir histórico, estoque e financeiro uma única vez.
+7. Fechar com os quatro valores, validar fechamento exato, sobra, falta,
+   diferenças opostas e senha administrativa; reabrir no mesmo dia.
 8. Com dois usuários em sessões de navegador separadas, conferir caixas
    simultâneos, associação de cada venda e continuidade ao fechar um dos caixas.
 9. Conferir consulta restrita do operador e fechamento administrativo de outro
    caixa em contingência.
-10. Conferir consolidado do período, filtros por vendedor/sessão e CSV.
+10. Conferir total geral único, contagens por método, parcelas, reconciliações,
+    filtros por vendedor/sessão e CSV.
 
-Registre o resultado do smoke manual após deploy. O gate do PR07 já automatiza
+Registre o resultado do smoke manual após deploy. O gate E2E automatiza
 caixas independentes, concorrência de abertura/vendas/fechamento, isolamento,
 contingência auditada e relatórios/CSV multioperador, sem skips autenticados.
 Os contextos de navegador e clientes são separados por identidade; a preparação

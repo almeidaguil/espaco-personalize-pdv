@@ -8,26 +8,33 @@ resultado remoto do PR09 é considerado concluído antes de ser capturado em
 
 ## Matriz Durante O PR08
 
-| Ambiente        | Branch      | Aplicação                    | Supabase                   | Estado                             |
-| --------------- | ----------- | ---------------------------- | -------------------------- | ---------------------------------- |
-| Local           | `feature/*` | Next.js local                | Supabase CLI local         | ativo                              |
-| Staging legado  | —           | Vercel legado                | `gpywbeoqcovjrfnmbdqx`     | pausado (`INACTIVE`)               |
-| Staging novo    | `develop`¹  | Vercel dedicado de staging   | `otsxpchqtfypxgzjzrxs`     | ativo e validado                   |
-| Produção legada | `main`      | Vercel legado                | `ciixpfquwmlsvzleattv`     | preservada e saudável              |
-| Produção nova   | `main`      | Vercel reservado, sem deploy | alvo ainda sem project ref | proibida no PR08; pertence ao PR09 |
+| Ambiente        | Branch      | Aplicação                  | Supabase                   | Estado                                      |
+| --------------- | ----------- | -------------------------- | -------------------------- | ------------------------------------------- |
+| Local           | `feature/*` | Next.js local              | Supabase CLI local         | ativo                                       |
+| Staging legado  | —           | Vercel legado              | `gpywbeoqcovjrfnmbdqx`     | pausado (`INACTIVE`)                        |
+| Staging novo    | `develop`¹  | Vercel dedicado de staging | `otsxpchqtfypxgzjzrxs`     | promoções manuais por SHA; Git desconectado |
+| Produção legada | `main`      | Vercel legado              | `ciixpfquwmlsvzleattv`     | preservada e saudável                       |
+| Produção nova   | `main`      | Vercel reservado           | alvo ainda sem project ref | pertence ao PR09; Vercel já tem recursos    |
 
 O staging usa exclusivamente `roberto-multimarcas-pdv-staging`. Por limitação
 confirmada da classificação do primeiro deployment na Vercel, o ambiente
-`Production` desse projeto dedicado representa staging e contém somente as
-três variáveis do Supabase `otsxpchqtfypxgzjzrxs`. O projeto reservado
-`roberto-multimarcas-pdv` permanece com zero variáveis e zero deployments até o
-PR09; a branch `main` não é publicada no PR08.
+`Production` desse projeto dedicado representa staging e contém as três
+variáveis necessárias ao runtime. `Preview` contém somente a URL e a chave
+pública do Supabase, sem `SUPABASE_SECRET_KEY`.
+
+Em 20/10/2026, a integração Git foi removida do projeto de staging para impedir
+deployments automáticos de `main` e de branches de feature. Os deployments
+existentes foram preservados. A auditoria encontrou 41 deployments de staging,
+3 variáveis Production e 2 Preview; não leu valores. O projeto Vercel reservado
+de produção contém 4 deployments Production `READY` e 3 variáveis Production.
+Esses recursos permanecem intactos e exigem reconciliação própria no PR09; não
+se deve presumir que o projeto esteja vazio nem modificá-lo pelo fluxo de staging.
 
 ¹ `develop` é a referência estável. O bootstrap validado no PR08 foi criado do
 snapshot `feature/provision-roberto-environments`, registrado em `sourceRef`;
-esse mesmo commit passa a compor `develop` depois do merge. O PR08 não oferece
-deploy contínuo nem rotina de substituição; promoções futuras exigem um fluxo
-versionado posterior.
+esse mesmo commit passou a compor `develop` depois do merge. O bootstrap do
+PR08 não oferece deploy contínuo; a integração Git foi desconectada. Novas
+versões são promovidas manualmente pelo fluxo versionado `ops:rollout-staging`.
 
 ## Manifesto E Arquivos Locais
 
@@ -50,10 +57,12 @@ SUPABASE_SECRET_KEY=
 
 `SUPABASE_SECRET_KEY` é exclusiva do servidor. Nunca use o prefixo
 `NEXT_PUBLIC_`, componentes cliente, logs ou artefatos de CI para essa chave.
-No PR08 os três valores são enviados somente ao ambiente `Production` do
-projeto dedicado `roberto-multimarcas-pdv-staging`. O
-`SUPABASE_SECRET_KEY` é marcado como sensível; nenhum valor é criado no projeto
-reservado `roberto-multimarcas-pdv`.
+No staging, os três valores de runtime são enviados ao ambiente `Production` do
+projeto dedicado `roberto-multimarcas-pdv-staging`. Os dois valores públicos
+também estão em `Preview`; `SUPABASE_SECRET_KEY` é exclusivo de `Production` e
+marcado como sensível. O projeto reservado de produção tem três variáveis
+`Production` preexistentes; nenhum valor foi lido e nenhuma alteração está
+autorizada antes do plano específico do PR09.
 
 Credenciais operacionais temporárias:
 
@@ -86,8 +95,9 @@ os grave no repositório, em documentação, issue ou PR.
    confirmação literal.
 7. Registrar o novo ref no manifesto, criar somente o admin de homologação e
    validar migrations, schema, Auth, RLS, grants, RPCs e banco vazio.
-8. Validar os projetos Vercel: staging dedicado em Next.js/Node 22.x e projeto
-   reservado para produção sem variáveis ou deployments.
+8. Validar o projeto Vercel de staging e o isolamento por IDs. O projeto
+   reservado para produção tem recursos preexistentes, deve permanecer
+   intocado e requer plano de reconciliação específico no PR09.
 9. Configurar as três variáveis em `Production` somente no projeto dedicado,
    publicar o staging e executar smoke remoto somente leitura com bypass de
    automação temporário e revogado ao final.
@@ -116,12 +126,13 @@ A produção legada não é pausada, alterada ou excluída no PR08.
 
 O proprietário declarou que o uso é pessoal e não comercial. O projeto novo
 deve permanecer no plano Hobby, com preset Next.js, Node 22.x e o build oficial.
-O provisionador valida conta e ambos os project IDs. Ele permite `Production`
-somente quando o nome termina em `-staging` e `dedicatedStaging=true`, exige
-Vercel Authentication ativa, zero bypasses temporários, exatamente três
-variáveis e um único deployment registrado. No projeto reservado ele exige a
-identidade exata, zero variáveis, zero deployments de qualquer target e somente
-o domínio padrão `<projeto>.vercel.app`, sem domínios customizados.
+O provisionador de bootstrap valida conta e ambos os project IDs e pressupõe
+ambientes iniciais vazios. Não o reutilize para promoções após a criação do
+histórico. O fluxo atual exige Vercel Authentication ativa, zero bypasses,
+exatamente três variáveis `Production` e as duas variáveis públicas `Preview`;
+valida o deployment promovido por SHA e alias, preservando o histórico. O
+projeto reservado de produção é validado por identidade e permanece fora das
+operações de staging, mesmo contendo recursos preexistentes.
 
 Monitore os limites vigentes do plano Hobby e suspenda deployments não
 essenciais antes de excedê-los. O projeto Vercel e o Supabase legados de
@@ -162,14 +173,17 @@ nulos no alvo de produção.
 
 Organização autorizada: `team_jstETBWBHJi0hsir3a3bAkbK`.
 
-| Uso      | Projeto                           | Project ID                         | URL estável                                          | Estado esperado antes do corte          |
-| -------- | --------------------------------- | ---------------------------------- | ---------------------------------------------------- | --------------------------------------- |
-| Staging  | `roberto-multimarcas-pdv-staging` | `prj_fb7pug2hcbCGI1XIMLz5VuMr4S79` | `https://roberto-multimarcas-pdv-staging.vercel.app` | ativo e protegido                       |
-| Produção | `roberto-multimarcas-pdv`         | `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` | `https://roberto-multimarcas-pdv.vercel.app`         | reservado, sem variáveis ou deployments |
+| Uso      | Projeto                           | Project ID                         | URL estável                                          | Estado esperado antes do corte                                  |
+| -------- | --------------------------------- | ---------------------------------- | ---------------------------------------------------- | --------------------------------------------------------------- |
+| Staging  | `roberto-multimarcas-pdv-staging` | `prj_fb7pug2hcbCGI1XIMLz5VuMr4S79` | `https://roberto-multimarcas-pdv-staging.vercel.app` | ativo e protegido                                               |
+| Produção | `roberto-multimarcas-pdv`         | `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` | `https://roberto-multimarcas-pdv.vercel.app`         | reservado; 4 deployments e 3 variáveis Production preexistentes |
 
 O projeto Vercel de produção é independente do staging dedicado e do projeto
 legado. Produção não usa Vercel Authentication: as rotas privadas continuam
 protegidas pelo login da aplicação e pelo Supabase Auth.
+O inventário acima é metadado redigido. Os valores das variáveis não foram
+consultados; não limpe nem sobrescreva esses recursos sem decisão e plano
+específicos do PR09.
 
 ## Segredos E Estado Local Do Corte
 

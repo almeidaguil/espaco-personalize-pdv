@@ -100,4 +100,50 @@ describe("exportSalesReportCsvUseCase", () => {
       "Ajuste pós-fechamento;debit_card;Cartão de débito;1;70,00",
     );
   });
+
+  it("exports split-payment counts, installments and all reconciliations", () => {
+    const result = exportSalesReportCsvUseCase({
+      report: createSalesReportFixture({
+        completedSalesCount: 2,
+        creditInstallmentSummary: [
+          { installmentCount: 1, netTotalInCents: 0, salesCount: 0 },
+          { installmentCount: 2, netTotalInCents: 6000, salesCount: 1 },
+          { installmentCount: 3, netTotalInCents: 3000, salesCount: 1 },
+        ],
+        reconciliationDifferenceTotalInCents: -150,
+        reconciliationShortageTotalInCents: 250,
+        reconciliationSurplusTotalInCents: 100,
+      }),
+    });
+
+    expect(result.content).toContain(
+      "Resumo;vendas_liquidas;Vendas líquidas;2;45,00",
+    );
+    expect(result.content).toContain("Parcela de crédito;2;Crédito 2x;1;60,00");
+    expect(result.content).toContain(
+      "Resumo;falta_reconciliacao;Falta em todos os métodos;;2,50",
+    );
+    expect(result.content).toContain(
+      "Resumo;sobra_reconciliacao;Sobra em todos os métodos;;1,00",
+    );
+    expect(result.content).toContain(
+      "Resumo;diferenca_reconciliacao;Diferença líquida de todos os métodos;;-1,50",
+    );
+    expect(result.content).toContain(
+      `Reconciliação;${createSalesReportFixture().sessions[0].id};Dinheiro · esperado 75,00 · conferido 74,00;;-1,00`,
+    );
+    expect(result.content).toContain(
+      `Reconciliação;${createSalesReportFixture().sessions[0].id};Pix · esperado 15,00 · conferido 15,00;;0,00`,
+    );
+    expect(result.content.match(/Reconciliação;/g)).toHaveLength(4);
+  });
+
+  it("keeps formula neutralization on reconciliation labels", () => {
+    const report = createSalesReportFixture();
+    report.sessions[0].operatorName = "=SUM(A1:A2)";
+
+    const result = exportSalesReportCsvUseCase({ report });
+
+    expect(result.content).toContain(";'=SUM(A1:A2);");
+  });
 });

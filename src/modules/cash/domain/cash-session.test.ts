@@ -1,9 +1,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
-  closeCashSession,
-  type CashSession,
   openCashSession,
+  validateCashSessionReconciliations,
 } from "./cash-session";
 
 describe("openCashSession", () => {
@@ -95,95 +94,64 @@ describe("openCashSession", () => {
   });
 });
 
-describe("closeCashSession", () => {
-  it("closes an open cash session", () => {
-    const session = createOpenSession();
-    const closedAt = new Date("2026-07-10T22:00:00.000Z");
+describe("validateCashSessionReconciliations", () => {
+  it("accepts each payment method exactly once and permits explicit zero", () => {
+    const reconciliations = [
+      { countedAmountInCents: 0, method: "cash" as const },
+      { countedAmountInCents: 1000, method: "pix" as const },
+      { countedAmountInCents: 2000, method: "credit_card" as const },
+      { countedAmountInCents: 3000, method: "debit_card" as const },
+    ];
 
-    expect(
-      closeCashSession({
-        closedAt,
-        countedAmountInReais: 255.75,
-        session,
-      }),
-    ).toEqual({
-      session: {
-        ...session,
-        closedAt,
-        countedAmountInReais: 255.75,
-        status: "closed",
-      },
+    expect(validateCashSessionReconciliations(reconciliations)).toEqual({
+      reconciliations,
       success: true,
     });
   });
 
-  it("rejects sessions that are already closed", () => {
-    const session: CashSession = {
-      ...createOpenSession(),
-      closedAt: new Date("2026-07-10T22:00:00.000Z"),
-      status: "closed",
-    };
-
-    const result = closeCashSession({
-      closedAt: new Date("2026-07-10T23:00:00.000Z"),
-      countedAmountInReais: 255.75,
-      session,
-    });
-
-    expect(result).toEqual({
-      errors: [
-        {
-          field: "status",
-          message: "Only open cash sessions can be closed.",
-        },
+  it.each([
+    {
+      name: "a missing method",
+      reconciliations: [
+        { countedAmountInCents: 0, method: "cash" as const },
+        { countedAmountInCents: 1000, method: "pix" as const },
+        { countedAmountInCents: 2000, method: "credit_card" as const },
       ],
-      success: false,
-    });
-  });
-
-  it("rejects close dates before open dates", () => {
-    const result = closeCashSession({
-      closedAt: new Date("2026-07-10T11:00:00.000Z"),
-      countedAmountInReais: 255.75,
-      session: createOpenSession(),
-    });
-
-    expect(result).toEqual({
-      errors: [
-        {
-          field: "closedAt",
-          message: "Cash session close date must be after open date.",
-        },
+    },
+    {
+      name: "a duplicated method",
+      reconciliations: [
+        { countedAmountInCents: 0, method: "cash" as const },
+        { countedAmountInCents: 1000, method: "pix" as const },
+        { countedAmountInCents: 2000, method: "credit_card" as const },
+        { countedAmountInCents: 3000, method: "credit_card" as const },
       ],
-      success: false,
-    });
-  });
-
-  it("rejects invalid counted amounts", () => {
-    const result = closeCashSession({
-      closedAt: new Date("2026-07-10T22:00:00.000Z"),
-      countedAmountInReais: 10.999,
-      session: createOpenSession(),
-    });
-
-    expect(result).toEqual({
-      errors: [
-        {
-          field: "countedAmountInReais",
-          message: "Counted amount can have at most 2 decimal places.",
-        },
+    },
+    {
+      name: "a negative amount",
+      reconciliations: [
+        { countedAmountInCents: -1, method: "cash" as const },
+        { countedAmountInCents: 1000, method: "pix" as const },
+        { countedAmountInCents: 2000, method: "credit_card" as const },
+        { countedAmountInCents: 3000, method: "debit_card" as const },
       ],
+    },
+    {
+      name: "an unsafe integer",
+      reconciliations: [
+        {
+          countedAmountInCents: Number.MAX_SAFE_INTEGER + 1,
+          method: "cash" as const,
+        },
+        { countedAmountInCents: 1000, method: "pix" as const },
+        { countedAmountInCents: 2000, method: "credit_card" as const },
+        { countedAmountInCents: 3000, method: "debit_card" as const },
+      ],
+    },
+  ])("rejects $name", ({ reconciliations }) => {
+    expect(validateCashSessionReconciliations(reconciliations)).toMatchObject({
+      errors: [{ field: "reconciliations" }],
       success: false,
     });
   });
 });
-
-function createOpenSession(): CashSession {
-  return {
-    id: "cash-session-1",
-    openedAt: new Date("2026-07-10T12:00:00.000Z"),
-    openingAmountInReais: 150.5,
-    operatorId: "operator-1",
-    status: "open",
-  };
-}

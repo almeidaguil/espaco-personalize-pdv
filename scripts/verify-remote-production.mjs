@@ -19,6 +19,7 @@ import {
 } from "./supabase-management-client.mjs";
 import { createVercelManagementClient } from "./vercel-management-client.mjs";
 import { hasActiveVercelProtectionBypass } from "./vercel-protection-bypass.mjs";
+import { readAuthenticatedProfile } from "./read-authenticated-profile.mjs";
 import { verifyRemoteEnvironment } from "./verify-remote-environment.mjs";
 
 const expectedVariables = new Map([
@@ -32,6 +33,7 @@ export async function verifyRemoteProduction({
   authPolicy = /** @type {any} */ (undefined),
   authenticatedClient,
   commandRunner,
+  cutoverState = /** @type {any} */ (null),
   deploymentTarget = /** @type {any} */ (null),
   expectedVercelEnvironment,
   linkedProjectRef,
@@ -43,6 +45,10 @@ export async function verifyRemoteProduction({
   vercelClient,
 }) {
   const databaseReport = await verifyRemoteEnvironment({
+    allowExistingProductionData: allowsExistingProductionData(
+      cutoverState,
+      manifest.supabase.targets.production.projectRef,
+    ),
     authPolicy,
     environment: "production",
     manifest,
@@ -331,13 +337,8 @@ export async function runVerifyRemoteProductionCli(
         if (error) throw new Error(`Unable to count ${table}.`);
         return count ?? 0;
       },
-      async getOwnProfile() {
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id,role")
-          .single();
-        if (error) throw new Error("Unable to read the admin profile.");
-        return data;
+      async getOwnProfile(userId) {
+        return readAuthenticatedProfile(supabase, userId);
       },
     },
     authPolicy: databaseReady
@@ -348,6 +349,7 @@ export async function runVerifyRemoteProductionCli(
       : undefined,
     commandRunner: (command, args, options = {}) =>
       runCliCommand(command, args, { environment, ...options }),
+    cutoverState,
     linkedProjectRef: await readLocalLinkedProjectRef(),
     managementClient,
     manifest,
@@ -365,6 +367,30 @@ export async function runVerifyRemoteProductionCli(
   });
   console.log(JSON.stringify(result, null, 2));
   return result;
+}
+
+function allowsExistingProductionData(cutoverState, projectRef) {
+  if (cutoverState?.phase !== "verified") return false;
+
+  const databaseReady = cutoverState.history?.find(
+    (entry) => entry.phase === "database-ready",
+  );
+  const adminReady = cutoverState.history?.find(
+    (entry) => entry.phase === "admin-ready",
+  );
+  const verified = cutoverState.history?.find(
+    (entry) => entry.phase === "verified",
+  );
+  if (
+    databaseReady?.facts?.projectRef !== projectRef ||
+    adminReady?.facts?.adminCount !== 1 ||
+    adminReady?.facts?.operatorCount !== 0 ||
+    adminReady?.facts?.operationalRowCount !== 0 ||
+    verified?.facts?.smokeStatus !== "passed"
+  ) {
+    throw new Error("Persisted production cutover state is divergent.");
+  }
+  return true;
 }
 
 export function readProductionDeploymentTarget(argv) {

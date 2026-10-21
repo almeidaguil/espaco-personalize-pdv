@@ -4,6 +4,7 @@ import type { CurrentUserProfileRepository } from "@/modules/auth/application/cu
 
 import type {
   CashSessionRepository,
+  CloseCashSessionPersistenceInput,
   FindOpenCashSessionResult,
   SaveCashSessionResult,
 } from "./cash-session-repository";
@@ -11,31 +12,39 @@ import { closeCashSessionUseCase } from "./close-cash-session-use-case";
 import type { CashSession } from "../domain/cash-session";
 
 class FakeCashSessionRepository implements CashSessionRepository {
+  public closeInput?: CloseCashSessionPersistenceInput;
   public findById?: string;
-  public updateOptions?: { adminPassword?: string };
-  public updatedSession?: CashSession;
 
   constructor(
     private readonly findResult: FindOpenCashSessionResult = {
       session: createCashSession(),
       success: true,
     },
-    private readonly updateResult?: SaveCashSessionResult,
+    private readonly closeResult?: SaveCashSessionResult,
   ) {}
+
+  async close(
+    input: CloseCashSessionPersistenceInput,
+  ): Promise<SaveCashSessionResult> {
+    this.closeInput = input;
+
+    return (
+      this.closeResult ?? {
+        session: createClosedCashSession(),
+        success: true,
+      }
+    );
+  }
 
   async findOpenById(
     cashSessionId: string,
   ): Promise<FindOpenCashSessionResult> {
     this.findById = cashSessionId;
-
     return this.findResult;
   }
 
   async listOpenByOperator() {
-    return {
-      sessions: [],
-      success: true as const,
-    };
+    return { sessions: [], success: true as const };
   }
 
   async findOpenByOperator(): Promise<FindOpenCashSessionResult> {
@@ -52,82 +61,56 @@ class FakeCashSessionRepository implements CashSessionRepository {
       success: true,
     };
   }
-
-  async update(
-    session: CashSession,
-    options?: { adminPassword?: string },
-  ): Promise<SaveCashSessionResult> {
-    this.updateOptions = options;
-    this.updatedSession = session;
-
-    return (
-      this.updateResult ?? {
-        session,
-        success: true,
-      }
-    );
-  }
 }
 
 describe("closeCashSessionUseCase", () => {
-  it("closes an open cash session for the current operator", async () => {
+  it("closes the current operator session with every reconciliation", async () => {
     const cashSessionRepository = new FakeCashSessionRepository();
+    const reconciliations = countedReconciliations();
 
     const result = await closeCashSessionUseCase(
       {
         adminPassword: "admin-password-test",
         cashSessionId: " cash-session-1 ",
-        countedAmountInReais: 260.75,
+        reconciliations,
       },
-      {
-        cashSessionRepository,
-        currentUserProfileRepository: createCurrentUserProfileRepository(),
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
-    );
-
-    expect(result.success).toBe(true);
-    expect(cashSessionRepository.findById).toBe("cash-session-1");
-    expect(cashSessionRepository.updatedSession).toEqual({
-      closedAt: new Date("2026-07-10T18:00:00.000Z"),
-      countedAmountInReais: 260.75,
-      id: "cash-session-1",
-      openedAt: new Date("2026-07-10T12:00:00.000Z"),
-      openingAmountInReais: 150.5,
-      operatorId: "operator-1",
-      status: "closed",
-    });
-    expect(cashSessionRepository.updateOptions).toEqual({
-      adminPassword: "admin-password-test",
-    });
-  });
-
-  it("rejects an operator who tries to close another operator's open cash session", async () => {
-    const cashSessionRepository = new FakeCashSessionRepository({
-      session: createCashSession({ operatorId: "operator-2" }),
-      success: true,
-    });
-
-    const result = await closeCashSessionUseCase(
-      {
-        cashSessionId: "cash-session-1",
-        countedAmountInReais: 260.75,
-      },
-      {
-        cashSessionRepository,
-        currentUserProfileRepository: createCurrentUserProfileRepository(),
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
+      dependencies(cashSessionRepository),
     );
 
     expect(result).toEqual({
+      session: createClosedCashSession(),
+      success: true,
+    });
+    expect(cashSessionRepository.findById).toBe("cash-session-1");
+    expect(cashSessionRepository.closeInput).toEqual({
+      adminPassword: "admin-password-test",
+      cashSessionId: "cash-session-1",
+      reconciliations,
+    });
+  });
+
+  it("rejects an operator closing another operator session", async () => {
+    const cashSessionRepository = new FakeCashSessionRepository({
+      session: createCashSession({ operatorId: "operator-2" }),
+      success: true,
+    });
+
+    await expect(
+      closeCashSessionUseCase(
+        {
+          cashSessionId: "cash-session-1",
+          reconciliations: countedReconciliations(),
+        },
+        dependencies(cashSessionRepository),
+      ),
+    ).resolves.toEqual({
       formError: "Voce nao tem permissao para fechar este caixa.",
       success: false,
     });
-    expect(cashSessionRepository.updatedSession).toBeUndefined();
+    expect(cashSessionRepository.closeInput).toBeUndefined();
   });
 
-  it("allows an admin to close another operator's open cash session", async () => {
+  it("allows an admin to close another operator session", async () => {
     const cashSessionRepository = new FakeCashSessionRepository({
       session: createCashSession({ operatorId: "operator-2" }),
       success: true,
@@ -136,68 +119,74 @@ describe("closeCashSessionUseCase", () => {
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: "cash-session-1",
-        countedAmountInReais: 260.75,
+        reconciliations: countedReconciliations(),
       },
-      {
+      dependencies(
         cashSessionRepository,
-        currentUserProfileRepository: createCurrentUserProfileRepository({
-          id: "admin-1",
-          role: "admin",
-        }),
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
+        createCurrentUserProfileRepository({ id: "admin-1", role: "admin" }),
+      ),
     );
 
     expect(result.success).toBe(true);
-    expect(cashSessionRepository.findById).toBe("cash-session-1");
-    expect(cashSessionRepository.updatedSession).toMatchObject({
-      id: "cash-session-1",
-      operatorId: "operator-2",
-      status: "closed",
+    expect(cashSessionRepository.closeInput).toMatchObject({
+      cashSessionId: "cash-session-1",
+      reconciliations: countedReconciliations(),
     });
   });
 
-  it("returns field errors when input is invalid", async () => {
+  it.each([
+    {
+      name: "a missing method",
+      reconciliations: countedReconciliations().slice(0, 3),
+    },
+    {
+      name: "a duplicated method",
+      reconciliations: [
+        ...countedReconciliations().slice(0, 3),
+        { countedAmountInCents: 0, method: "credit_card" as const },
+      ],
+    },
+    {
+      name: "a negative amount",
+      reconciliations: countedReconciliations({ cash: -1 }),
+    },
+    {
+      name: "an unsafe integer",
+      reconciliations: countedReconciliations({
+        cash: Number.MAX_SAFE_INTEGER + 1,
+      }),
+    },
+  ])("rejects $name before persistence", async ({ reconciliations }) => {
     const cashSessionRepository = new FakeCashSessionRepository();
 
     const result = await closeCashSessionUseCase(
-      {
-        cashSessionId: "",
-        countedAmountInReais: Number.NaN,
-      },
-      {
-        cashSessionRepository,
-        currentUserProfileRepository: createCurrentUserProfileRepository(),
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
+      { cashSessionId: "cash-session-1", reconciliations },
+      dependencies(cashSessionRepository),
     );
 
     expect(result).toEqual({
       fieldErrors: {
-        cashSessionId: "Informe o caixa aberto.",
-        countedAmountInReais: "Informe o valor contado em Reais.",
+        cashSessionId: undefined,
+        reconciliations:
+          "Informe a conferencia dos quatro metodos de pagamento.",
       },
       success: false,
     });
-    expect(cashSessionRepository.updatedSession).toBeUndefined();
+    expect(cashSessionRepository.closeInput).toBeUndefined();
   });
 
   it("maps unauthenticated users to a form error", async () => {
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: "cash-session-1",
-        countedAmountInReais: 260.75,
+        reconciliations: countedReconciliations(),
       },
-      {
-        cashSessionRepository: new FakeCashSessionRepository(),
-        currentUserProfileRepository: {
-          getCurrent: async () => ({
-            error: "unauthenticated",
-            success: false,
-          }),
-        },
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
+      dependencies(new FakeCashSessionRepository(), {
+        getCurrent: async () => ({
+          error: "unauthenticated",
+          success: false,
+        }),
+      }),
     );
 
     expect(result).toEqual({
@@ -215,108 +204,70 @@ describe("closeCashSessionUseCase", () => {
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: "cash-session-1",
-        countedAmountInReais: 260.75,
+        reconciliations: countedReconciliations(),
       },
-      {
-        cashSessionRepository,
-        currentUserProfileRepository: createCurrentUserProfileRepository(),
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
+      dependencies(cashSessionRepository),
     );
 
     expect(result).toEqual({
       formError: "Nao ha caixa aberto para fechar.",
       success: false,
     });
-    expect(cashSessionRepository.updatedSession).toBeUndefined();
+    expect(cashSessionRepository.closeInput).toBeUndefined();
   });
 
-  it("does not persist when the selected session is already closed", async () => {
-    const cashSessionRepository = new FakeCashSessionRepository({
-      session: null,
-      success: true,
-    });
-
-    const result = await closeCashSessionUseCase(
-      {
-        cashSessionId: "cash-session-1",
-        countedAmountInReais: 260.75,
-      },
-      {
-        cashSessionRepository,
-        currentUserProfileRepository: createCurrentUserProfileRepository(),
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
-    );
-
-    expect(result).toEqual({
-      formError: "Nao ha caixa aberto para fechar.",
-      success: false,
-    });
-    expect(cashSessionRepository.findById).toBe("cash-session-1");
-    expect(cashSessionRepository.updatedSession).toBeUndefined();
-  });
-
-  it("maps update failures to a form error", async () => {
+  it("uses a neutral administrative authorization error for any difference", async () => {
     const cashSessionRepository = new FakeCashSessionRepository(
-      {
-        session: createCashSession(),
-        success: true,
-      },
-      {
-        error: "unknown",
-        success: false,
-      },
+      { session: createCashSession(), success: true },
+      { error: "admin_password_required", success: false },
     );
 
     const result = await closeCashSessionUseCase(
       {
         cashSessionId: "cash-session-1",
-        countedAmountInReais: 260.75,
+        reconciliations: countedReconciliations({ pix: 999 }),
       },
-      {
-        cashSessionRepository,
-        currentUserProfileRepository: createCurrentUserProfileRepository(),
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
+      dependencies(cashSessionRepository),
     );
 
     expect(result).toEqual({
+      formError:
+        "Informe uma senha administrativa valida para fechar caixa com divergencia.",
+      success: false,
+    });
+  });
+
+  it("maps transactional failures without claiming the session closed", async () => {
+    const cashSessionRepository = new FakeCashSessionRepository(
+      { session: createCashSession(), success: true },
+      { error: "unknown", success: false },
+    );
+
+    await expect(
+      closeCashSessionUseCase(
+        {
+          cashSessionId: "cash-session-1",
+          reconciliations: countedReconciliations(),
+        },
+        dependencies(cashSessionRepository),
+      ),
+    ).resolves.toEqual({
       formError: "Nao foi possivel fechar o caixa.",
       success: false,
     });
   });
-
-  it("maps admin password failures to a shortage form error", async () => {
-    const cashSessionRepository = new FakeCashSessionRepository(
-      {
-        session: createCashSession(),
-        success: true,
-      },
-      {
-        error: "admin_password_required",
-        success: false,
-      },
-    );
-
-    const result = await closeCashSessionUseCase(
-      {
-        cashSessionId: "cash-session-1",
-        countedAmountInReais: 200,
-      },
-      {
-        cashSessionRepository,
-        currentUserProfileRepository: createCurrentUserProfileRepository(),
-        getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
-      },
-    );
-
-    expect(result).toEqual({
-      formError: "Informe a senha administrativa para fechar caixa com falta.",
-      success: false,
-    });
-  });
 });
+
+function dependencies(
+  cashSessionRepository: CashSessionRepository,
+  currentUserProfileRepository = createCurrentUserProfileRepository(),
+) {
+  return {
+    cashSessionRepository,
+    currentUserProfileRepository,
+    getCurrentDate: () => new Date("2026-07-10T18:00:00.000Z"),
+  };
+}
 
 function createCurrentUserProfileRepository(
   profile: { id: string; role: "admin" | "operator" } = {
@@ -325,11 +276,64 @@ function createCurrentUserProfileRepository(
   },
 ): CurrentUserProfileRepository {
   return {
-    getCurrent: async () => ({
-      profile,
-      success: true,
-    }),
+    getCurrent: async () => ({ profile, success: true }),
   };
+}
+
+function countedReconciliations(
+  overrides: Partial<
+    Record<"cash" | "credit_card" | "debit_card" | "pix", number>
+  > = {},
+) {
+  return [
+    { countedAmountInCents: overrides.cash ?? 15050, method: "cash" as const },
+    { countedAmountInCents: overrides.pix ?? 1000, method: "pix" as const },
+    {
+      countedAmountInCents: overrides.credit_card ?? 2000,
+      method: "credit_card" as const,
+    },
+    {
+      countedAmountInCents: overrides.debit_card ?? 3000,
+      method: "debit_card" as const,
+    },
+  ];
+}
+
+function createClosedCashSession(): CashSession {
+  return createCashSession({
+    closedAt: new Date("2026-07-10T18:00:00.000Z"),
+    closedBy: "operator-1",
+    countedAmountInReais: 150.5,
+    differenceAmountInReais: 0,
+    expectedAmountInReais: 150.5,
+    reconciliations: [
+      {
+        countedAmountInCents: 15050,
+        differenceAmountInCents: 0,
+        expectedAmountInCents: 15050,
+        method: "cash",
+      },
+      {
+        countedAmountInCents: 1000,
+        differenceAmountInCents: 0,
+        expectedAmountInCents: 1000,
+        method: "pix",
+      },
+      {
+        countedAmountInCents: 2000,
+        differenceAmountInCents: 0,
+        expectedAmountInCents: 2000,
+        method: "credit_card",
+      },
+      {
+        countedAmountInCents: 3000,
+        differenceAmountInCents: 0,
+        expectedAmountInCents: 3000,
+        method: "debit_card",
+      },
+    ],
+    status: "closed",
+  });
 }
 
 function createCashSession(overrides: Partial<CashSession> = {}): CashSession {

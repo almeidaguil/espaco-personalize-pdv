@@ -54,6 +54,47 @@ test("verifies production database, deployment, variables and protection read-on
   expect(vercelClient.createAutomationBypass).not.toHaveBeenCalled();
 });
 
+test("allows populated production only when its verified cutover state matches the project", async () => {
+  const { input } = fixture({
+    operationalRowCount: 300,
+    userSummary: {
+      admin_profile_count: 3,
+      auth_user_count: 5,
+      operator_profile_count: 2,
+      profile_count: 5,
+      profiles_linked_to_auth_count: 5,
+      unknown_role_profile_count: 0,
+    },
+  });
+
+  await expect(
+    verifyRemoteProduction({
+      ...input,
+      cutoverState: verifiedCutoverState(),
+    }),
+  ).resolves.toMatchObject({ status: "passed" });
+});
+
+test("rejects populated production when the verified cutover state targets another project", async () => {
+  const { input } = fixture({
+    operationalRowCount: 1,
+    userSummary: {
+      admin_profile_count: 1,
+      auth_user_count: 1,
+      operator_profile_count: 0,
+      profile_count: 1,
+      profiles_linked_to_auth_count: 1,
+      unknown_role_profile_count: 0,
+    },
+  });
+  const cutoverState = verifiedCutoverState();
+  cutoverState.history[0].facts.projectRef = "zyxwvutsrqponmlkjihg";
+
+  await expect(
+    verifyRemoteProduction({ ...input, cutoverState }),
+  ).rejects.toThrow(/cutover state is divergent/i);
+});
+
 test("accepts disabled HIBP only with the recorded Free-plan exception", async () => {
   const { input } = fixture({
     authConfig: { password_hibp_enabled: false },
@@ -339,7 +380,7 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
             anon_finalize_v5_execute: false,
             authenticated_close_v2_execute: true,
             authenticated_finalize_v5_execute: true,
-            authenticated_legacy_close_execute: true,
+            authenticated_legacy_close_execute: false,
             authenticated_payment_helper_execute: false,
             authenticated_reconciliation_select: true,
             authenticated_reconciliation_writes_blocked: true,
@@ -361,16 +402,22 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
         ];
       if (query.includes("auth.users"))
         return [
-          {
+          (vercelOverride.userSummary as Record<string, number>) ?? {
             auth_user_count: 1,
             profile_count: 1,
             admin_profile_count: 1,
-            non_admin_profile_count: 0,
+            operator_profile_count: 0,
+            unknown_role_profile_count: 0,
             profiles_linked_to_auth_count: 1,
           },
         ];
       if (query.includes("operational_row_count"))
-        return [{ operational_row_count: 0 }];
+        return [
+          {
+            operational_row_count:
+              (vercelOverride.operationalRowCount as number) ?? 0,
+          },
+        ];
       return [
         {
           sales_insert: false,
@@ -410,6 +457,31 @@ function fixture(vercelOverride: Record<string, unknown> = {}) {
       vercelClient,
     },
     vercelClient,
+  };
+}
+
+function verifiedCutoverState(): {
+  history: { facts: Record<string, unknown>; phase: string }[];
+  phase: string;
+} {
+  return {
+    history: [
+      { facts: { projectRef }, phase: "database-ready" },
+      {
+        facts: { adminCount: 1, operationalRowCount: 0, operatorCount: 0 },
+        phase: "admin-ready",
+      },
+      {
+        facts: {
+          checks: ["deployment-ready"],
+          commitSha,
+          deploymentId: "dpl_Production123",
+          smokeStatus: "passed",
+        },
+        phase: "verified",
+      },
+    ],
+    phase: "verified",
   };
 }
 

@@ -3,76 +3,103 @@ import { describe, expect, it } from "vitest";
 import { parseCreateSaleFormData } from "./sale-form-data";
 
 describe("parseCreateSaleFormData", () => {
-  it("ignores a forged cash session id from sale form data", () => {
+  it("parses two payments and ignores a forged cash session id", () => {
     const formData = new FormData();
     formData.set("cashSessionId", "forged-cash-session");
-    formData.set("paymentMethod", "cash");
     formData.set(
       "itemsJson",
+      JSON.stringify([{ productId: "product-1", quantity: 2 }]),
+    );
+    formData.set("discountInReais", "1,25");
+    formData.set(
+      "paymentsJson",
       JSON.stringify([
+        { amountInReais: "10,00", method: "pix" },
         {
-          productId: "product-1",
-          quantity: 2,
+          amountInReais: "18,75",
+          installmentCount: 3,
+          method: "credit_card",
         },
       ]),
     );
-    formData.set("amountReceivedInReais", "50,00");
-    formData.set("discountInReais", "1,25");
 
     expect(parseCreateSaleFormData(formData)).toEqual({
-      items: [
+      discountInCents: 125,
+      items: [{ productId: "product-1", quantity: 2 }],
+      payments: [
+        { amountInCents: 1000, method: "pix" },
         {
-          productId: "product-1",
-          quantity: 2,
+          amountInCents: 1875,
+          installmentCount: 3,
+          method: "credit_card",
         },
       ],
-      discountInCents: 125,
-      payment: {
-        amountInCents: 5000,
-        method: "cash",
-      },
     });
   });
 
-  it("parses pix payments", () => {
-    const formData = new FormData();
-    formData.set("paymentMethod", "pix");
-    formData.set("amountReceivedInReais", "30,00");
-
-    expect(parseCreateSaleFormData(formData)).toMatchObject({
-      payment: {
-        amountInCents: 3000,
-        method: "pix",
-      },
-    });
-  });
-
-  it("returns an empty item list when item JSON is invalid", () => {
+  it("returns empty arrays when JSON fields are malformed", () => {
     const formData = new FormData();
     formData.set("itemsJson", "invalid");
+    formData.set("paymentsJson", "invalid");
 
     expect(parseCreateSaleFormData(formData)).toMatchObject({
       items: [],
+      payments: [],
     });
   });
 
   it("uses zero when the discount field is empty", () => {
-    const formData = new FormData();
-    formData.set("amountReceivedInReais", "10,00");
-
-    expect(parseCreateSaleFormData(formData)).toMatchObject({
+    expect(parseCreateSaleFormData(new FormData())).toMatchObject({
       discountInCents: 0,
     });
   });
 
-  it("does not round invalid monetary input", () => {
+  it.each(["", "texto", "-0,01", "10,001", "90071992547410,00"])(
+    "does not round or coerce invalid payment value %s",
+    (amountInReais) => {
+      const formData = new FormData();
+      formData.set(
+        "paymentsJson",
+        JSON.stringify([{ amountInReais, method: "cash" }]),
+      );
+
+      expect(
+        parseCreateSaleFormData(formData).payments[0]?.amountInCents,
+      ).toBeNaN();
+    },
+  );
+
+  it("preserves invalid methods and installments for server validation", () => {
     const formData = new FormData();
-    formData.set("amountReceivedInReais", "10,001");
-    formData.set("discountInReais", "-0,01");
+    formData.set(
+      "paymentsJson",
+      JSON.stringify([
+        { amountInReais: "10,00", method: "voucher" },
+        {
+          amountInReais: "5,00",
+          installmentCount: "quatro",
+          method: "credit_card",
+        },
+      ]),
+    );
 
-    const parsed = parseCreateSaleFormData(formData);
+    expect(parseCreateSaleFormData(formData).payments).toEqual([
+      { amountInCents: 1000, method: "voucher" },
+      {
+        amountInCents: 500,
+        installmentCount: Number.NaN,
+        method: "credit_card",
+      },
+    ]);
+  });
 
-    expect(parsed.discountInCents).toBeNaN();
-    expect(parsed.payment.amountInCents).toBeNaN();
+  it("does not accept a non-array payment payload", () => {
+    const formData = new FormData();
+    formData.set(
+      "paymentsJson",
+      JSON.stringify({ amountInReais: "10,00", method: "cash" }),
+    );
+
+    expect(parseCreateSaleFormData(formData).payments).toEqual([]);
   });
 });

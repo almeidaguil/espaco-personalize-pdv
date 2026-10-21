@@ -55,5 +55,10 @@ test("admin logs in through the UI and traverses main flows", async ({
     page.getByRole("heading", { name: "Caixa aberto para venda" }),
   ).toBeVisible();
 
-  await closeCashSessionThroughUi(page, session.id);
+  await closeCashSessionThroughUi(page, session.id, {
+    cash: "100,00",
+    credit_card: "0,00",
+    debit_card: "0,00",
+    pix: "0,00",
+  });
 });
