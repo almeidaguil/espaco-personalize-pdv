@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { createClient } from "@supabase/supabase-js";
 
 import { loadRemoteEnvironmentManifest } from "./remote-environment-policy.mjs";
+import { readAuthenticatedProfile } from "./read-authenticated-profile.mjs";
 import {
   buildSupabaseUrl,
   createSupabaseManagementClient,
@@ -120,13 +121,8 @@ export async function runVerifyRemoteStagingCli(
       if (error) throw new Error(`Unable to count ${table}.`);
       return count ?? 0;
     },
-    async getOwnProfile() {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id,role")
-        .single();
-      if (error) throw new Error("Unable to read the admin profile.");
-      return data;
+    async getOwnProfile(userId) {
+      return readAuthenticatedProfile(supabase, userId);
     },
   };
   const result = await verifyRemoteStaging({
