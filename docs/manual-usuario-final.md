@@ -27,9 +27,10 @@ Antes de começar, confirme:
 - produtos ativos cadastrados e saldos corretos em `/stock`;
 - dinheiro inicial disponível para abrir o próprio caixa.
 
-O cadastro de produto não acrescenta estoque: o admin registra o saldo por
-movimentação em `/stock`. Vendas, caixa, estoque e relatórios dependem de conexão
-com o servidor nesta versão.
+Novos produtos podem ser cadastrados já com estoque inicial em `/products/new`, ou
+terem seus saldos adicionados posteriormente pelo admin através de movimentações em
+`/stock`. Vendas, caixa, estoque e relatórios dependem de conexão com o servidor
+nesta versão.
 
 ## Login E Instalação Do App
 
@@ -62,15 +63,17 @@ Uma segunda abertura simultânea para o mesmo usuário é recusada.
 1. Acesse `/pdv` e confira o seu caixa aberto.
 2. Em `Buscar produto`, pesquise por nome ou SKU.
 3. Clique em `Adicionar` e ajuste as quantidades com `+` e `-`.
-4. Confira os itens, o estoque disponível e o total.
-5. Escolha `Dinheiro`, `Pix`, `Cartão de crédito` ou `Cartão de débito`.
-6. Para usar duas formas distintas, clique em `Dividir pagamento` e informe o
+4. Confira os itens e o estoque disponível.
+5. Se aplicável, informe o `Desconto` em reais (o total líquido é atualizado
+   automaticamente).
+6. Escolha `Dinheiro`, `Pix`, `Cartão de crédito` ou `Cartão de débito`.
+7. Para usar duas formas distintas, clique em `Dividir pagamento` e informe o
    valor de cada uma. Cada forma deve contribuir com pelo menos R$ 0,01.
-7. Para dinheiro, informe o valor entregue e confira o troco. Somente dinheiro
+8. Para dinheiro, informe o valor entregue e confira o troco. Somente dinheiro
    pode superar o restante da venda. Para crédito, escolha `À vista`, `2x` ou
    `3x`; o parcelamento não altera o total.
-8. Confirme o recebimento e clique em `Finalizar venda`.
-9. Aguarde a mensagem de sucesso antes de iniciar outra venda.
+9. Confirme o recebimento e clique em `Finalizar venda`.
+10. Aguarde a mensagem de sucesso antes de iniciar outra venda.
 
 O PDV usa automaticamente o caixa aberto do usuário autenticado. Sem esse caixa,
 a tela orienta a abertura e bloqueia a finalização. O servidor valida identidade,
@@ -131,8 +134,14 @@ quem realizou o fechamento. O admin usa o próprio caixa quando precisa vender.
 ## Produtos E Estoque
 
 Para cadastrar um produto, o admin acessa `/products`, clica em `Novo produto`,
-preenche os campos do formulário e salva. Para editar, abre a edição do produto
-na lista. A alteração do cadastro não altera o saldo de estoque.
+preenche o nome, preço em reais e SKU (opcional). Na tela de novo produto, pode
+informar opcionalmente a `Quantidade inicial em estoque` para que o produto já
+entre com saldo disponível (o sistema registra automaticamente uma movimentação
+de `Ajuste inicial`). Se deixar vazio ou zero, o produto é criado sem estoque.
+
+Para editar dados cadastrais (nome, preço, SKU ou status ativo), abra a edição do
+produto na lista. A tela de edição não altera o saldo de estoque nem exibe campo
+de estoque inicial.
 
 Para registrar saldo ou correção:
 
@@ -143,8 +152,9 @@ Para registrar saldo ou correção:
 4. Informa `Quantidade` e clica em `Registrar ajuste`.
 5. Confere o saldo e o histórico na mesma tela.
 
-Cada ajuste gera uma movimentação. Vendas e cancelamentos também aparecem no
-histórico; o estoque não deve ser corrigido diretamente pelo cadastro de produto.
+Cada ajuste gera uma movimentação auditada. Vendas e cancelamentos também aparecem
+no histórico; correções posteriores de saldo devem ser feitas exclusivamente pelo
+módulo de Estoque.
 
 ## Gestão De Usuários
 

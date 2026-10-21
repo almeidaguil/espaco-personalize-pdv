@@ -1,7 +1,7 @@
 # Plano De Preparacao Do Ambiente
 
 Este checklist acompanha a preparacao completa do ambiente local do projeto
-Espaco Personalize PDV.
+Roberto Multimarcas PDV.
 
 Regra de acompanhamento: uma tarefa somente e marcada como concluida depois de
 executada e validada. Credenciais serao solicitadas apenas quando forem
@@ -68,7 +68,8 @@ necessarias para a etapa atual.
 ### CLIs E Autenticacao
 
 - Supabase CLI `2.105.0` instalado e fixado como dependencia do projeto.
-- Supabase CLI autenticado e com acesso ao projeto `ciixpfquwmlsvzleattv`.
+- Supabase CLI autenticado e com acesso aos projetos de produção `wjuzwjbvctbyfvgmprmd`
+  e staging `otsxpchqtfypxgzjzrxs`.
 - Vercel CLI `58.11.0` instalado globalmente no Node.js 22 do NVM.
 - Vercel CLI autenticado na conta `almeidaguil`.
 - Nenhum token foi gravado no repositorio.
