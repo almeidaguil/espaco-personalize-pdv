@@ -11,8 +11,9 @@ evolução segue rigorosamente os checkpoints abaixo antes de ser promovida.
 
 ## Regra De Release
 
-O último release publicado é `v2.1.0`. Toda alteração de código deve respeitar
-o versionamento semântico (SemVer):
+O último release publicado é `v2.1.0`. A revisão integral da documentação do
+sistema e readmes atualiza a versão para `2.1.1`. Toda alteração de código deve
+respeitar o versionamento semântico (SemVer):
 
 - **Patch (2.1.x)**: correções de bugs, ajustes de documentação ou refatorações
   sem alteração de contratos;
