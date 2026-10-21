@@ -1,40 +1,31 @@
 # Ambientes
 
-Banco, autenticação, chaves e dados são isolados entre local, staging e
-produção. O PR08 substituiu o staging. O PR09 prepara e executará, somente após
-os checkpoints previstos, o corte de produção da Roberto Multimarcas. Nenhum
-resultado remoto do PR09 é considerado concluído antes de ser capturado em
-[PR09 - corte de produção](evidencias/pr09-production-cutover.md).
+Banco, autenticação, chaves e dados são estritamente isolados entre local,
+staging e produção. A transição para os ambientes oficiais da Roberto Multimarcas
+foi concluída com sucesso.
 
-## Matriz Durante O PR08
+## Matriz De Ambientes
 
-| Ambiente        | Branch      | Aplicação                  | Supabase                   | Estado                                      |
-| --------------- | ----------- | -------------------------- | -------------------------- | ------------------------------------------- |
-| Local           | `feature/*` | Next.js local              | Supabase CLI local         | ativo                                       |
-| Staging legado  | —           | Vercel legado              | `gpywbeoqcovjrfnmbdqx`     | pausado (`INACTIVE`)                        |
-| Staging novo    | `develop`¹  | Vercel dedicado de staging | `otsxpchqtfypxgzjzrxs`     | promoções manuais por SHA; Git desconectado |
-| Produção legada | `main`      | Vercel legado              | `ciixpfquwmlsvzleattv`     | preservada e saudável                       |
-| Produção nova   | `main`      | Vercel reservado           | alvo ainda sem project ref | pertence ao PR09; Vercel já tem recursos    |
+| Ambiente                     | Branch      | Aplicação / Vercel                | Supabase Project Ref   | Estado                                      |
+| ---------------------------- | ----------- | --------------------------------- | ---------------------- | ------------------------------------------- |
+| Local                        | `feature/*` | Next.js local                     | Supabase CLI local     | ativo (Docker / WSL 2)                      |
+| Staging Roberto Multimarcas  | `develop`   | `roberto-multimarcas-pdv-staging` | `otsxpchqtfypxgzjzrxs` | ativo (promoções coordenadas por SHA)       |
+| Produção Roberto Multimarcas | `main`      | `roberto-multimarcas-pdv`         | `wjuzwjbvctbyfvgmprmd` | **ativo** (dados reais da loja preservados) |
+| Staging legado               | —           | Vercel legado                     | `gpywbeoqcovjrfnmbdqx` | pausado (`INACTIVE`)                        |
+| Produção legada              | —           | Vercel legado                     | `ciixpfquwmlsvzleattv` | preservada para histórico                   |
 
-O staging usa exclusivamente `roberto-multimarcas-pdv-staging`. Por limitação
-confirmada da classificação do primeiro deployment na Vercel, o ambiente
-`Production` desse projeto dedicado representa staging e contém as três
-variáveis necessárias ao runtime. `Preview` contém somente a URL e a chave
-pública do Supabase, sem `SUPABASE_SECRET_KEY`.
+O staging utiliza o projeto Vercel dedicado `roberto-multimarcas-pdv-staging`.
+A integração Git permanece desconectada para evitar deploys automáticos
+inadvertidos; as promoções são executadas manualmente pelo fluxo versionado
+`npm run ops:rollout-staging`.
 
-Em 20/10/2026, a integração Git foi removida do projeto de staging para impedir
-deployments automáticos de `main` e de branches de feature. Os deployments
-existentes foram preservados. A auditoria encontrou 41 deployments de staging,
-3 variáveis Production e 2 Preview; não leu valores. O projeto Vercel reservado
-de produção contém 4 deployments Production `READY` e 3 variáveis Production.
-Esses recursos permanecem intactos e exigem reconciliação própria no PR09; não
-se deve presumir que o projeto esteja vazio nem modificá-lo pelo fluxo de staging.
-
-¹ `develop` é a referência estável. O bootstrap validado no PR08 foi criado do
-snapshot `feature/provision-roberto-environments`, registrado em `sourceRef`;
-esse mesmo commit passou a compor `develop` depois do merge. O bootstrap do
-PR08 não oferece deploy contínuo; a integração Git foi desconectada. Novas
-versões são promovidas manualmente pelo fluxo versionado `ops:rollout-staging`.
+A produção oficial da Roberto Multimarcas utiliza o projeto Vercel
+`roberto-multimarcas-pdv` (ID `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq`) e o projeto
+Supabase `wjuzwjbvctbyfvgmprmd` em `sa-east-1` (São Paulo). O deploy é
+executado a partir do commit exato integrado em `main` e responde no alias
+estável [https://roberto-multimarcas-pdv.vercel.app](https://roberto-multimarcas-pdv.vercel.app).
+A base de produção possui dados operacionais reais (produtos, vendas, estoque e
+caixas) que são integralmente preservados em cada release.
 
 ## Manifesto E Arquivos Locais
 

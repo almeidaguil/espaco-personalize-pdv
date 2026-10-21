@@ -1,9 +1,10 @@
 # Plano De Desenvolvimento - Roberto Multimarcas PDV
 
-> O runtime atual opera como loja fisica, com caixas por operador e sem modulo
-> de eventos. O PR05 esta concluido; o PR06 tem implementacao, gates locais e
-> revisao independente concluidos; integracao pendente. As etapas de QA
-> multioperador, ambientes e release continuam no plano de reestruturacao.
+> O sistema opera em produção na versão `v2.1.0` como loja física, com caixas
+> independentes por operador, pagamentos divididos, descontos auditados, estoque
+> inicial no cadastro de produtos e sem módulo legado de eventos. Todas as fases
+> de desenvolvimento, homologação em staging e corte de produção foram
+> integralmente concluídas.
 
 ## 1. Objetivo
 

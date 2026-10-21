@@ -33,13 +33,13 @@ Monitorar:
 
 ## Onde Observar
 
-Fontes atuais:
+Fontes oficiais:
 
-- Vercel Runtime Logs de `roberto-multimarcas-pdv-staging`;
-- Vercel Runtime Logs do projeto legado para a produção enquanto o PR09 não
-  ocorrer;
-- Supabase Logs;
-- GitHub Actions.
+- **Vercel Runtime Logs de Produção**: projeto `roberto-multimarcas-pdv`;
+- **Vercel Runtime Logs de Staging**: projeto `roberto-multimarcas-pdv-staging`;
+- **Supabase Logs de Produção**: projeto `wjuzwjbvctbyfvgmprmd` (São Paulo);
+- **Supabase Logs de Staging**: projeto `otsxpchqtfypxgzjzrxs`;
+- **GitHub Actions**: workflows de CI/CD (`Quality`, `E2E Release Gate`).
 
 Sentry, centralização de logs e alertas automáticos são possíveis evoluções,
 ainda não entregues por este PR. Até sua definição, o responsável operacional
