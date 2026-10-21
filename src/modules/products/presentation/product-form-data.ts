@@ -15,6 +15,14 @@ export function parseCreateProductFormData(
 
 export function getProductFormValues(formData: FormData): ProductFormValues {
   return {
+    ...(formData.has("initialStockQuantity")
+      ? {
+          initialStockQuantity: getTrimmedString(
+            formData,
+            "initialStockQuantity",
+          ),
+        }
+      : {}),
     isActive: parseOptionalBoolean(formData.getAll("isActive")),
     name: getTrimmedString(formData, "name"),
     priceInReais: getTrimmedString(formData, "priceInReais"),
