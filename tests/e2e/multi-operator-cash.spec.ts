@@ -5,6 +5,7 @@ import {
   createAuthenticatedSupabaseClient,
 } from "./support/auth";
 import {
+  closeCashSessionV2,
   closeCashSessionThroughUi,
   closeOwnOpenCashSession,
   getOwnOpenCashSession,
@@ -104,16 +105,22 @@ test("operators keep independent cash sessions with audited administrative closu
       .eq("id", sessionB.id);
     expect(hiddenSession.error).toBeNull();
     expect(hiddenSession.data).toEqual([]);
-    const forbiddenClose = await clientA.rpc("close_cash_session", {
-      p_cash_session_id: sessionB.id,
-      p_counted_amount_in_cents: 5000,
-      p_closed_at: new Date().toISOString(),
+    const forbiddenClose = await closeCashSessionV2(clientA, sessionB.id, {
+      cash: 5000,
+      credit_card: 0,
+      debit_card: 0,
+      pix: 0,
     });
     expect(forbiddenClose.error?.message).toBe(
       "User is not allowed to close this cash session.",
     );
     expect(forbiddenClose.data).toBeNull();
-    await closeCashSessionThroughUi(operatorA.page, sessionA.id, "25,00");
+    await closeCashSessionThroughUi(operatorA.page, sessionA.id, {
+      cash: "25,00",
+      credit_card: "0,00",
+      debit_card: "0,00",
+      pix: "0,00",
+    });
     expect(await getOwnOpenCashSession("operatorA")).toBeNull();
     expect((await getOwnOpenCashSession("operatorB"))?.id).toBe(sessionB.id);
     await operatorB.page.goto("/pdv");
@@ -129,7 +136,12 @@ test("operators keep independent cash sessions with audited administrative closu
     expect(new Date(reopened.opened_at).toDateString()).toBe(
       new Date(sessionA.opened_at).toDateString(),
     );
-    await closeCashSessionThroughUi(admin.page, reopened.id, "15,00");
+    await closeCashSessionThroughUi(admin.page, reopened.id, {
+      cash: "15,00",
+      credit_card: "0,00",
+      debit_card: "0,00",
+      pix: "0,00",
+    });
     const adminClient = await createAuthenticatedSupabaseClient("admin");
     const { data: identity, error: identityError } =
       await adminClient.auth.getUser();
@@ -152,7 +164,12 @@ test("operators keep independent cash sessions with audited administrative closu
     });
     expect(closed?.closed_at).not.toBeNull();
     expect((await getOwnOpenCashSession("operatorB"))?.id).toBe(sessionB.id);
-    await closeCashSessionThroughUi(operatorB.page, sessionB.id, "50,00");
+    await closeCashSessionThroughUi(operatorB.page, sessionB.id, {
+      cash: "50,00",
+      credit_card: "0,00",
+      debit_card: "0,00",
+      pix: "0,00",
+    });
     expect(await getOwnOpenCashSession("operatorB")).toBeNull();
   } finally {
     await Promise.all([

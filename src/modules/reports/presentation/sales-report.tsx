@@ -182,18 +182,18 @@ export function SalesReport({
             </h2>
             <dl className="mt-4 grid gap-3 sm:grid-cols-3">
               <SummaryCard
-                label="Faltas"
+                label="Faltas em todos os métodos"
                 tone="danger"
-                value={formatMoney(report.cashShortageTotalInCents)}
+                value={formatMoney(report.reconciliationShortageTotalInCents)}
               />
               <SummaryCard
-                label="Sobras"
+                label="Sobras em todos os métodos"
                 tone="success"
-                value={formatMoney(report.cashSurplusTotalInCents)}
+                value={formatMoney(report.reconciliationSurplusTotalInCents)}
               />
               <SummaryCard
                 label="Diferença líquida"
-                value={formatMoney(report.cashDifferenceTotalInCents)}
+                value={formatMoney(report.reconciliationDifferenceTotalInCents)}
               />
             </dl>
           </Panel>
@@ -205,12 +205,34 @@ export function SalesReport({
             <h2 className="mt-1 text-lg font-bold text-[var(--brand-foreground)]">
               Resumo por pagamento
             </h2>
+            <p className="mt-2 text-sm leading-6 text-[var(--brand-muted)]">
+              Uma venda dividida aparece em cada método utilizado; por isso,
+              estas contagens não devem ser somadas.
+            </p>
             <dl className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {report.paymentSummary.map((payment) => (
                 <SummaryCard
                   key={payment.method}
                   label={formatPaymentMethod(payment.method)}
                   value={`${formatMoney(payment.netTotalInCents)} · ${payment.salesCount} ${payment.salesCount === 1 ? "venda" : "vendas"}`}
+                />
+              ))}
+            </dl>
+          </Panel>
+
+          <Panel>
+            <p className="text-xs font-bold uppercase tracking-[0.12em] text-[var(--brand-accent-foreground)]">
+              Cartão de crédito
+            </p>
+            <h2 className="mt-1 text-lg font-bold text-[var(--brand-foreground)]">
+              Crédito por parcelas
+            </h2>
+            <dl className="mt-4 grid gap-3 sm:grid-cols-3">
+              {report.creditInstallmentSummary.map((installment) => (
+                <SummaryCard
+                  key={installment.installmentCount}
+                  label={formatInstallmentCount(installment.installmentCount)}
+                  value={`${formatMoney(installment.netTotalInCents)} · ${installment.salesCount} ${installment.salesCount === 1 ? "venda" : "vendas"}`}
                 />
               ))}
             </dl>
@@ -281,11 +303,52 @@ export function SalesReport({
                           Líquido: {formatMoney(session.completedTotalInCents)}
                         </strong>
                         <p className="mt-1 text-sm text-[var(--brand-muted)]">
-                          {session.differenceAmountInCents === null
-                            ? "Reconciliação pendente"
-                            : `Diferença: ${formatMoney(session.differenceAmountInCents)}`}
+                          {session.reconciliations.length > 0
+                            ? `${session.reconciliations.length} ${session.reconciliations.length === 1 ? "método conferido" : "métodos conferidos"}`
+                            : session.differenceAmountInCents === null
+                              ? "Reconciliação pendente"
+                              : `Diferença: ${formatMoney(session.differenceAmountInCents)}`}
                         </p>
                       </div>
+                      {session.reconciliations.length > 0 ? (
+                        <div className="border-t border-[var(--border)] pt-3 lg:col-span-2">
+                          <h3 className="text-sm font-bold text-[var(--brand-foreground)]">
+                            Conferência por método
+                          </h3>
+                          <dl className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                            {session.reconciliations.map((reconciliation) => (
+                              <div
+                                className="rounded-xl bg-[var(--surface-muted)] p-3"
+                                key={reconciliation.method}
+                              >
+                                <dt className="text-sm font-bold text-[var(--brand-foreground)]">
+                                  {formatPaymentMethod(reconciliation.method)}
+                                </dt>
+                                <dd className="mt-2 grid gap-1 text-sm text-[var(--brand-muted)]">
+                                  <span>
+                                    Esperado:{" "}
+                                    {formatMoney(
+                                      reconciliation.expectedAmountInCents,
+                                    )}
+                                  </span>
+                                  <span>
+                                    Conferido:{" "}
+                                    {formatMoney(
+                                      reconciliation.countedAmountInCents,
+                                    )}
+                                  </span>
+                                  <span>
+                                    Diferença:{" "}
+                                    {formatMoney(
+                                      reconciliation.differenceAmountInCents,
+                                    )}
+                                  </span>
+                                </dd>
+                              </div>
+                            ))}
+                          </dl>
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
@@ -479,6 +542,10 @@ function formatPaymentMethod(
     debit_card: "Cartão de débito",
     pix: "Pix",
   }[method];
+}
+
+function formatInstallmentCount(installmentCount: 1 | 2 | 3): string {
+  return installmentCount === 1 ? "À vista" : `${installmentCount}x`;
 }
 
 function buildExportQuery(filters: SalesReportFilters): string {

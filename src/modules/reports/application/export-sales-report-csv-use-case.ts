@@ -78,6 +78,27 @@ export function exportSalesReportCsvUseCase({
       "",
       formatCsvMoney(report.cashDifferenceTotalInCents),
     ],
+    [
+      "Resumo",
+      "falta_reconciliacao",
+      "Falta em todos os métodos",
+      "",
+      formatCsvMoney(report.reconciliationShortageTotalInCents),
+    ],
+    [
+      "Resumo",
+      "sobra_reconciliacao",
+      "Sobra em todos os métodos",
+      "",
+      formatCsvMoney(report.reconciliationSurplusTotalInCents),
+    ],
+    [
+      "Resumo",
+      "diferenca_reconciliacao",
+      "Diferença líquida de todos os métodos",
+      "",
+      formatCsvMoney(report.reconciliationDifferenceTotalInCents),
+    ],
     ...report.paymentSummary.map((payment) => [
       "Pagamento",
       payment.method,
@@ -91,6 +112,13 @@ export function exportSalesReportCsvUseCase({
       formatPaymentMethod(payment.method),
       String(payment.salesCount),
       formatCsvMoney(payment.netTotalInCents),
+    ]),
+    ...report.creditInstallmentSummary.map((installment) => [
+      "Parcela de crédito",
+      String(installment.installmentCount),
+      `Crédito ${formatInstallmentCount(installment.installmentCount)}`,
+      String(installment.salesCount),
+      formatCsvMoney(installment.netTotalInCents),
     ]),
     ...report.items.map((item) => [
       "Produto",
@@ -132,6 +160,13 @@ export function exportSalesReportCsvUseCase({
           ? ""
           : formatCsvMoney(session.differenceAmountInCents),
       ],
+      ...session.reconciliations.map((reconciliation) => [
+        "Reconciliação",
+        session.id,
+        `${formatPaymentMethod(reconciliation.method)} · esperado ${formatCsvMoney(reconciliation.expectedAmountInCents)} · conferido ${formatCsvMoney(reconciliation.countedAmountInCents)}`,
+        "",
+        formatCsvMoney(reconciliation.differenceAmountInCents),
+      ]),
     ]),
   ];
 
@@ -190,4 +225,8 @@ function formatCashSessionStatus(
   status: SalesReport["sessions"][number]["status"],
 ): string {
   return status === "open" ? "Aberto" : "Fechado";
+}
+
+function formatInstallmentCount(installmentCount: 1 | 2 | 3): string {
+  return installmentCount === 1 ? "à vista" : `${installmentCount}x`;
 }

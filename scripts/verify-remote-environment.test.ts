@@ -23,13 +23,14 @@ test("preserves the complete staging database verification contract", async () =
   const manifest = structuredClone(manifestFixture);
   manifest.supabase.targets.staging.projectRef = projectRef;
   manifest.supabase.targets.staging.hostname = `${projectRef}.supabase.co`;
+  const supabase = supabaseFixture({
+    siteUrl: manifest.vercel.targets.staging.siteUrl,
+  });
   const result = await verifyRemoteEnvironment({
     environment: "staging",
     manifest,
     runCommand: commandRunner(),
-    supabase: supabaseFixture({
-      siteUrl: manifest.vercel.targets.staging.siteUrl,
-    }),
+    supabase,
     vercel: {},
   });
 
@@ -52,6 +53,35 @@ test("preserves the complete staging database verification contract", async () =
     projectRef,
     status: "passed",
   });
+  expect(supabase.authenticatedClient.getOwnProfile).toHaveBeenCalledWith(
+    "admin-id",
+  );
+});
+
+test.each([
+  ["a different user", { id: "other-id", role: "admin" }],
+  ["a non-admin role", { id: "admin-id", role: "operator" }],
+])("rejects an authenticated profile for %s", async (_description, profile) => {
+  const manifest = structuredClone(manifestFixture);
+  manifest.supabase.targets.staging.projectRef = projectRef;
+  manifest.supabase.targets.staging.hostname = `${projectRef}.supabase.co`;
+  const supabase = supabaseFixture({
+    siteUrl: manifest.vercel.targets.staging.siteUrl,
+  });
+  supabase.authenticatedClient.getOwnProfile.mockResolvedValue(profile);
+
+  await expect(
+    verifyRemoteEnvironment({
+      environment: "staging",
+      manifest,
+      runCommand: commandRunner(),
+      supabase,
+      vercel: {},
+    }),
+  ).rejects.toThrow("The authenticated staging profile is not an admin.");
+  expect(supabase.authenticatedClient.getOwnProfile).toHaveBeenCalledWith(
+    "admin-id",
+  );
 });
 
 test("rejects a missing production extension and redacts credentials from logs", async () => {
@@ -102,6 +132,79 @@ test("uses authoritative management counts instead of RLS-filtered client counts
     }),
   ).rejects.toThrow(/operational data/i);
   expect(supabase.authenticatedClient.countRows).not.toHaveBeenCalled();
+});
+
+test("allows existing production records only after verified cutover", async () => {
+  const manifest = productionManifest();
+  const supabase = supabaseFixture({
+    operationalRowCount: 300,
+    userSummary: {
+      admin_profile_count: 3,
+      auth_user_count: 5,
+      operator_profile_count: 2,
+      profile_count: 5,
+      profiles_linked_to_auth_count: 5,
+      unknown_role_profile_count: 0,
+    },
+  });
+
+  await expect(
+    verifyRemoteEnvironment({
+      allowExistingProductionData: true,
+      environment: "production",
+      manifest,
+      runCommand: commandRunner(),
+      supabase,
+      vercel: {},
+    }),
+  ).resolves.toMatchObject({
+    checks: expect.arrayContaining(["existing-operational-data"]),
+    status: "passed",
+  });
+});
+
+test("does not allow existing records for an unverified or non-production environment", async () => {
+  const manifest = structuredClone(manifestFixture);
+  manifest.supabase.targets.staging.projectRef = projectRef;
+  manifest.supabase.targets.staging.hostname = `${projectRef}.supabase.co`;
+
+  await expect(
+    verifyRemoteEnvironment({
+      allowExistingProductionData: true,
+      environment: "staging",
+      manifest,
+      runCommand: commandRunner(),
+      supabase: supabaseFixture({
+        operationalRowCount: 1,
+        siteUrl: manifest.vercel.targets.staging.siteUrl,
+      }),
+      vercel: {},
+    }),
+  ).rejects.toThrow(/operational data/i);
+});
+
+test("rejects existing production users with unknown roles or broken auth links", async () => {
+  const manifest = productionManifest();
+
+  await expect(
+    verifyRemoteEnvironment({
+      allowExistingProductionData: true,
+      environment: "production",
+      manifest,
+      runCommand: commandRunner(),
+      supabase: supabaseFixture({
+        userSummary: {
+          admin_profile_count: 3,
+          auth_user_count: 5,
+          operator_profile_count: 1,
+          profile_count: 5,
+          profiles_linked_to_auth_count: 4,
+          unknown_role_profile_count: 1,
+        },
+      }),
+      vercel: {},
+    }),
+  ).rejects.toThrow(/user inventory is inconsistent/i);
 });
 
 test("rejects a divergent policy contract even when every table has a policy", async () => {
@@ -303,6 +406,14 @@ function supabaseFixture({
   extensionCount = 2,
   operationalRowCount = 0,
   policies = expectedPolicyRows(),
+  userSummary = {
+    admin_profile_count: 1,
+    auth_user_count: 1,
+    operator_profile_count: 0,
+    profile_count: 1,
+    profiles_linked_to_auth_count: 1,
+    unknown_role_profile_count: 0,
+  },
   saleDiscountContract = {
     anon_finalize_v4_execute: false,
     authenticated_finalize_v3_execute: true,
@@ -316,6 +427,7 @@ function supabaseFixture({
   extensionCount?: number;
   operationalRowCount?: number;
   policies?: PolicyRow[];
+  userSummary?: Record<string, number>;
   saleDiscountContract?: Record<string, boolean | number>;
   splitPaymentContract?: Record<string, boolean | number>;
   siteUrl?: string;
@@ -388,15 +500,7 @@ function supabaseFixture({
         if (query.includes("split_payment_contract_row"))
           return [splitPaymentContract];
         if (query.includes("auth.users")) {
-          return [
-            {
-              admin_profile_count: 1,
-              auth_user_count: 1,
-              non_admin_profile_count: 0,
-              profile_count: 1,
-              profiles_linked_to_auth_count: 1,
-            },
-          ];
+          return [userSummary];
         }
         if (query.includes("operational_row_count")) {
           return [{ operational_row_count: operationalRowCount }];
@@ -419,7 +523,7 @@ function expectedSplitPaymentContract() {
     anon_finalize_v5_execute: false,
     authenticated_close_v2_execute: true,
     authenticated_finalize_v5_execute: true,
-    authenticated_legacy_close_execute: true,
+    authenticated_legacy_close_execute: false,
     authenticated_payment_helper_execute: false,
     authenticated_reconciliation_select: true,
     authenticated_reconciliation_writes_blocked: true,

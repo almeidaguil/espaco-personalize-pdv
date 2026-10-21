@@ -1,11 +1,24 @@
 # Checklist De Go-Live
 
 Checklist para liberar a operação da loja física Roberto Multimarcas.
-O staging foi provisionado no PR08. O corte técnico de produção e a liberação
-operacional pertencem ao PR09 e permanecem pendentes até que cada evidência
-remota seja capturada. Banco criado não significa loja liberada.
+O staging foi provisionado no PR08 e o corte provisório PR09-A foi executado.
+O PR09-B está integrado em `main`; a produção Roberto já contém dados
+operacionais reais e autorizados. O deploy final, a tag de release e a liberação
+operacional permanecem pendentes até que cada evidência remota seja capturada.
+Banco criado ou PR integrado não significa loja liberada; banco populado também
+não pode ser resetado nem limpo para satisfazer o baseline histórico do corte.
 
 ## Regra De Release
+
+O último release publicado é `v1.0.0`. A reestruturação para loja física
+Roberto Multimarcas substitui o modelo operacional anterior pelo controle de
+caixa por operador; como essa mudança é incompatível com contratos e fluxos
+prévios, a próxima versão SemVer é `2.0.0`. `package.json` e
+`package-lock.json` devem permanecer alinhados nessa versão. O PR #191 já foi
+integrado em `main` e os gates pós-merge passaram, mas `v2.0.0` ainda não foi
+implantada nem etiquetada. Criar a tag e publicar o release somente depois do
+deploy do SHA exato de `main`, smoke, monitoramento e validação final; o
+alinhamento de metadados não autoriza mutação remota.
 
 1. Concluir a alteração em `feature/*`, com commits assinados.
 2. Integrar em `develop` por PR com checks aprovados.
@@ -50,8 +63,9 @@ Conferir também:
 - `Quality checks` e `Database contract` aprovados;
 - ausência de conflitos e pendências críticas;
 - constraints, RLS e grants financeiros validados;
-- RPCs `open_cash_session_v3`, `finalize_sale_v3`, `cancel_sale` e
-  `close_cash_session` disponíveis;
+- RPCs `open_cash_session_v3`, `finalize_sale_v5`, `cancel_sale` e
+  `close_cash_session_v2` disponíveis; fechamento legado sem permissão de
+  execução para usuários da aplicação;
 - operador derivado da sessão autenticada; escritas financeiras diretas bloqueadas.
 
 ## 2. Gate E2E E Smoke Funcional
@@ -94,7 +108,13 @@ Antes de aplicar migrations remotamente, identificar o ambiente e validar o
 project ref, o backup e a sequência de promoção conforme
 [Ambientes](ambientes.md) e [Supabase CLI](supabase-cli.md).
 
-- Aplicar primeiro em staging e validar o schema e as RPCs.
+- Aplicar primeiro em staging e validar o schema e as RPCs usando as fases coordenadas descritas em
+  [Promoção para staging](vercel-cli.md#promover-uma-vers%C3%A3o-para-staging).
+  Não aplicar o corte legado antes do deploy e do smoke financeiro aprovados.
+- Em produção, usar a sequência protegida
+  [Promoção para produção](vercel-cli.md#promover-uma-vers%C3%A3o-para-produ%C3%A7%C3%A3o):
+  backup recente e verificado, migration foundation, deployment do SHA exato de
+  `main`, migration cutover, verificação completa e smoke somente leitura.
 - Confirmar banco alinhado às migrations da versão aprovada.
 - Manter RLS nas tabelas operacionais e validar isolamento por operador.
 - Manter migrations históricas imutáveis.
@@ -106,10 +126,14 @@ delete e SQL manual também são proibidos pela automação.
 
 ## 4. Acessos E Segredos
 
-No corte técnico, conferir:
+O baseline inicial do corte PR09-A exigia somente um administrador e banco
+operacional vazio. Esse requisito histórico não se aplica à promoção 2.0.0: a
+produção atual contém contas e dados operacionais autorizados. Para esta
+release, conferir:
 
-- exatamente um admin oficial e nenhum outro usuário;
-- banco operacional vazio, sem produtos, estoque, caixas ou vendas;
+- contas existentes e seus papéis autorizados, sem exigir exatamente um admin;
+- inventário de produtos, vendas, pagamentos, estoque e caixas preservado antes
+  e depois das migrations; não exigir banco operacional vazio;
 - signup público desabilitado conforme a política do projeto;
 - `leaked password protection` habilitada no Supabase Auth ou, no plano Free,
   exceção explícita registrada como `unavailable-free-plan`, sem reduzir os
@@ -149,7 +173,9 @@ redigida registrada em [PR09 - corte de produção](evidencias/pr09-production-c
 - [ ] Staging legado `gpywbeoqcovjrfnmbdqx` confirmado `INACTIVE`.
 - [ ] Staging Roberto `otsxpchqtfypxgzjzrxs` confirmado `ACTIVE_HEALTHY`.
 - [ ] Produção legada `ciixpfquwmlsvzleattv` confirmada `ACTIVE_HEALTHY`.
-- [ ] Projeto Vercel `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` confirmado vazio.
+- [ ] Projeto Vercel `prj_oBs2uc7uxsHMc7ssHFKczfi52LMq` inventariado: recursos
+      preexistentes preservados; reconciliação e autorização específicas do
+      PR09 concluídas antes de qualquer mutação.
 - [ ] Inventário recente, hash íntegro e origem legada exata confirmados.
 - [ ] Organização, ref, topologia, evidência e rollback apresentados ao dono.
 - [ ] Confirmação literal nova recebida imediatamente antes da pausa:
@@ -177,16 +203,21 @@ reinicialize projeto automaticamente.
 
 ## 7. Release PR09-B
 
-- [ ] PR de `develop` para `main` contém somente mudanças já revisadas.
-- [ ] Quality, Database contract e E2E Release Gate verdes, sem bypass.
-- [ ] Merge produz commit assinado e compatível com histórico linear.
+- [x] PR #191 promoveu o snapshot revisado para `main`; merge assinado
+      `41b83edab9c78a583e1bb2f1c7df750911ec566b`.
+- [x] Quality e E2E Release Gate pós-merge verdes, sem bypass.
+- [x] Merge produziu commit assinado e compatível com histórico linear.
 - [ ] Audit Vercel permite `main` e confirma as três variáveis inalteradas.
 - [ ] Deploy final usa o SHA assinado resultante de `main`.
 - [ ] Gate final recebeu deployment ID, URL imutável, `source-ref main` e o
       mesmo SHA assinado, sem reescrever manifesto ou estado versionado.
 - [ ] Fingerprint das três variáveis do deployment corresponde à URL e às
       chaves lidas do Supabase de produção, sem expor seus valores.
-- [ ] Deployment, alias, banco, admin único e banco vazio foram revalidados.
+- [ ] Deployment, alias e banco foram revalidados. A exigência de um único
+      admin e banco vazio vale para o primeiro provisionamento; depois da
+      operação validada, preservar os dados existentes, exigir perfis ligados
+      a usuários Auth com papéis permitidos e verificar os invariantes
+      financeiros antes/depois das migrations.
 - [ ] Smoke somente leitura e monitoramento de 30 minutos aprovados.
 - [ ] Produção legada permanece pausada e preservada por 30 dias.
 

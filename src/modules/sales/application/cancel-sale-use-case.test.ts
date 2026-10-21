@@ -239,11 +239,13 @@ function createSaleDetail(): SaleDetail {
         unitPriceInCents: 2500,
       },
     ],
-    payment: {
-      amountInCents: 6000,
-      changeInCents: 500,
-      method: "cash",
-    },
+    payments: [
+      {
+        amountInCents: 6000,
+        changeInCents: 500,
+        method: "cash",
+      },
+    ],
     operatorId: "operator-1",
     operatorName: "Operador 1",
     status: "completed",

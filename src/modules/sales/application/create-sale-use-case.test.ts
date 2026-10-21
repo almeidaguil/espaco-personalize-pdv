@@ -76,9 +76,9 @@ class FakeCashSessionRepository implements CashSessionRepository {
     };
   }
 
-  async update(session: CashSession): Promise<SaveCashSessionResult> {
+  async close(): Promise<SaveCashSessionResult> {
     return {
-      session,
+      session: createCashSession(),
       success: true,
     };
   }
@@ -190,11 +190,13 @@ describe("createSaleUseCase", () => {
           unitPriceInCents: 1500,
         },
       ],
-      payment: {
-        amountInCents: 5000,
-        changeInCents: 2000,
-        method: "cash",
-      },
+      payments: [
+        {
+          amountInCents: 5000,
+          changeInCents: 2000,
+          method: "cash",
+        },
+      ],
       discountInCents: 0,
       subtotalInCents: 3000,
       totalInCents: 3000,
@@ -300,10 +302,12 @@ describe("createSaleUseCase", () => {
     const result = await createSaleUseCase(
       {
         ...createInput(),
-        payment: {
-          amountInCents: 1000,
-          method: "cash",
-        },
+        payments: [
+          {
+            amountInCents: 1000,
+            method: "cash",
+          },
+        ],
       },
       {
         cashSessionRepository: new FakeCashSessionRepository(),
@@ -319,7 +323,7 @@ describe("createSaleUseCase", () => {
     );
 
     expect(result).toEqual({
-      formError: "Payment amount must cover the sale total.",
+      formError: "Payment contributions must match the sale total exactly.",
       success: false,
     });
   });
@@ -330,10 +334,12 @@ describe("createSaleUseCase", () => {
     const result = await createSaleUseCase(
       {
         ...createInput(),
-        payment: {
-          amountInCents: 3000,
-          method: "pix",
-        },
+        payments: [
+          {
+            amountInCents: 3000,
+            method: "pix",
+          },
+        ],
       },
       {
         cashSessionRepository: new FakeCashSessionRepository(),
@@ -349,11 +355,57 @@ describe("createSaleUseCase", () => {
     );
 
     expect(result.success).toBe(true);
-    expect(saleRepository.savedSale?.payment).toEqual({
-      amountInCents: 3000,
-      changeInCents: 0,
-      method: "pix",
-    });
+    expect(saleRepository.savedSale?.payments).toEqual([
+      {
+        amountInCents: 3000,
+        changeInCents: 0,
+        method: "pix",
+      },
+    ]);
+  });
+
+  it("accepts two distinct payments and preserves credit installments", async () => {
+    const saleRepository = new FakeSaleRepository();
+
+    const result = await createSaleUseCase(
+      {
+        ...createInput(),
+        payments: [
+          { amountInCents: 1000, method: "pix" },
+          {
+            amountInCents: 2000,
+            installmentCount: 2,
+            method: "credit_card",
+          },
+        ],
+      },
+      {
+        cashSessionRepository: new FakeCashSessionRepository(),
+        currentUserProfileRepository: createCurrentUserProfileRepository(),
+        generateSaleId: () => "sale-1",
+        getCurrentDate: () => new Date("2026-07-10T12:00:00.000Z"),
+        productRepository: new FakeProductRepository(),
+        saleRepository,
+        stockMovementRepository: new FakeStockMovementRepository([
+          createStockMovement(3),
+        ]),
+      },
+    );
+
+    expect(result.success).toBe(true);
+    expect(saleRepository.savedSale?.payments).toEqual([
+      {
+        amountInCents: 1000,
+        changeInCents: 0,
+        method: "pix",
+      },
+      {
+        amountInCents: 2000,
+        changeInCents: 0,
+        installmentCount: 2,
+        method: "credit_card",
+      },
+    ]);
   });
 
   it("calculates and persists a valid sale discount from current product prices", async () => {
@@ -362,7 +414,7 @@ describe("createSaleUseCase", () => {
       {
         ...createInput(),
         discountInCents: 500,
-        payment: { amountInCents: 3000, method: "cash" },
+        payments: [{ amountInCents: 3000, method: "cash" }],
       },
       {
         cashSessionRepository: new FakeCashSessionRepository(),
@@ -382,7 +434,7 @@ describe("createSaleUseCase", () => {
       discountInCents: 500,
       subtotalInCents: 3000,
       totalInCents: 2500,
-      payment: { amountInCents: 3000, changeInCents: 500 },
+      payments: [{ amountInCents: 3000, changeInCents: 500 }],
     });
   });
 
@@ -392,7 +444,7 @@ describe("createSaleUseCase", () => {
       {
         ...createInput(),
         discountInCents: 3000,
-        payment: { amountInCents: 0, method: "cash" },
+        payments: [{ amountInCents: 0, method: "cash" }],
       },
       {
         cashSessionRepository: new FakeCashSessionRepository(),
@@ -425,10 +477,12 @@ function createInput() {
         quantity: 2,
       },
     ],
-    payment: {
-      amountInCents: 5000,
-      method: "cash" as const,
-    },
+    payments: [
+      {
+        amountInCents: 5000,
+        method: "cash" as const,
+      },
+    ],
   };
 }
 

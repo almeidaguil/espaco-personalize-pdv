@@ -1,6 +1,6 @@
 import type { CurrentUserProfileRepository } from "@/modules/auth/application/current-user-profile-repository";
 
-import { closeCashSession, type CashSession } from "../domain/cash-session";
+import type { CashSession } from "../domain/cash-session";
 import type { CashSessionRepository } from "./cash-session-repository";
 import type { CashSessionDateProvider } from "./cash-session-date-provider";
 import { closeCashSessionSchema } from "./cash-session-validation";
@@ -12,7 +12,7 @@ export type CloseCashSessionUseCaseResult =
     }
   | {
       fieldErrors?: Partial<
-        Record<"cashSessionId" | "countedAmountInReais", string>
+        Record<"cashSessionId" | "reconciliations", string>
       >;
       formError?: string;
       success: false;
@@ -49,7 +49,7 @@ export async function closeCashSessionUseCase(
     return {
       fieldErrors: {
         cashSessionId: flattenedErrors.cashSessionId?.[0],
-        countedAmountInReais: flattenedErrors.countedAmountInReais?.[0],
+        reconciliations: flattenedErrors.reconciliations?.[0],
       },
       success: false,
     };
@@ -84,38 +84,26 @@ export async function closeCashSessionUseCase(
     };
   }
 
-  const closeResult = closeCashSession({
-    closedAt: dependencies.getCurrentDate(),
-    countedAmountInReais: parsedInput.data.countedAmountInReais,
-    session: openSessionResult.session,
+  const closeResult = await dependencies.cashSessionRepository.close({
+    ...(parsedInput.data.adminPassword
+      ? { adminPassword: parsedInput.data.adminPassword }
+      : {}),
+    cashSessionId: parsedInput.data.cashSessionId,
+    reconciliations: parsedInput.data.reconciliations,
   });
 
   if (!closeResult.success) {
     return {
-      formError: closeResult.errors[0]?.message ?? "Caixa invalido.",
-      success: false,
-    };
-  }
-
-  const updateResult = await dependencies.cashSessionRepository.update(
-    closeResult.session,
-    {
-      adminPassword: parsedInput.data.adminPassword,
-    },
-  );
-
-  if (!updateResult.success) {
-    return {
       formError:
-        updateResult.error === "admin_password_required"
-          ? "Informe a senha administrativa para fechar caixa com falta."
+        closeResult.error === "admin_password_required"
+          ? "Informe uma senha administrativa valida para fechar caixa com divergencia."
           : "Nao foi possivel fechar o caixa.",
       success: false,
     };
   }
 
   return {
-    session: updateResult.session,
+    session: closeResult.session,
     success: true,
   };
 }

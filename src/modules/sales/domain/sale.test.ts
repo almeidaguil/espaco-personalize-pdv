@@ -16,7 +16,7 @@ function saleInput(overrides: Partial<CreateSaleInput> = {}): CreateSaleInput {
         unitPriceInCents: 1500,
       },
     ],
-    payment: { amountInCents: 3000, method: "cash" },
+    payments: [{ amountInCents: 3000, method: "cash" }],
     ...overrides,
   };
 }
@@ -39,7 +39,7 @@ describe("createSale", () => {
             unitPriceInCents: 2550,
           },
         ],
-        payment: { amountInCents: 6000, method: "cash" },
+        payments: [{ amountInCents: 6000, method: "cash" }],
       }),
     );
 
@@ -65,11 +65,13 @@ describe("createSale", () => {
             unitPriceInCents: 2550,
           },
         ],
-        payment: {
-          amountInCents: 6000,
-          changeInCents: 450,
-          method: "cash",
-        },
+        payments: [
+          {
+            amountInCents: 6000,
+            changeInCents: 450,
+            method: "cash",
+          },
+        ],
         status: "completed",
         subtotalInCents: 5550,
         totalInCents: 5550,
@@ -87,7 +89,7 @@ describe("createSale", () => {
       const result = createSale(
         saleInput({
           discountInCents,
-          payment: { amountInCents: totalInCents, method: "pix" },
+          payments: [{ amountInCents: totalInCents, method: "pix" }],
         }),
       );
 
@@ -97,7 +99,7 @@ describe("createSale", () => {
           discountInCents,
           subtotalInCents: 3000,
           totalInCents,
-          payment: { amountInCents: totalInCents, changeInCents: 0 },
+          payments: [{ amountInCents: totalInCents, changeInCents: 0 }],
         });
       }
     },
@@ -109,7 +111,7 @@ describe("createSale", () => {
       const result = createSale(
         saleInput({
           discountInCents,
-          payment: { amountInCents: 0, method: "cash" },
+          payments: [{ amountInCents: 0, method: "cash" }],
         }),
       );
 
@@ -136,7 +138,7 @@ describe("createSale", () => {
             unitPriceInCents: 0,
           },
         ],
-        payment: { amountInCents: 0, method: "cash" },
+        payments: [{ amountInCents: 0, method: "cash" }],
       }),
     );
 
@@ -158,7 +160,7 @@ describe("createSale", () => {
         completedAt: new Date("invalid"),
         id: "",
         items: [],
-        payment: { amountInCents: 0, method: "cash" },
+        payments: [{ amountInCents: 0, method: "cash" }],
       }),
     );
 
@@ -190,7 +192,7 @@ describe("createSale", () => {
             unitPriceInCents: 1500.5,
           },
         ],
-        payment: { amountInCents: -1, method: "cash" },
+        payments: [{ amountInCents: -1, method: "cash" }],
       }),
     );
 
@@ -206,8 +208,8 @@ describe("createSale", () => {
           message: "Sale item unit price must be a non-negative integer.",
         },
         {
-          field: "payment",
-          message: "Payment amount must be a non-negative integer.",
+          field: "payments",
+          message: "Payment amount must be a positive safe integer.",
         },
       ],
       success: false,
@@ -218,13 +220,13 @@ describe("createSale", () => {
     const result = createSale(
       saleInput({
         discountInCents: 500,
-        payment: { amountInCents: 3000, method: "cash" },
+        payments: [{ amountInCents: 3000, method: "cash" }],
       }),
     );
 
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.sale.payment.changeInCents).toBe(500);
+      expect(result.sale.payments[0]?.changeInCents).toBe(500);
       expect(result.sale.totalInCents).toBe(2500);
     }
   });
@@ -235,13 +237,21 @@ describe("createSale", () => {
       const accepted = createSale(
         saleInput({
           discountInCents: 500,
-          payment: { amountInCents: 2500, method },
+          payments: [
+            method === "credit_card"
+              ? { amountInCents: 2500, installmentCount: 1, method }
+              : { amountInCents: 2500, method },
+          ],
         }),
       );
       const rejected = createSale(
         saleInput({
           discountInCents: 500,
-          payment: { amountInCents: 2501, method },
+          payments: [
+            method === "credit_card"
+              ? { amountInCents: 2501, installmentCount: 1, method }
+              : { amountInCents: 2501, method },
+          ],
         }),
       );
 
@@ -249,8 +259,159 @@ describe("createSale", () => {
       expect(rejected).toEqual({
         errors: [
           {
-            field: "payment",
-            message: "Non-cash payments must match the sale total exactly.",
+            field: "payments",
+            message: "Payment contributions must match the sale total exactly.",
+          },
+        ],
+        success: false,
+      });
+    },
+  );
+
+  it("splits a sale between pix and cash and assigns all change to cash", () => {
+    const result = createSale(
+      saleInput({
+        payments: [
+          { amountInCents: 1000, method: "pix" },
+          { amountInCents: 2500, method: "cash" },
+        ],
+      }),
+    );
+
+    expect(result).toEqual({
+      sale: expect.objectContaining({
+        payments: [
+          {
+            amountInCents: 1000,
+            changeInCents: 0,
+            method: "pix",
+          },
+          {
+            amountInCents: 2500,
+            changeInCents: 500,
+            method: "cash",
+          },
+        ],
+        totalInCents: 3000,
+      }),
+      success: true,
+    });
+  });
+
+  it.each([1, 2, 3] as const)(
+    "accepts credit card installment count %i",
+    (installmentCount) => {
+      const result = createSale(
+        saleInput({
+          payments: [
+            {
+              amountInCents: 3000,
+              installmentCount,
+              method: "credit_card",
+            },
+          ],
+        }),
+      );
+
+      expect(result.success).toBe(true);
+      if (result.success) {
+        expect(result.sale.payments).toEqual([
+          {
+            amountInCents: 3000,
+            changeInCents: 0,
+            installmentCount,
+            method: "credit_card",
+          },
+        ]);
+      }
+    },
+  );
+
+  it.each([
+    [[], "Sale must have one or two payments."],
+    [
+      [
+        { amountInCents: 1000, method: "cash" },
+        { amountInCents: 1000, method: "pix" },
+        { amountInCents: 1000, method: "debit_card" },
+      ],
+      "Sale must have one or two payments.",
+    ],
+    [
+      [
+        { amountInCents: 1500, method: "pix" },
+        { amountInCents: 1500, method: "pix" },
+      ],
+      "Payment methods must be distinct.",
+    ],
+    [
+      [
+        { amountInCents: 3000, method: "pix" },
+        { amountInCents: 500, method: "cash" },
+      ],
+      "Each payment must contribute at least one cent.",
+    ],
+  ])("rejects invalid payment collection %#", (payments, message) => {
+    const result = createSale(
+      saleInput({
+        payments: payments as never,
+      }),
+    );
+
+    expect(result).toEqual({
+      errors: [{ field: "payments", message }],
+      success: false,
+    });
+  });
+
+  it.each([
+    {
+      amountInCents: 3000,
+      method: "credit_card",
+    },
+    {
+      amountInCents: 3000,
+      installmentCount: 4,
+      method: "credit_card",
+    },
+    {
+      amountInCents: 3000,
+      installmentCount: 2,
+      method: "pix",
+    },
+  ])("rejects an invalid installment contract %#", (payment) => {
+    const result = createSale(
+      saleInput({
+        payments: [payment] as never,
+      }),
+    );
+
+    expect(result).toEqual({
+      errors: [
+        {
+          field: "payments",
+          message:
+            "Credit installments must be 1, 2 or 3 and exclusive to credit card payments.",
+        },
+      ],
+      success: false,
+    });
+  });
+
+  it.each([0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects unsafe or non-positive payment amount %s",
+    (amountInCents) => {
+      const result = createSale(
+        saleInput({
+          payments: [{ amountInCents, method: "cash" }],
+        }),
+      );
+
+      expect(result).toEqual({
+        errors: [
+          {
+            field: "payments",
+            message: "Payment amount must be a positive safe integer.",
           },
         ],
         success: false,

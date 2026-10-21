@@ -1,7 +1,10 @@
 export type CashSessionActionState = {
   fieldErrors?: Partial<
     Record<
-      "cashSessionId" | "countedAmountInReais" | "openingAmountInReais",
+      | "cashSessionId"
+      | "countedAmountInReais"
+      | "openingAmountInReais"
+      | "reconciliations",
       string
     >
   >;

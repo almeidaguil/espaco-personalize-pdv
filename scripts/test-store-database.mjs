@@ -176,12 +176,11 @@ try {
   );
 
   const { error: foreignCloseError } = await operatorBIdentity.client.rpc(
-    "close_cash_session",
+    "close_cash_session_v2",
     {
       p_admin_password: null,
       p_cash_session_id: operatorACashSessionId,
-      p_closed_at: new Date(Date.now() + 1_000).toISOString(),
-      p_counted_amount_in_cents: 1_000,
+      p_reconciliations: countedReconciliations({ cash: 1_000 }),
     },
   );
   assert.ok(
@@ -190,12 +189,11 @@ try {
   );
 
   const { error: administrativeCloseError } = await adminIdentity.client.rpc(
-    "close_cash_session",
+    "close_cash_session_v2",
     {
       p_admin_password: null,
       p_cash_session_id: operatorBCashSessionId,
-      p_closed_at: new Date(Date.now() + 1_000).toISOString(),
-      p_counted_amount_in_cents: 2_000,
+      p_reconciliations: countedReconciliations({ cash: 2_000 }),
     },
   );
   assert.equal(
@@ -389,11 +387,10 @@ try {
       },
       p_sale_id: closeRaceSaleId,
     }),
-    operatorBIdentity.client.rpc("close_cash_session", {
-      p_admin_password: null,
+    operatorBIdentity.client.rpc("close_cash_session_v2", {
+      p_admin_password: password,
       p_cash_session_id: operatorBConcurrentCashSession.id,
-      p_closed_at: new Date().toISOString(),
-      p_counted_amount_in_cents: 1_000,
+      p_reconciliations: countedReconciliations({ cash: 1_000 }),
     }),
   ]);
   assert.equal(
@@ -663,12 +660,11 @@ try {
   );
 
   const { error: bannedCloseError } = await operatorBIdentity.client.rpc(
-    "close_cash_session",
+    "close_cash_session_v2",
     {
       p_cash_session_id: operatorBCashSessionId,
-      p_counted_amount_in_cents: 2_000,
-      p_closed_at: new Date().toISOString(),
       p_admin_password: null,
+      p_reconciliations: countedReconciliations({ cash: 2_000 }),
     },
   );
   assert.match(
@@ -683,12 +679,11 @@ try {
     });
   assert.equal(banAdminError, null);
   const { error: bannedAdminCloseError } = await adminIdentity.client.rpc(
-    "close_cash_session",
+    "close_cash_session_v2",
     {
       p_cash_session_id: operatorACashSessionId,
-      p_counted_amount_in_cents: 3_000,
-      p_closed_at: new Date().toISOString(),
       p_admin_password: null,
+      p_reconciliations: countedReconciliations({ cash: 3_000 }),
     },
   );
   assert.match(
@@ -699,12 +694,14 @@ try {
 
   const originalBusinessDate = operatorACashSession.business_date;
   const { error: closeError } = await operatorAIdentity.client.rpc(
-    "close_cash_session",
+    "close_cash_session_v2",
     {
       p_admin_password: null,
       p_cash_session_id: operatorACashSessionId,
-      p_closed_at: new Date(Date.now() + 1_000).toISOString(),
-      p_counted_amount_in_cents: 3_000,
+      p_reconciliations: countedReconciliations({
+        cash: 3_000,
+        pix: concurrentSaleResults[0].error ? 0 : 1_000,
+      }),
     },
   );
   assert.equal(
@@ -807,6 +804,20 @@ try {
   );
 } finally {
   await cleanupTestData();
+}
+
+function countedReconciliations({
+  cash = 0,
+  credit_card = 0,
+  debit_card = 0,
+  pix = 0,
+} = {}) {
+  return [
+    { counted_amount_in_cents: cash, method: "cash" },
+    { counted_amount_in_cents: pix, method: "pix" },
+    { counted_amount_in_cents: credit_card, method: "credit_card" },
+    { counted_amount_in_cents: debit_card, method: "debit_card" },
+  ];
 }
 
 function createIdentity(label) {

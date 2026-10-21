@@ -1,4 +1,3 @@
-import type { PaymentMethod } from "../domain/sale";
 import { parseBrlCurrencyToCents } from "@/shared/utils/brl-currency";
 
 type SaleItemFormInput = {
@@ -12,12 +11,7 @@ export function parseCreateSaleFormData(formData: FormData) {
       formData.get("discountInReais")?.toString() ?? "",
     ),
     items: parseSaleItems(formData.get("itemsJson")?.toString() ?? "[]"),
-    payment: {
-      amountInCents: parseBrlCurrencyToCents(
-        formData.get("amountReceivedInReais")?.toString() ?? "",
-      ),
-      method: parsePaymentMethod(formData.get("paymentMethod")?.toString()),
-    },
+    payments: parsePayments(formData.get("paymentsJson")?.toString() ?? "[]"),
   };
 }
 
@@ -46,13 +40,34 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function parsePaymentMethod(value?: string): PaymentMethod {
-  switch (value) {
-    case "pix":
-    case "credit_card":
-    case "debit_card":
-      return value;
-    default:
-      return "cash";
+function parsePayments(value: string) {
+  try {
+    const parsedValue: unknown = JSON.parse(value);
+
+    if (!Array.isArray(parsedValue)) {
+      return [];
+    }
+
+    return parsedValue.map((payment) => {
+      const record = isRecord(payment) ? payment : {};
+      const parsedPayment: {
+        amountInCents: number;
+        installmentCount?: number;
+        method: string;
+      } = {
+        amountInCents: parseBrlCurrencyToCents(
+          String(record.amountInReais ?? ""),
+        ),
+        method: String(record.method ?? ""),
+      };
+
+      if ("installmentCount" in record) {
+        parsedPayment.installmentCount = Number(record.installmentCount);
+      }
+
+      return parsedPayment;
+    });
+  } catch {
+    return [];
   }
 }
