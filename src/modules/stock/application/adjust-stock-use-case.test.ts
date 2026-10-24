@@ -53,28 +53,49 @@ describe("adjustStockUseCase", () => {
     });
   });
 
-  it("creates manual positive and negative adjustments", async () => {
-    const repository = new FakeStockMovementRepository([
-      createMovement({ quantityChange: 10 }),
-    ]);
+  it.each([
+    [5, 15],
+    [-3, 7],
+    [-10, 0],
+  ])(
+    "applies manual adjustment %s with balance %s",
+    async (quantity, balance) => {
+      const repository = new FakeStockMovementRepository([
+        createMovement({ quantityChange: 10 }),
+      ]);
 
-    const result = await adjustStockUseCase(
-      {
-        productId: "product-1",
-        quantity: -3,
-        type: "manual_adjustment",
-      },
-      createDependencies(repository),
-    );
+      const result = await adjustStockUseCase(
+        {
+          productId: "product-1",
+          quantity,
+          type: "manual_adjustment",
+        },
+        createDependencies(repository),
+      );
 
-    expect(result.success).toBe(true);
+      expect(result.success).toBe(true);
 
-    if (result.success) {
-      expect(result.quantityOnHand).toBe(7);
-      expect(result.movement.type).toBe("manual_adjustment");
-      expect(result.movement.quantityChange).toBe(-3);
-    }
-  });
+      if (result.success) {
+        expect(result.quantityOnHand).toBe(balance);
+        expect(result.movement.type).toBe("manual_adjustment");
+        expect(result.movement.quantityChange).toBe(quantity);
+        expect(repository.savedMovement).toEqual(result.movement);
+      }
+    },
+  );
+
+  it.each([1.5, Number.NaN, "abc"])(
+    "rejects invalid manual quantity %s",
+    async (quantity) => {
+      const repository = new FakeStockMovementRepository();
+      const result = await adjustStockUseCase(
+        { productId: "product-1", quantity, type: "manual_adjustment" },
+        createDependencies(repository),
+      );
+      expect(result.success).toBe(false);
+      expect(repository.savedMovement).toBeUndefined();
+    },
+  );
 
   it("prevents manual adjustments from making stock negative", async () => {
     const repository = new FakeStockMovementRepository([

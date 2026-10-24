@@ -1,6 +1,7 @@
 "use server";
 
 import { randomUUID } from "node:crypto";
+import { revalidatePath } from "next/cache";
 
 import {
   SupabaseCurrentUserProfileRepository,
@@ -25,7 +26,7 @@ export async function adjustStockAction(
   const stockMovementClient =
     supabaseClient as unknown as SupabaseStockMovementClient;
 
-  return adjustStockActionService(previousState, formData, {
+  const result = await adjustStockActionService(previousState, formData, {
     currentUserProfileRepository: new SupabaseCurrentUserProfileRepository(
       currentUserProfileClient,
     ),
@@ -35,4 +36,7 @@ export async function adjustStockAction(
       stockMovementClient,
     ),
   });
+
+  if (result.successMessage) revalidatePath("/stock");
+  return result;
 }

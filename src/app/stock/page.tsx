@@ -1,5 +1,11 @@
 import type { Metadata } from "next";
 
+import { requireAdminUseCase } from "@/modules/auth/application/require-admin-use-case";
+import {
+  SupabaseCurrentUserProfileRepository,
+  type SupabaseCurrentUserProfileClient,
+} from "@/modules/auth/infra/supabase-current-user-profile-repository";
+
 import { listProductsUseCase } from "@/modules/products/application/list-products-use-case";
 import type { Product } from "@/modules/products/domain/product";
 import {
@@ -31,6 +37,11 @@ export const dynamic = "force-dynamic";
 
 export default async function StockPage() {
   const supabaseClient = await createSupabaseServerClient();
+  const authorization = await requireAdminUseCase(
+    new SupabaseCurrentUserProfileRepository(
+      supabaseClient as unknown as SupabaseCurrentUserProfileClient,
+    ),
+  );
 
   const productRepository = new SupabaseProductRepository(
     supabaseClient as unknown as SupabaseProductClient,
@@ -76,12 +87,14 @@ export default async function StockPage() {
         </h2>
 
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[var(--brand-muted)]">
-          Escolha um produto ativo e registre a entrada inicial ou um ajuste
-          manual. A validação final acontece no servidor.
+          Escolha um produto e informe a quantidade que deseja adicionar ou
+          remover do estoque.
         </p>
       </Panel>
 
-      {!result.success ? (
+      {!authorization.success ? (
+        <p>{authorization.formError}</p>
+      ) : !result.success ? (
         <LoadErrorState
           actions={[
             {
@@ -113,14 +126,20 @@ export default async function StockPage() {
           message="Cadastre ou ative um produto antes de ajustar o estoque."
           title="Estoque sem produto disponível."
         />
-      ) : (
+      ) : summaryResult.success ? (
         <Panel>
           <StockAdjustmentForm
             action={adjustStockAction}
-            products={activeProductOptions}
+            products={activeProductOptions.map((product) => ({
+              ...product,
+              quantityOnHand:
+                summaryResult.balances.find(
+                  (balance) => balance.productId === product.id,
+                )?.quantityOnHand ?? 0,
+            }))}
           />
         </Panel>
-      )}
+      ) : null}
 
       {!summaryResult.success ? (
         <LoadErrorState

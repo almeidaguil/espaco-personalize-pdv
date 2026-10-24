@@ -91,30 +91,33 @@ describe("adjustStockActionService", () => {
     expect(stockMovementRepository.savedMovement?.quantityChange).toBe(-2);
   });
 
-  it("blocks operator users before changing stock", async () => {
-    const stockMovementRepository = new FakeStockMovementRepository();
+  it.each(["8", "-3"])(
+    "blocks operator manual adjustment %s before changing stock",
+    async (quantity) => {
+      const stockMovementRepository = new FakeStockMovementRepository();
 
-    const result = await adjustStockActionService(
-      {},
-      createFormData({
-        productId: "product-1",
-        quantity: "8",
-        type: "initial_adjustment",
-      }),
-      {
-        currentUserProfileRepository:
-          createCurrentUserProfileRepository("operator"),
-        generateStockMovementId: () => "movement-1",
-        getCurrentDate: () => new Date("2026-06-10T12:00:00.000Z"),
-        stockMovementRepository,
-      },
-    );
+      const result = await adjustStockActionService(
+        {},
+        createFormData({
+          productId: "product-1",
+          quantity,
+          type: "manual_adjustment",
+        }),
+        {
+          currentUserProfileRepository:
+            createCurrentUserProfileRepository("operator"),
+          generateStockMovementId: () => "movement-1",
+          getCurrentDate: () => new Date("2026-06-10T12:00:00.000Z"),
+          stockMovementRepository,
+        },
+      );
 
-    expect(result).toEqual({
-      formError: "Acesso restrito a administradores.",
-    });
-    expect(stockMovementRepository.savedMovement).toBeUndefined();
-  });
+      expect(result).toEqual({
+        formError: "Acesso restrito a administradores.",
+      });
+      expect(stockMovementRepository.savedMovement).toBeUndefined();
+    },
+  );
 
   it("returns field errors from stock validation", async () => {
     const result = await adjustStockActionService(
