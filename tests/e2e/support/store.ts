@@ -34,7 +34,7 @@ export async function createTestProductWithStock(
       "The newly created E2E product must be available for stock adjustment.",
     );
   await adminPage.getByLabel("Quantidade").fill(String(quantity));
-  await adminPage.getByRole("button", { name: "Registrar ajuste" }).click();
+  await adminPage.getByRole("button", { name: "Adicionar ao estoque" }).click();
   await expect(
     adminPage.getByText("Estoque ajustado com sucesso."),
   ).toBeVisible();

@@ -215,6 +215,9 @@ evidências redigidas e retome apenas a etapa idempotente correspondente.
 
 ## Promover Uma Versão Para Produção
 
+**Regra mandatória:** Nenhum deploy em produção deve acontecer sem que a versão
+tenha sido previamente deployada e testada em staging.
+
 Produção Roberto está ativa e contém contas, produtos, vendas, pagamentos,
 movimentações de estoque e caixas históricos. Nunca exija banco vazio, cancele
 operações para limpar dados ou use `db reset`. A promoção preserva todos os

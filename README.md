@@ -103,6 +103,7 @@ npm.cmd run test:e2e:local-reset
 - **Fluxo Git**:
   - `feature/*` -> `develop` exclusivamente por pull request com Quality e E2E aprovados.
   - `develop` -> `main` exclusivamente por pull request de release com gates aprovados.
+  - Nenhum deploy em produção deve acontecer sem que a versão tenha sido previamente deployada e testada em staging.
   - Commits e pushes diretos na `main` ou `develop` são proibidos.
   - Commits são assinados via SSH e seguem o padrão Conventional Commits.
 
