@@ -11,11 +11,11 @@ evolução segue rigorosamente os checkpoints abaixo antes de ser promovida.
 
 ## Regra De Release
 
-O último release publicado é `v2.1.0`. A revisão integral da documentação do
-sistema e readmes atualiza a versão para `2.1.1`. Toda alteração de código deve
-respeitar o versionamento semântico (SemVer):
+O último release publicado é `v2.1.1`. O ajuste administrativo de estoque
+atualiza a versão para `2.2.0`. Toda alteração de código deve respeitar o
+versionamento semântico (SemVer):
 
-- **Patch (2.1.x)**: correções de bugs, ajustes de documentação ou refatorações
+- **Patch (2.2.x)**: correções de bugs, ajustes de documentação ou refatorações
   sem alteração de contratos;
 - **Minor (2.x.0)**: adição de novas funcionalidades retrocompatíveis;
 - **Major (x.0.0)**: mudanças incompatíveis com contratos de banco, APIs ou
@@ -26,10 +26,17 @@ A tag Git e a release no GitHub só podem ser criadas após o merge em `main`,
 deploy bem-sucedido na Vercel de produção, verificação de conformidade e smoke
 test aprovado.
 
+**Regra mandatória de promoção:** Nenhum deploy em produção deve acontecer sem
+que a versão correspondente tenha sido previamente deployada e testada em staging.
+
 1. Concluir a alteração em branch `feature/*`, com commits assinados.
 2. Integrar em `develop` por pull request com checks de qualidade e E2E aprovados.
-3. Se houver migrations, validar aplicação coordenada em staging antes de produção.
-4. Abrir pull request de release de `develop` para `main` e revisar o diff.
+3. Realizar o deploy do commit integrado em staging (`ops:rollout-staging`) e
+   executar a validação e testes no ambiente de staging. Nenhum deploy em
+   produção é permitido sem esta etapa concluída e aprovada. Se houver
+   migrations, validar aplicação coordenada em staging antes de produção.
+4. Somente após a aprovação e validação em staging, abrir pull request de release
+   de `develop` para `main` e revisar o diff.
 5. Fazer merge em `main` via pull request.
 6. Realizar deploy do commit exato de `main` na Vercel de produção.
 7. Executar `ops:verify-production` e `test:e2e:production-smoke` somente leitura.
