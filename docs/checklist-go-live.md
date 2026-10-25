@@ -11,8 +11,9 @@ evolução segue rigorosamente os checkpoints abaixo antes de ser promovida.
 
 ## Regra De Release
 
-O último release publicado é `v2.1.1`. O ajuste administrativo de estoque
-atualiza a versão para `2.2.0`. Toda alteração de código deve respeitar o
+O último release publicado é `v2.2.0`. A correção de vulnerabilidades de
+segurança do npm e alinhamento de tipos do Next.js App Router atualiza a
+versão para `2.2.1`. Toda alteração de código deve respeitar o
 versionamento semântico (SemVer):
 
 - **Patch (2.2.x)**: correções de bugs, ajustes de documentação ou refatorações
