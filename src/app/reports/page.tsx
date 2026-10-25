@@ -29,9 +29,7 @@ type ReportsPageProps = {
   }>;
 };
 
-export default async function ReportsPage({
-  searchParams,
-}: ReportsPageProps = {}) {
+export default async function ReportsPage({ searchParams }: ReportsPageProps) {
   const resolvedSearchParams = await searchParams;
   const currentBusinessDate = getSaoPauloBusinessDate();
   const filters: SalesReportFilters = {
