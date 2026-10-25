@@ -77,7 +77,7 @@ describe("SalesPage", () => {
       pageSize: 8,
       totalCount: 0,
     });
-    render(await SalesPage());
+    render(await SalesPage({}));
     expect(screen.getByLabelText("Operador")).toBeInTheDocument();
     expect(screen.getByLabelText("Sessão de caixa")).toBeInTheDocument();
     expect(
@@ -103,7 +103,7 @@ describe("SalesPage", () => {
       success: false,
       error: "unknown",
     });
-    render(await SalesPage());
+    render(await SalesPage({}));
     expect(
       screen.getByText("Não foi possível carregar as vendas"),
     ).toBeInTheDocument();
