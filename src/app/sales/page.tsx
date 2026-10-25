@@ -24,7 +24,7 @@ type SalesPageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export default async function SalesPage({ searchParams }: SalesPageProps = {}) {
+export default async function SalesPage({ searchParams }: SalesPageProps) {
   const query = (await searchParams) ?? {};
   const filterFields = Object.fromEntries(
     Object.entries(query).filter(
