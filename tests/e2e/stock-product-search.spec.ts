@@ -28,6 +28,28 @@ for (const width of [390, 768, 1440]) {
       { action: "Remover", quantity: "3", balance: 7 },
       { action: "Adicionar", quantity: "2", balance: 9 },
     ]) {
+      await page
+        .getByRole("searchbox", { name: "Buscar produto" })
+        .fill(productName);
+      const productLink = page
+        .getByRole("link")
+        .filter({ hasText: productName });
+      await expect(productLink).toHaveAttribute(
+        "href",
+        `/products/${productId}/edit`,
+      );
+      if (width === 768) {
+        await productLink.focus();
+        await page.keyboard.press("Enter");
+      } else {
+        await productLink.click();
+      }
+      await expect(page).toHaveURL(`/products/${productId}/edit`);
+      await expect(page.getByLabel("Nome do produto")).toHaveValue(productName);
+      await expect(page.getByLabel("SKU")).toHaveValue(
+        `E2E-${productName.replace("Produto E2E ", "").toUpperCase()}`,
+      );
+      await expect(page.getByRole("combobox")).toHaveCount(0);
       await page.getByRole("radio", { name: new RegExp(step.action) }).check();
       await page.getByLabel("Quantidade", { exact: true }).fill(step.quantity);
       await expect(page.getByRole("status", { name: "Novo saldo" })).toHaveText(
@@ -59,16 +81,39 @@ for (const width of [390, 768, 1440]) {
       await expect(
         page.getByRole("status", { name: "Estoque atual" }),
       ).toHaveText(`Estoque atual: ${step.balance} unidades`);
-      await page.reload();
+      await page.getByRole("link", { name: "Estoque", exact: true }).click();
       await page
-        .getByRole("combobox", { name: "Buscar produto" })
+        .getByRole("searchbox", { name: "Buscar produto" })
         .fill(productName);
-      await page.getByRole("option").filter({ hasText: productName }).click();
       await expect(
-        page.getByRole("status", { name: "Estoque atual" }),
-      ).toHaveText(`Estoque atual: ${step.balance} unidades`);
+        page.getByRole("link").filter({ hasText: productName }),
+      ).toContainText(String(step.balance));
     }
+    await page.getByRole("link").filter({ hasText: productName }).click();
+    const updatedName = `Atualizado ${productName}`;
+    const updatedSku = `EDIT-${productId.toUpperCase()}`;
+    await page.getByLabel("Nome do produto").fill(updatedName);
+    await page.getByLabel("SKU").fill(updatedSku);
+    await page.locator("#priceInReais").fill("19,90");
+    await page.getByRole("button", { name: "Salvar alteracoes" }).click();
+    await expect(
+      page.getByText("Produto atualizado com sucesso."),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("status", { name: "Estoque atual" }),
+    ).toHaveText("Estoque atual: 9 unidades");
     const client = await createAuthenticatedSupabaseClient();
+    const updatedProduct = await client
+      .from("products")
+      .select("name,sku,price_in_cents")
+      .eq("id", productId)
+      .single();
+    expect(updatedProduct.error).toBeNull();
+    expect(updatedProduct.data).toEqual({
+      name: updatedName,
+      sku: updatedSku,
+      price_in_cents: 1990,
+    });
     const { data, error } = await client
       .from("stock_movements")
       .select("quantity_change, type")

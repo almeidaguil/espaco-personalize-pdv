@@ -157,7 +157,14 @@ describe("StockMovementsOverview", () => {
       />,
     );
 
+    expect(
+      screen.getByRole("link", { name: /Chaveiro polvo/ }),
+    ).toHaveAttribute("href", "/products/product-2/edit");
     await user.type(screen.getByLabelText("Buscar produto"), "cane");
+    const link = screen.getByRole("link", { name: /Caneca personalizada/ });
+    expect(link).toHaveAttribute("href", "/products/product-1/edit");
+    await user.tab();
+    expect(link).toHaveFocus();
 
     expect(
       screen.getByText("Caneca personalizada (CANECA-001)"),

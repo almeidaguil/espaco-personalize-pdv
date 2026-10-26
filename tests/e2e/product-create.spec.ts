@@ -42,15 +42,15 @@ test("admin creates a product and sees it in the products list", async ({
 
   await page.goto("/stock");
   await page.locator("#stock-balance-search").fill(productSku);
-  const balance = page
-    .locator("article")
-    .filter({ hasText: productName })
-    .filter({ has: page.locator("strong", { hasText: /^12$/ }) });
+  const balance = page.getByRole("link", {
+    name: `${productName} (${productSku}) 12`,
+    exact: true,
+  });
   await expect(balance).toHaveCount(1);
-  await expect(balance.locator("strong")).toHaveText("12");
+  await expect(balance).toBeVisible();
   await page.reload();
   await page.locator("#stock-balance-search").fill(productSku);
-  await expect(balance.locator("strong")).toHaveText("12");
+  await expect(balance).toBeVisible();
 
   const client = await createAuthenticatedSupabaseClient("admin");
   const { data: product, error: productError } = await client
@@ -68,6 +68,11 @@ test("admin creates a product and sees it in the products list", async ({
   expect(movements).toEqual([
     { type: "initial_adjustment", quantity_change: 12 },
   ]);
-  await page.goto(`/products/${product!.id}/edit`);
+  await expect(balance).toHaveAttribute(
+    "href",
+    `/products/${product!.id}/edit`,
+  );
+  await balance.click();
+  await expect(page).toHaveURL(`/products/${product!.id}/edit`);
   await expect(page.getByLabel("Quantidade inicial em estoque")).toHaveCount(0);
 });
