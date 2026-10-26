@@ -18,11 +18,13 @@ type StockAdjustmentFormProps = {
     formData: FormData,
   ) => Promise<StockAdjustmentActionState>;
   products: (StockAdjustmentProductOption & { quantityOnHand: number })[];
+  fixedProductId?: string;
 };
 
 export function StockAdjustmentForm({
   action,
   products,
+  fixedProductId,
 }: StockAdjustmentFormProps) {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [direction, setDirection] = useState<"add" | "remove">("add");
@@ -32,7 +34,7 @@ export function StockAdjustmentForm({
     Number.isSafeInteger(Number(quantity)) &&
     Number(quantity) > 0;
   const selectedProduct = products.find(
-    (product) => product.id === selectedProductId,
+    (product) => product.id === (fixedProductId ?? selectedProductId),
   );
   const currentBalance = selectedProduct?.quantityOnHand;
   const nextBalance =
@@ -60,6 +62,7 @@ export function StockAdjustmentForm({
         };
       }
       formData.set("type", "manual_adjustment");
+      formData.set("productId", selectedProduct.id);
       formData.set(
         "quantity",
         String(direction === "remove" ? -Number(quantity) : Number(quantity)),
@@ -79,12 +82,14 @@ export function StockAdjustmentForm({
     <form action={formAction} className="grid min-w-0 gap-5" noValidate>
       <fieldset className="grid min-w-0 gap-5" disabled={isPending}>
         <div className="grid min-w-0 gap-2">
-          <StockProductCombobox
-            errorId={errors.productId ? "productId-error" : undefined}
-            invalid={Boolean(errors.productId)}
-            onSelectionChange={setSelectedProductId}
-            products={products}
-          />
+          {fixedProductId ? null : (
+            <StockProductCombobox
+              errorId={errors.productId ? "productId-error" : undefined}
+              invalid={Boolean(errors.productId)}
+              onSelectionChange={setSelectedProductId}
+              products={products}
+            />
+          )}
           {errors.productId ? (
             <FieldError id="productId-error">{errors.productId}</FieldError>
           ) : null}
