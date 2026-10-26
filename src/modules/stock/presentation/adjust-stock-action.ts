@@ -37,6 +37,9 @@ export async function adjustStockAction(
     ),
   });
 
-  if (result.successMessage) revalidatePath("/stock");
+  if (result.successMessage) {
+    revalidatePath("/stock");
+    revalidatePath(`/products/${formData.get("productId")}/edit`);
+  }
   return result;
 }
