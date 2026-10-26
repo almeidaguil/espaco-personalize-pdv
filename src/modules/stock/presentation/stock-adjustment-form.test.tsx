@@ -32,10 +32,12 @@ describe("StockAdjustmentForm", () => {
       render(
         <StockAdjustmentForm
           action={vi.fn()}
+          fixedProductId="product-1"
           products={[{ ...products[0], quantityOnHand: 3 }]}
         />,
       );
-      const user = await selectProduct();
+      const user = userEvent.setup();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
       if (direction === "remove")
         await user.click(screen.getByRole("radio", { name: /Remover/ }));
       await user.type(screen.getByLabelText("Quantidade"), quantity);
@@ -90,9 +92,14 @@ describe("StockAdjustmentForm", () => {
         .fn()
         .mockResolvedValue({ successMessage: "Estoque ajustado com sucesso." });
       const { rerender } = render(
-        <StockAdjustmentForm action={action} products={products} />,
+        <StockAdjustmentForm
+          action={action}
+          fixedProductId="product-1"
+          products={products}
+        />,
       );
-      const user = await selectProduct();
+      const user = userEvent.setup();
+      expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
       if (direction === "remove")
         await user.click(screen.getByRole("radio", { name: /Remover/ }));
       await user.type(screen.getByLabelText("Quantidade"), quantity);
@@ -118,6 +125,7 @@ describe("StockAdjustmentForm", () => {
       rerender(
         <StockAdjustmentForm
           action={action}
+          fixedProductId="product-1"
           products={[{ ...products[0], quantityOnHand: Number(balance) }]}
         />,
       );

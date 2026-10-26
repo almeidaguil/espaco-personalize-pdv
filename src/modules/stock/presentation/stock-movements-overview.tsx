@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 
 import { PaginationControls } from "@/shared/components/pagination-controls";
 import { Panel } from "@/shared/components/panel";
@@ -115,8 +116,9 @@ export function StockMovementsOverview({
             ) : (
               <div className="mt-4 grid gap-2">
                 {visibleBalances.map((balance) => (
-                  <article
-                    className="flex items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 transition hover:border-[var(--brand-accent)]/50"
+                  <Link
+                    href={`/products/${balance.productId}/edit`}
+                    className="flex min-h-12 items-center justify-between gap-4 rounded-xl border border-[var(--border)] bg-[var(--surface-muted)] px-4 py-3 transition hover:border-[var(--brand-accent)]/50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
                     key={balance.productId}
                   >
                     <p className="min-w-0 break-words text-sm font-semibold text-[var(--brand-foreground)]">
@@ -126,7 +128,7 @@ export function StockMovementsOverview({
                     <strong className="shrink-0 text-lg font-bold text-[var(--brand-accent-foreground)]">
                       {balance.quantityOnHand}
                     </strong>
-                  </article>
+                  </Link>
                 ))}
               </div>
             )}

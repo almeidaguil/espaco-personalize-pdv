@@ -1,11 +1,28 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Money } from "@/modules/products/domain/money";
 
 import EditProductPage from "./page";
 
 const getProductByIdUseCaseMock = vi.hoisted(() => vi.fn());
+const authorizationMock = vi.hoisted(() => vi.fn());
+const listMovementsMock = vi.hoisted(() => vi.fn());
+vi.mock("@/modules/auth/application/require-admin-use-case", () => ({
+  requireAdminUseCase: authorizationMock,
+}));
+vi.mock(
+  "@/modules/auth/infra/supabase-current-user-profile-repository",
+  () => ({ SupabaseCurrentUserProfileRepository: vi.fn() }),
+);
+vi.mock("@/modules/stock/infra/supabase-stock-movement-repository", () => ({
+  SupabaseStockMovementRepository: class {
+    listByProductId = listMovementsMock;
+  },
+}));
+vi.mock("@/modules/stock/presentation/adjust-stock-action", () => ({
+  adjustStockAction: vi.fn(),
+}));
 const notFoundMock = vi.hoisted(() => vi.fn());
 
 vi.mock("@/shared/lib/supabase/server-client", () => ({
@@ -33,6 +50,35 @@ vi.mock("next/navigation", () => ({
 }));
 
 describe("EditProductPage", () => {
+  beforeEach(() => {
+    authorizationMock.mockResolvedValue({ success: true });
+    listMovementsMock.mockResolvedValue([
+      { quantityChange: 5 },
+      { quantityChange: -2 },
+    ]);
+  });
+  it("shows read-only stock for operators", async () => {
+    authorizationMock.mockResolvedValue({ success: false });
+    getProductByIdUseCaseMock.mockResolvedValueOnce({
+      success: true,
+      product: {
+        id: "product-2",
+        isActive: true,
+        name: "Cal?a",
+        price: Money.fromReais(35),
+        sku: "CAL-002",
+      },
+    });
+    render(
+      await EditProductPage({ params: Promise.resolve({ id: "product-2" }) }),
+    );
+    expect(
+      screen.getByRole("status", { name: "Estoque atual" }),
+    ).toHaveTextContent("3 unidades");
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Quantidade")).not.toBeInTheDocument();
+    expect(listMovementsMock).toHaveBeenCalledWith("product-2");
+  });
   it("renders the edit page with the product form", async () => {
     getProductByIdUseCaseMock.mockResolvedValueOnce({
       product: {
@@ -51,6 +97,15 @@ describe("EditProductPage", () => {
       }),
     );
 
+    expect(
+      screen.getByRole("status", { name: "Estoque atual" }),
+    ).toHaveTextContent("3 unidades");
+    expect(
+      screen.getByRole("radio", { name: /Adicionar/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("radio", { name: /Remover/ })).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(listMovementsMock).toHaveBeenCalledWith("product-1");
     expect(
       screen.getByRole("heading", { level: 1, name: "Editar produto" }),
     ).toBeInTheDocument();
