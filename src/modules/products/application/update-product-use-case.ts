@@ -47,6 +47,7 @@ export async function updateProductUseCase(
   }
 
   const productResult = createProduct({
+    description: parsedInput.data.description,
     id: normalizedProductId,
     isActive: parsedInput.data.isActive,
     name: parsedInput.data.name,

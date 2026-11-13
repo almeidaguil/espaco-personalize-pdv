@@ -40,6 +40,7 @@ export async function createProductUseCase(
   }
 
   const productResult = createProduct({
+    description: parsedInput.data.description,
     id: dependencies.generateProductId(),
     isActive: parsedInput.data.isActive,
     name: parsedInput.data.name,

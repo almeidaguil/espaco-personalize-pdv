@@ -102,10 +102,11 @@ export default async function EditProductPage({
         <ProductForm
           action={action}
           initialValues={createProductFormValuesFromProduct({
+            description: result.product.description,
             isActive: result.product.isActive,
             name: result.product.name,
-            priceInReais: result.product.price.toReais(),
             sku: result.product.sku,
+            priceInReais: result.product.price.toReais(),
           })}
           submitLabel="Salvar alteracoes"
         />

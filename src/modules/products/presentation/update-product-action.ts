@@ -51,6 +51,7 @@ export async function updateProductAction(
   return {
     successMessage: "Produto atualizado com sucesso.",
     values: createProductFormValuesFromProduct({
+      description: result.product.description,
       isActive: result.product.isActive,
       name: result.product.name,
       priceInReais: result.product.price.toReais(),

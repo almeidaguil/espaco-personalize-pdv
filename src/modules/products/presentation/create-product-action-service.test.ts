@@ -140,3 +140,26 @@ describe("createProductActionService", () => {
     expect(result.values?.name).toBe("");
   });
 });
+
+it.each(["Algodão", "", "   "])(
+  "transports description %s with initial stock",
+  async (description) => {
+    const { form, dependencies } = setup("12");
+    form.set("description", description);
+    const result = await createProductActionService(form, dependencies);
+    expect(result.successMessage).toBe("Produto cadastrado com sucesso.");
+    expect(dependencies.productRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ description: description.trim() || null }),
+    );
+    expect(dependencies.stockMovementRepository.save).toHaveBeenCalledOnce();
+  },
+);
+it("preserves description after a validation error", async () => {
+  const { form, dependencies } = setup("12");
+  form.set("description", "  Algodão\nDetalhes  ");
+  form.set("name", "");
+  const result = await createProductActionService(form, dependencies);
+  expect(result.fieldErrors?.name).toBeDefined();
+  expect(result.values?.description).toBe("  Algodão\nDetalhes  ");
+  expect(dependencies.productRepository.save).not.toHaveBeenCalled();
+});

@@ -1,8 +1,12 @@
 import { z } from "zod";
 
-import { normalizeProductSku } from "../domain/product";
+import {
+  normalizeProductDescription,
+  normalizeProductSku,
+} from "../domain/product";
 
 export const createProductSchema = z.object({
+  description: z.string().nullish().transform(normalizeProductDescription),
   isActive: z.boolean().optional(),
   name: z.string().trim().min(1, "Informe o nome do produto."),
   priceInReais: z
