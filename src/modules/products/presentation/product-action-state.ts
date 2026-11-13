@@ -1,4 +1,5 @@
 export type ProductFormValues = {
+  description?: string | null;
   initialStockQuantity?: string;
   isActive: boolean;
   name: string;

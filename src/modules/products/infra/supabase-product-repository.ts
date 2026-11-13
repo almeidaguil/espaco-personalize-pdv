@@ -9,6 +9,7 @@ import type {
 } from "../application/product-repository";
 
 type SupabaseProductRow = {
+  description: string | null;
   id: string;
   is_active: boolean;
   name: string;
@@ -17,6 +18,7 @@ type SupabaseProductRow = {
 };
 
 type SupabaseProductInsert = {
+  description: string | null;
   id: string;
   is_active: boolean;
   name: string;
@@ -83,7 +85,7 @@ export class SupabaseProductRepository implements ProductRepository {
   async findById(productId: string): Promise<FindProductByIdResult> {
     const { data, error } = await this.supabaseClient
       .from("products")
-      .select("id,name,sku,price_in_cents,is_active")
+      .select("id,name,description,sku,price_in_cents,is_active")
       .eq("id", productId)
       .maybeSingle();
 
@@ -110,7 +112,7 @@ export class SupabaseProductRepository implements ProductRepository {
   async list(): Promise<ListProductsResult> {
     const { data, error } = await this.supabaseClient
       .from("products")
-      .select("id,name,sku,price_in_cents,is_active")
+      .select("id,name,description,sku,price_in_cents,is_active")
       .order("name", { ascending: true });
 
     if (error || !data) {
@@ -130,7 +132,7 @@ export class SupabaseProductRepository implements ProductRepository {
     const { data, error } = await this.supabaseClient
       .from("products")
       .insert(toProductInsert(product))
-      .select("id,name,sku,price_in_cents,is_active")
+      .select("id,name,description,sku,price_in_cents,is_active")
       .single();
 
     if (error) {
@@ -158,7 +160,7 @@ export class SupabaseProductRepository implements ProductRepository {
       .from("products")
       .update(toProductInsert(product))
       .eq("id", product.id)
-      .select("id,name,sku,price_in_cents,is_active")
+      .select("id,name,description,sku,price_in_cents,is_active")
       .maybeSingle();
 
     if (error) {
@@ -184,6 +186,7 @@ export class SupabaseProductRepository implements ProductRepository {
 
 function toProductInsert(product: Product): SupabaseProductInsert {
   return {
+    description: product.description ?? null,
     id: product.id,
     is_active: product.isActive,
     name: product.name,
@@ -194,6 +197,7 @@ function toProductInsert(product: Product): SupabaseProductInsert {
 
 function toProduct(row: SupabaseProductRow): Product {
   return {
+    description: row.description,
     id: row.id,
     isActive: row.is_active,
     name: row.name,

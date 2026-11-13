@@ -1,7 +1,9 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ProductForm } from "./product-form";
+import { getProductFormValues } from "./product-form-data";
 
 const actionState = vi.hoisted(() => ({
   current: {},
@@ -17,6 +19,71 @@ vi.mock("react", async () => {
 });
 
 describe("ProductForm", () => {
+  it.each([undefined, null, ""])(
+    "renders an optional empty description for %s",
+    (description) => {
+      render(
+        <ProductForm
+          action={vi.fn()}
+          initialValues={{
+            description,
+            name: "Camisa",
+            priceInReais: "129,90",
+            sku: "CAM-001",
+            isActive: true,
+          }}
+        />,
+      );
+      const field = screen.getByRole("textbox", { name: "Descrição" });
+      expect(field).toHaveValue("");
+      expect(field).not.toBeRequired();
+      expect(field).toHaveAccessibleDescription("Opcional.");
+      expect(screen.queryByText(/undefined|null/)).not.toBeInTheDocument();
+    },
+  );
+
+  it("allows keyboard editing and clearing an existing description", async () => {
+    const user = userEvent.setup();
+    render(
+      <ProductForm
+        action={vi.fn()}
+        initialValues={{
+          description: "Algodão",
+          name: "Camisa",
+          priceInReais: "129,90",
+          sku: "CAM-001",
+          isActive: true,
+        }}
+      />,
+    );
+    const field = screen.getByRole("textbox", { name: "Descrição" });
+    expect(field).toHaveValue("Algodão");
+    await user.tab();
+    expect(screen.getByLabelText("Nome do produto")).toHaveFocus();
+    await user.tab();
+    expect(field).toHaveFocus();
+    await user.clear(field);
+    await user.type(field, "Descrição atualizada");
+    expect(field).toHaveValue("Descrição atualizada");
+    await user.clear(field);
+    expect(new FormData(field.closest("form")!).get("description")).toBe("");
+  });
+
+  it("preserves a long multiline description when other fields fail validation", () => {
+    const description = `Camisa em algodão.\n${"Detalhes ".repeat(500)}${"x".repeat(500)}`;
+    const data = new FormData();
+    data.set("description", description);
+    data.set("name", "Camisa");
+    data.set("priceInReais", "inválido");
+    actionState.current = {
+      values: getProductFormValues(data),
+      fieldErrors: { priceInReais: "Informe um preço válido." },
+    };
+    render(<ProductForm action={vi.fn()} />);
+    expect(screen.getByLabelText("Descrição")).toHaveValue(description);
+    expect(screen.getByLabelText("Nome do produto")).toHaveValue("Camisa");
+    expect(screen.getByLabelText("Preço")).toHaveValue("inválido");
+  });
   it("shows initial stock only when enabled and associates its error", () => {
     actionState.current = {
       fieldErrors: { initialStockQuantity: "Informe uma quantidade inteira." },
@@ -47,6 +114,7 @@ describe("ProductForm", () => {
     render(<ProductForm action={vi.fn()} />);
 
     expect(screen.getByLabelText("Nome do produto")).toBeInTheDocument();
+    expect(screen.getByLabelText("Descrição")).toHaveValue("");
 
     expect(screen.getByLabelText("Preço")).toBeInTheDocument();
 
