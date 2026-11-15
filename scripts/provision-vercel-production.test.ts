@@ -488,6 +488,19 @@ describe("runVercelProductionProvisioning", () => {
     const history = [
       prior,
       readyDeployment({
+        alias: [],
+        gitSource: {
+          ref: olderSha,
+          repoId: 1264018806,
+          sha: olderSha,
+        },
+        meta: { githubCommitSha: olderSha },
+        readyState: "ERROR",
+        source: "git",
+        target: null,
+        uid: "dpl_FailedGitPreview456",
+      }),
+      readyDeployment({
         gitSource: {
           ref: olderSha,
           repoId: 1264018806,
@@ -555,7 +568,54 @@ describe("runVercelProductionProvisioning", () => {
     expect(client.createGitDeployment).toHaveBeenCalledTimes(1);
   });
 
-  test("still requires the persisted prior production deployment in history", async () => {
+  test("validates a persisted prior deployment omitted from recent history", async () => {
+    const mainSha = "b".repeat(40);
+    const prior = readyDeployment();
+    const main = readyDeployment({
+      gitSource: { ref: mainSha, repoId: 1264018806, sha: mainSha },
+      meta: {
+        ...readyDeployment().meta,
+        roberto_commit_sha: mainSha,
+        roberto_source_ref: "main",
+      },
+      uid: "dpl_MainProduction456",
+      url: "roberto-main-build.vercel.app",
+    });
+    const client = createClient({
+      archivedDeployments: [prior],
+      deployment: main,
+      deployments: [
+        readyDeployment({
+          uid: "dpl_OlderProduction456",
+        }),
+        readyDeployment({
+          uid: "dpl_AnotherProduction456",
+        }),
+      ],
+      variables: expectedVariables(),
+    });
+
+    await expect(
+      run({
+        client,
+        options: {
+          commitSha: mainSha,
+          confirmation: projectId,
+          execute: true,
+          phase: "deploy",
+          sourceRef: "main",
+        },
+        resolveSourceCommit: vi.fn().mockResolvedValue(mainSha),
+        state: verifiedState(),
+      }),
+    ).resolves.toMatchObject({
+      deploymentId: "dpl_MainProduction456",
+      sourceRef: "main",
+    });
+    expect(client.createGitDeployment).toHaveBeenCalledTimes(1);
+  });
+
+  test("rejects a divergent persisted deployment omitted from recent history", async () => {
     const mainSha = "b".repeat(40);
     const main = readyDeployment({
       gitSource: { ref: mainSha, repoId: 1264018806, sha: mainSha },
@@ -568,15 +628,9 @@ describe("runVercelProductionProvisioning", () => {
       url: "roberto-main-build.vercel.app",
     });
     const client = createClient({
+      archivedDeployments: [readyDeployment({ name: "another-project" })],
       deployment: main,
-      deployments: [
-        readyDeployment({
-          uid: "dpl_OlderProduction456",
-        }),
-        readyDeployment({
-          uid: "dpl_AnotherProduction456",
-        }),
-      ],
+      deployments: [readyDeployment({ uid: "dpl_OlderProduction456" })],
       variables: expectedVariables(),
     });
 
@@ -816,6 +870,7 @@ function readyDeployment(override: Record<string, unknown> = {}) {
 }
 
 function createClient({
+  archivedDeployments = [],
   createThrowsAfterPersist = false,
   deployment = readyDeployment(),
   deployments = [],
@@ -824,6 +879,7 @@ function createClient({
   project = {},
   variables = [],
 }: {
+  archivedDeployments?: ReturnType<typeof readyDeployment>[];
   createThrowsAfterPersist?: boolean;
   deployment?: ReturnType<typeof readyDeployment>;
   deployments?: ReturnType<typeof readyDeployment>[];
@@ -880,7 +936,10 @@ function createClient({
       const existing = currentDeployments.find(
         (candidate) => candidate.uid === deploymentId,
       );
-      return structuredClone(existing ?? deployment);
+      const archived = archivedDeployments.find(
+        (candidate) => candidate.uid === deploymentId,
+      );
+      return structuredClone(existing ?? archived ?? deployment);
     }),
     getProject: vi.fn(async () => ({
       framework: "nextjs",
