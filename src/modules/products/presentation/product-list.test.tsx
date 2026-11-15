@@ -29,6 +29,15 @@ describe("ProductList", () => {
     expect(screen.getByText("Caneca personalizada")).toBeInTheDocument();
     expect(screen.getByText("CANECA-001")).toBeInTheDocument();
     expect(screen.getByText("R$ 35,00")).toBeInTheDocument();
+    for (const price of ["R$ 35,00", "R$ 12,00"]) {
+      expect(screen.getByText(price)).toHaveClass(
+        "font-bold",
+        "text-[var(--foreground)]",
+      );
+      expect(screen.getByText(price)).not.toHaveClass(
+        "text-[var(--brand-accent-foreground)]",
+      );
+    }
     expect(screen.getByText("Chaveiro")).toBeInTheDocument();
     expect(screen.getByText("Sem SKU")).toBeInTheDocument();
     expect(screen.getByText("Inativo")).toBeInTheDocument();

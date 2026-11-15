@@ -11,11 +11,11 @@ evolução segue rigorosamente os checkpoints abaixo antes de ser promovida.
 
 ## Regra De Release
 
-O último release publicado é `v2.2.1`. A integração direta entre listagem
-de estoque e ações de ajuste no produto atualiza a versão para `2.3.0`. Toda
-alteração de código deve respeitar o versionamento semântico (SemVer):
+O último release publicado é `v2.3.0`. O suporte completo a descrições de
+produtos atualiza a versão para `2.4.0`. Toda alteração de código deve respeitar
+o versionamento semântico (SemVer):
 
-- **Patch (2.2.x)**: correções de bugs, ajustes de documentação ou refatorações
+- **Patch (2.4.x)**: correções de bugs, ajustes de documentação ou refatorações
   sem alteração de contratos;
 - **Minor (2.x.0)**: adição de novas funcionalidades retrocompatíveis;
 - **Major (x.0.0)**: mudanças incompatíveis com contratos de banco, APIs ou

@@ -1,6 +1,7 @@
 import { Money } from "./money";
 
 export type Product = {
+  description?: string | null;
   id: string;
   isActive: boolean;
   name: string;
@@ -9,6 +10,7 @@ export type Product = {
 };
 
 export type CreateProductInput = {
+  description?: string | null;
   id: string;
   isActive?: boolean;
   name: string;
@@ -91,6 +93,7 @@ export function createProduct(input: CreateProductInput): CreateProductResult {
 
   return {
     product: {
+      description: normalizeProductDescription(input.description),
       id,
       isActive: input.isActive ?? true,
       name,
@@ -113,6 +116,12 @@ export function activateProduct(product: Product): Product {
     ...product,
     isActive: true,
   };
+}
+
+export function normalizeProductDescription(
+  description: string | null | undefined,
+): string | null {
+  return description?.replace(/\r\n?/g, "\n").trim() || null;
 }
 
 export function normalizeProductSku(
