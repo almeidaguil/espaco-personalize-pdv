@@ -552,10 +552,10 @@ async function assertVerifiedDeploymentHistory({
   const priorDeployments = listed.filter(
     (candidate) => (candidate.uid ?? candidate.id) === prior.deploymentId,
   );
-  const priorDeployment =
-    priorDeployments.length === 1
-      ? await client.getDeployment(prior.deploymentId, target.orgId)
-      : null;
+  const priorDeployment = await client.getDeployment(
+    prior.deploymentId,
+    target.orgId,
+  );
   const priorSource = {
     commitSha: prior.commitSha,
     environmentFingerprint: source.environmentFingerprint,
@@ -563,13 +563,14 @@ async function assertVerifiedDeploymentHistory({
   };
   if (
     source.sourceRef !== "main" ||
-    priorDeployments.length !== 1 ||
+    priorDeployments.length > 1 ||
     deploymentIds.some((id) => !/^dpl_[A-Za-z0-9]+$/.test(id ?? "")) ||
     new Set(deploymentIds).size !== deploymentIds.length ||
     listed.some(
       (candidate) =>
         candidate.name !== target.projectName ||
-        !["production", "preview"].includes(candidate.target),
+        (!["production", "preview"].includes(candidate.target) &&
+          !isExpectedFailedGitPreview(candidate)),
     ) ||
     (priorDeployment?.uid ?? priorDeployment?.id) !== prior.deploymentId ||
     priorDeployment?.name !== target.projectName ||
@@ -579,6 +580,18 @@ async function assertVerifiedDeploymentHistory({
   ) {
     throw new Error("Production release deployment history is divergent.");
   }
+}
+
+function isExpectedFailedGitPreview(deployment) {
+  const metadata = deployment?.meta ?? {};
+  return (
+    deployment?.target == null &&
+    deployment?.source === "git" &&
+    (deployment?.state ?? deployment?.readyState) === "ERROR" &&
+    /^[a-f0-9]{40}$/.test(metadata.githubCommitSha ?? "") &&
+    metadata.roberto_environment == null &&
+    metadata.roberto_commit_sha == null
+  );
 }
 
 async function findExistingDeployment(client, target, source) {
