@@ -552,10 +552,16 @@ async function assertVerifiedDeploymentHistory({
   const priorDeployments = listed.filter(
     (candidate) => (candidate.uid ?? candidate.id) === prior.deploymentId,
   );
-  const priorDeployment = await client.getDeployment(
-    prior.deploymentId,
-    target.orgId,
-  );
+  let priorDeployment;
+  try {
+    priorDeployment = await client.getDeployment(
+      prior.deploymentId,
+      target.orgId,
+    );
+  } catch (error) {
+    if (!isDeploymentRemovedByRetention(error)) throw error;
+    priorDeployment = null;
+  }
   const priorSource = {
     commitSha: prior.commitSha,
     environmentFingerprint: source.environmentFingerprint,
@@ -572,14 +578,22 @@ async function assertVerifiedDeploymentHistory({
         (!["production", "preview"].includes(candidate.target) &&
           !isExpectedFailedGitPreview(candidate)),
     ) ||
-    (priorDeployment?.uid ?? priorDeployment?.id) !== prior.deploymentId ||
-    priorDeployment?.name !== target.projectName ||
-    priorDeployment?.target !== "production" ||
-    priorDeployment?.readyState !== "READY" ||
-    !deploymentMatchesSource(priorDeployment, priorSource, target)
+    (priorDeployment != null &&
+      ((priorDeployment.uid ?? priorDeployment.id) !== prior.deploymentId ||
+        priorDeployment.name !== target.projectName ||
+        priorDeployment.target !== "production" ||
+        priorDeployment.readyState !== "READY" ||
+        !deploymentMatchesSource(priorDeployment, priorSource, target)))
   ) {
     throw new Error("Production release deployment history is divergent.");
   }
+}
+
+function isDeploymentRemovedByRetention(error) {
+  return (
+    error instanceof Error &&
+    /Vercel API returned 404:.*Deployment not found/.test(error.message)
+  );
 }
 
 function isExpectedFailedGitPreview(deployment) {
