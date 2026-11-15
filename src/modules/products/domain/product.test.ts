@@ -4,6 +4,18 @@ import { Money } from "./money";
 import { activateProduct, createProduct, deactivateProduct } from "./product";
 
 describe("createProduct", () => {
+  it("normalizes browser form line endings to the textarea representation", () => {
+    const result = createProduct({
+      id: "product-1",
+      name: "Camisa",
+      description: "  Algodão\r\nManga curta\rDetalhes  ",
+      priceInReais: 35,
+    });
+    expect(result).toMatchObject({
+      success: true,
+      product: { description: "Algodão\nManga curta\nDetalhes" },
+    });
+  });
   it("creates an active product with normalized fields", () => {
     const result = createProduct({
       id: " product-1 ",
@@ -195,3 +207,28 @@ describe("product activation", () => {
     });
   });
 });
+
+it.each([undefined, null, "", " \n\t ", "  Algodão\nManga curta  "])(
+  "normalizes optional description %s",
+  (description) => {
+    const result = createProduct({
+      id: "product-1",
+      name: " Camisa ",
+      priceInReais: 35,
+      sku: " cam-1 ",
+      isActive: false,
+      description,
+    });
+    expect(result).toEqual({
+      success: true,
+      product: {
+        id: "product-1",
+        name: "Camisa",
+        price: Money.fromReais(35),
+        sku: "CAM-1",
+        isActive: false,
+        description: description?.trim() || null,
+      },
+    });
+  },
+);

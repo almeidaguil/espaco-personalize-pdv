@@ -34,7 +34,7 @@ export function ProductList({ products }: ProductListProps) {
             </StatusBadge>
           </div>
 
-          <strong className="mt-4 block text-lg text-[var(--brand-accent-foreground)]">
+          <strong className="mt-4 block text-lg font-bold text-[var(--foreground)]">
             {product.priceLabel}
           </strong>
 

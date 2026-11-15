@@ -41,10 +41,6 @@ vi.mock("@/modules/products/presentation/update-product-action", () => ({
   updateProductAction: vi.fn(),
 }));
 
-vi.mock("@/modules/products/presentation/product-form", () => ({
-  ProductForm: () => <form aria-label="Formulario de edicao de produto" />,
-}));
-
 vi.mock("next/navigation", () => ({
   notFound: notFoundMock,
 }));
@@ -78,6 +74,7 @@ describe("EditProductPage", () => {
     expect(screen.queryByRole("radio")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Quantidade")).not.toBeInTheDocument();
     expect(listMovementsMock).toHaveBeenCalledWith("product-2");
+    expect(screen.getByLabelText("Descrição")).toHaveValue("");
   });
   it("renders the edit page with the product form", async () => {
     getProductByIdUseCaseMock.mockResolvedValueOnce({
@@ -85,6 +82,7 @@ describe("EditProductPage", () => {
         id: "product-1",
         isActive: true,
         name: "Caneca personalizada",
+        description: "Caneca de cerâmica com alça.",
         price: Money.fromReais(35),
         sku: "CANECA-001",
       },
@@ -113,9 +111,9 @@ describe("EditProductPage", () => {
       "href",
       "/products",
     );
-    expect(
-      screen.getByLabelText("Formulario de edicao de produto"),
-    ).toBeInTheDocument();
+    expect(screen.getByLabelText("Descrição")).toHaveValue(
+      "Caneca de cerâmica com alça.",
+    );
   });
 
   it("delegates to notFound when the product does not exist", async () => {

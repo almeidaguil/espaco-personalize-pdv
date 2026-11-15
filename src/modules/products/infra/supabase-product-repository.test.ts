@@ -14,6 +14,7 @@ type FakeSupabaseResponse = {
 };
 
 type FakeSupabaseProductRow = {
+  description: string | null;
   id: string;
   is_active: boolean;
   name: string;
@@ -114,6 +115,7 @@ describe("SupabaseProductRepository", () => {
       { data: [], error: null },
       {
         data: {
+          description: null,
           id: "product-1",
           is_active: true,
           name: "Caneca personalizada",
@@ -127,6 +129,7 @@ describe("SupabaseProductRepository", () => {
 
     await expect(repository.findById("product-1")).resolves.toEqual({
       product: {
+        description: null,
         id: "product-1",
         isActive: true,
         name: "Caneca personalizada",
@@ -153,6 +156,7 @@ describe("SupabaseProductRepository", () => {
   it("saves a product mapping BRL money to persisted cents", async () => {
     const supabaseClient = new FakeSupabaseProductClient({
       data: {
+        description: null,
         id: "product-1",
         is_active: true,
         name: "Caneca personalizada",
@@ -163,6 +167,7 @@ describe("SupabaseProductRepository", () => {
     });
     const repository = new SupabaseProductRepository(supabaseClient);
     const product: Product = {
+      description: null,
       id: "product-1",
       isActive: true,
       name: "Caneca personalizada",
@@ -173,6 +178,7 @@ describe("SupabaseProductRepository", () => {
     const result = await repository.save(product);
 
     expect(supabaseClient.insertedPayload).toEqual({
+      description: null,
       id: "product-1",
       is_active: true,
       name: "Caneca personalizada",
@@ -180,7 +186,7 @@ describe("SupabaseProductRepository", () => {
       sku: "CANECA-001",
     });
     expect(supabaseClient.selectedColumns).toBe(
-      "id,name,sku,price_in_cents,is_active",
+      "id,name,description,sku,price_in_cents,is_active",
     );
     expect(result.success).toBe(true);
 
@@ -197,6 +203,7 @@ describe("SupabaseProductRepository", () => {
       { data: null, error: null },
       {
         data: {
+          description: null,
           id: "product-1",
           is_active: false,
           name: "Caneca premium",
@@ -209,6 +216,7 @@ describe("SupabaseProductRepository", () => {
     const repository = new SupabaseProductRepository(supabaseClient);
 
     const result = await repository.update({
+      description: null,
       id: "product-1",
       isActive: false,
       name: "Caneca premium",
@@ -217,6 +225,7 @@ describe("SupabaseProductRepository", () => {
     });
 
     expect(supabaseClient.updatedPayload).toEqual({
+      description: null,
       id: "product-1",
       is_active: false,
       name: "Caneca premium",
@@ -225,6 +234,7 @@ describe("SupabaseProductRepository", () => {
     });
     expect(result).toEqual({
       product: {
+        description: null,
         id: "product-1",
         isActive: false,
         name: "Caneca premium",
@@ -238,6 +248,7 @@ describe("SupabaseProductRepository", () => {
   it("maps empty SKU to null on insert and omits it from the domain product", async () => {
     const supabaseClient = new FakeSupabaseProductClient({
       data: {
+        description: null,
         id: "product-1",
         is_active: true,
         name: "Caneca personalizada",
@@ -249,6 +260,7 @@ describe("SupabaseProductRepository", () => {
     const repository = new SupabaseProductRepository(supabaseClient);
 
     const result = await repository.save({
+      description: null,
       id: "product-1",
       isActive: true,
       name: "Caneca personalizada",
@@ -278,6 +290,7 @@ describe("SupabaseProductRepository", () => {
     const repository = new SupabaseProductRepository(supabaseClient);
 
     const result = await repository.save({
+      description: null,
       id: "product-1",
       isActive: true,
       name: "Caneca personalizada",
@@ -321,6 +334,7 @@ describe("SupabaseProductRepository", () => {
     const repository = new SupabaseProductRepository(supabaseClient);
 
     const result = await repository.save({
+      description: null,
       id: "product-1",
       isActive: true,
       name: "Caneca personalizada",
@@ -345,6 +359,7 @@ describe("SupabaseProductRepository", () => {
     const repository = new SupabaseProductRepository(supabaseClient);
 
     const result = await repository.save({
+      description: null,
       id: "product-1",
       isActive: true,
       name: "Caneca personalizada",
@@ -363,6 +378,7 @@ describe("SupabaseProductRepository", () => {
       {
         data: [
           {
+            description: null,
             id: "product-1",
             is_active: true,
             name: "Caneca personalizada",
@@ -370,6 +386,7 @@ describe("SupabaseProductRepository", () => {
             sku: "CANECA-001",
           },
           {
+            description: null,
             id: "product-2",
             is_active: false,
             name: "Chaveiro",
@@ -385,7 +402,7 @@ describe("SupabaseProductRepository", () => {
     const result = await repository.list();
 
     expect(supabaseClient.selectedColumns).toBe(
-      "id,name,sku,price_in_cents,is_active",
+      "id,name,description,sku,price_in_cents,is_active",
     );
     expect(supabaseClient.orderedColumn).toBe("name");
     expect(supabaseClient.orderOptions).toEqual({ ascending: true });
@@ -416,5 +433,79 @@ describe("SupabaseProductRepository", () => {
       error: "unknown",
       success: false,
     });
+  });
+});
+
+it.each(["Algodão\nManga curta", null])(
+  "persists and reads description %s through every repository operation",
+  async (description) => {
+    const row = {
+      id: "product-1",
+      name: "Camisa",
+      description,
+      is_active: false,
+      price_in_cents: 3500,
+      sku: "CAM-1",
+    };
+    const response = { data: row, error: null };
+    const client = new FakeSupabaseProductClient(
+      response,
+      { data: [row], error: null },
+      response,
+      response,
+    );
+    const repository = new SupabaseProductRepository(client);
+    const product = {
+      id: row.id,
+      name: row.name,
+      description,
+      isActive: false,
+      price: Money.fromReais(35),
+      sku: "CAM-1",
+    };
+    expect(await repository.save(product)).toEqual({ success: true, product });
+    expect(client.insertedPayload).toEqual(row);
+    expect(await repository.update(product)).toEqual({
+      success: true,
+      product,
+    });
+    expect(client.updatedPayload).toEqual(row);
+    expect(await repository.findById(row.id)).toEqual({
+      success: true,
+      product,
+    });
+    expect(await repository.list()).toEqual({
+      success: true,
+      products: [product],
+    });
+    expect(client.selectedColumns).toBe(
+      "id,name,description,sku,price_in_cents,is_active",
+    );
+  },
+);
+
+it("sends null when a domain caller omits description", async () => {
+  const client = new FakeSupabaseProductClient({
+    data: {
+      id: "product-1",
+      description: null,
+      name: "Camisa",
+      price_in_cents: 3500,
+      is_active: true,
+      sku: null,
+    },
+    error: null,
+  });
+  const repository = new SupabaseProductRepository(client);
+  const result = await repository.save({
+    id: "product-1",
+    name: "Camisa",
+    price: Money.fromReais(35),
+    isActive: true,
+  });
+  expect(client.insertedPayload).toMatchObject({ description: null });
+  expect(result).toMatchObject({
+    success: true,
+    product: { description: null },
   });
 });

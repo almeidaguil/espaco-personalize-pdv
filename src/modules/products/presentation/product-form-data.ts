@@ -6,6 +6,7 @@ export function parseCreateProductFormData(
   formData: FormData,
 ): CreateProductUseCaseInput {
   return {
+    description: getTrimmedString(formData, "description") || null,
     isActive: parseOptionalBoolean(formData.getAll("isActive")),
     name: getTrimmedString(formData, "name"),
     priceInReais: parseBrlPrice(formData.get("priceInReais")),
@@ -14,7 +15,10 @@ export function parseCreateProductFormData(
 }
 
 export function getProductFormValues(formData: FormData): ProductFormValues {
+  const description = formData.get("description");
+
   return {
+    ...(typeof description === "string" ? { description } : {}),
     ...(formData.has("initialStockQuantity")
       ? {
           initialStockQuantity: getTrimmedString(
@@ -40,12 +44,16 @@ export function createEmptyProductFormValues(): ProductFormValues {
 }
 
 export function createProductFormValuesFromProduct(input: {
+  description?: string | null;
   isActive: boolean;
   name: string;
   priceInReais: number;
   sku?: string;
 }): ProductFormValues {
   return {
+    ...(input.description !== undefined
+      ? { description: input.description ?? "" }
+      : {}),
     isActive: input.isActive,
     name: input.name,
     priceInReais: input.priceInReais.toFixed(2).replace(".", ","),

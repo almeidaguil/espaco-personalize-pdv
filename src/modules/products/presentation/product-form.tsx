@@ -71,6 +71,26 @@ export function ProductForm({
         ) : null}
       </div>
 
+      <div className="grid min-w-0 gap-2">
+        <label
+          className="text-sm font-semibold text-[var(--brand-foreground)]"
+          htmlFor="description"
+        >
+          Descrição
+        </label>
+        <textarea
+          aria-describedby="description-help"
+          className="min-h-32 w-full min-w-0 resize-y rounded-xl border border-[var(--border)] bg-white px-3 py-3 text-base text-[var(--foreground)] outline-none transition placeholder:text-neutral-400 focus:border-[var(--brand-accent)] focus:ring-2 focus:ring-[var(--brand-accent)]/15"
+          defaultValue={values.description ?? ""}
+          id="description"
+          name="description"
+          rows={4}
+        />
+        <p className="text-xs text-[var(--brand-muted)]" id="description-help">
+          Opcional.
+        </p>
+      </div>
+
       {/* Preço + SKU */}
       <div className="grid gap-5 sm:grid-cols-2">
         <div className="grid gap-2">
