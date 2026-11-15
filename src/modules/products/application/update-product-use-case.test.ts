@@ -68,6 +68,7 @@ describe("updateProductUseCase", () => {
 
     expect(result).toEqual({
       product: {
+        description: null,
         id: "product-1",
         isActive: false,
         name: "Caneca premium",
@@ -77,6 +78,7 @@ describe("updateProductUseCase", () => {
       success: true,
     });
     expect(productRepository.updatedProduct).toEqual({
+      description: null,
       id: "product-1",
       isActive: false,
       name: "Caneca premium",
@@ -153,3 +155,30 @@ describe("updateProductUseCase", () => {
     });
   });
 });
+
+it.each([undefined, null, "", "   ", "  Algodão\nManga curta  "])(
+  "update normalizes description %s before persistence",
+  async (description) => {
+    const productRepository = new FakeProductRepository();
+    const result = await updateProductUseCase(
+      "product-1",
+      {
+        description,
+        name: "Camisa",
+        priceInReais: 35,
+        sku: "cam-1",
+        isActive: false,
+      },
+      { productRepository },
+    );
+    expect(result.success).toBe(true);
+    expect(productRepository.updatedProduct).toEqual({
+      id: "product-1",
+      description: description?.trim() || null,
+      name: "Camisa",
+      price: Money.fromReais(35),
+      sku: "CAM-1",
+      isActive: false,
+    });
+  },
+);

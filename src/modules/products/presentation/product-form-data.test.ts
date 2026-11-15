@@ -16,6 +16,7 @@ describe("parseCreateProductFormData", () => {
     formData.set("isActive", "true");
 
     expect(parseCreateProductFormData(formData)).toEqual({
+      description: null,
       isActive: true,
       name: "Caneca personalizada",
       priceInReais: 35.99,
@@ -30,6 +31,7 @@ describe("parseCreateProductFormData", () => {
     formData.set("sku", " ");
 
     expect(parseCreateProductFormData(formData)).toEqual({
+      description: null,
       isActive: true,
       name: "Caneca personalizada",
       priceInReais: 35,
@@ -44,6 +46,7 @@ describe("parseCreateProductFormData", () => {
     formData.set("isActive", "false");
 
     expect(parseCreateProductFormData(formData)).toEqual({
+      description: null,
       isActive: false,
       name: "Caneca personalizada",
       priceInReais: 35,
@@ -59,6 +62,7 @@ describe("parseCreateProductFormData", () => {
     formData.append("isActive", "true");
 
     expect(parseCreateProductFormData(formData)).toEqual({
+      description: null,
       isActive: true,
       name: "Caneca personalizada",
       priceInReais: 35,
@@ -122,3 +126,23 @@ describe("product form helpers", () => {
     });
   });
 });
+
+it.each([
+  undefined,
+  "",
+  "   ",
+  "  Algodão\nManga curta  ",
+  "Detalhes ".repeat(1000),
+])(
+  "normalizes submission and preserves original description %s",
+  (description) => {
+    const form = new FormData();
+    if (description !== undefined) form.set("description", description);
+    form.set("priceInReais", "inválido");
+    expect(parseCreateProductFormData(form).description).toBe(
+      description?.trim() || null,
+    );
+    expect(getProductFormValues(form).description).toBe(description);
+    expect(getProductFormValues(form).priceInReais).toBe("inválido");
+  },
+);
