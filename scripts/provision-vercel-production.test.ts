@@ -651,6 +651,41 @@ describe("runVercelProductionProvisioning", () => {
     expect(client.createGitDeployment).not.toHaveBeenCalled();
     expect(client.mutations).toHaveLength(0);
   });
+
+  test("allows a persisted deployment removed by Vercel retention", async () => {
+    const mainSha = "b".repeat(40);
+    const main = readyDeployment({
+      gitSource: { ref: mainSha, repoId: 1264018806, sha: mainSha },
+      meta: {
+        ...readyDeployment().meta,
+        roberto_commit_sha: mainSha,
+        roberto_source_ref: "main",
+      },
+      uid: "dpl_MainProduction456",
+      url: "roberto-main-build.vercel.app",
+    });
+    const client = createClient({
+      deployment: main,
+      missingDeploymentIds: ["dpl_Production123"],
+      deployments: [readyDeployment({ uid: "dpl_OlderProduction456" })],
+      variables: expectedVariables(),
+    });
+
+    await expect(
+      run({
+        client,
+        options: {
+          commitSha: mainSha,
+          confirmation: projectId,
+          execute: true,
+          phase: "deploy",
+          sourceRef: "main",
+        },
+        resolveSourceCommit: vi.fn().mockResolvedValue(mainSha),
+        state: verifiedState(),
+      }),
+    ).resolves.toMatchObject({ deploymentId: "dpl_MainProduction456" });
+  });
 });
 
 describe("runProvisionVercelProductionCli", () => {
@@ -876,6 +911,7 @@ function createClient({
   deployments = [],
   domains = [{ name: "roberto-multimarcas-pdv.vercel.app" }],
   failAtUpsert = 0,
+  missingDeploymentIds = [],
   project = {},
   variables = [],
 }: {
@@ -885,6 +921,7 @@ function createClient({
   deployments?: ReturnType<typeof readyDeployment>[];
   domains?: { name: string }[];
   failAtUpsert?: number;
+  missingDeploymentIds?: string[];
   project?: Record<string, unknown>;
   variables?: ReturnType<typeof expectedVariables>;
 } = {}) {
@@ -933,6 +970,11 @@ function createClient({
     createAutomationBypass: vi.fn(),
     createGitDeployment,
     getDeployment: vi.fn(async (deploymentId: string) => {
+      if (missingDeploymentIds.includes(deploymentId)) {
+        throw new Error(
+          'Vercel API returned 404: {"error":{"code":"not_found","message":"Deployment not found"}}',
+        );
+      }
       const existing = currentDeployments.find(
         (candidate) => candidate.uid === deploymentId,
       );
